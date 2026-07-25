@@ -14,5 +14,8 @@
   },
   "search.exclude": {
     ".repos/**": true
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
   }
 }
