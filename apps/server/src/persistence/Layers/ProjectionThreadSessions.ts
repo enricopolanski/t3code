@@ -2,8 +2,9 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Schema from "effect/Schema";
 
-import { toPersistenceSqlError } from "../Errors.ts";
+import { toPersistenceDecodeError, toPersistenceSqlError } from "../Errors.ts";
 
 import {
   ProjectionThreadSession,
@@ -12,6 +13,13 @@ import {
   DeleteProjectionThreadSessionInput,
   GetProjectionThreadSessionInput,
 } from "../Services/ProjectionThreadSessions.ts";
+
+function toPersistenceSqlOrDecodeError(sqlOperation: string, decodeOperation: string) {
+  return (cause: unknown) =>
+    Schema.isSchemaError(cause)
+      ? toPersistenceDecodeError(decodeOperation)(cause)
+      : toPersistenceSqlError(sqlOperation)(cause);
+}
 
 const makeProjectionThreadSessionRepository = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
@@ -82,20 +90,31 @@ const makeProjectionThreadSessionRepository = Effect.gen(function* () {
 
   const upsert: ProjectionThreadSessionRepositoryShape["upsert"] = (row) =>
     upsertProjectionThreadSessionRow(row).pipe(
-      Effect.mapError(toPersistenceSqlError("ProjectionThreadSessionRepository.upsert:query")),
+      Effect.mapError(
+        toPersistenceSqlOrDecodeError(
+          "ProjectionThreadSessionRepository.upsert:query",
+          "ProjectionThreadSessionRepository.upsert:encodeRequest",
+        ),
+      ),
     );
 
   const getByThreadId: ProjectionThreadSessionRepositoryShape["getByThreadId"] = (input) =>
     getProjectionThreadSessionRow(input).pipe(
       Effect.mapError(
-        toPersistenceSqlError("ProjectionThreadSessionRepository.getByThreadId:query"),
+        toPersistenceSqlOrDecodeError(
+          "ProjectionThreadSessionRepository.getByThreadId:query",
+          "ProjectionThreadSessionRepository.getByThreadId:decodeRow",
+        ),
       ),
     );
 
   const deleteByThreadId: ProjectionThreadSessionRepositoryShape["deleteByThreadId"] = (input) =>
     deleteProjectionThreadSessionRow(input).pipe(
       Effect.mapError(
-        toPersistenceSqlError("ProjectionThreadSessionRepository.deleteByThreadId:query"),
+        toPersistenceSqlOrDecodeError(
+          "ProjectionThreadSessionRepository.deleteByThreadId:query",
+          "ProjectionThreadSessionRepository.deleteByThreadId:encodeRequest",
+        ),
       ),
     );
 

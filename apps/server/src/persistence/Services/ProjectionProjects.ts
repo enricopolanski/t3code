@@ -14,27 +14,28 @@ import type * as Effect from "effect/Effect";
 
 import type { ProjectionRepositoryError } from "../Errors.ts";
 
-export const ProjectionProject = Schema.Struct({
+export class ProjectionProject extends Schema.Class<ProjectionProject>("ProjectionProject")({
   projectId: ProjectId,
   title: Schema.String,
   workspaceRoot: Schema.String,
-  defaultModelSelection: Schema.NullOr(ModelSelection),
-  scripts: Schema.Array(ProjectScript),
+  defaultModelSelection: Schema.NullOr(Schema.fromJsonString(ModelSelection)),
+  scripts: Schema.fromJsonString(Schema.Array(ProjectScript)),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
   deletedAt: Schema.NullOr(IsoDateTime),
-});
-export type ProjectionProject = typeof ProjectionProject.Type;
+}) {}
 
-export const GetProjectionProjectInput = Schema.Struct({
+export class GetProjectionProjectInput extends Schema.Class<GetProjectionProjectInput>(
+  "GetProjectionProjectInput",
+)({
   projectId: ProjectId,
-});
-export type GetProjectionProjectInput = typeof GetProjectionProjectInput.Type;
+}) {}
 
-export const DeleteProjectionProjectInput = Schema.Struct({
+export class DeleteProjectionProjectInput extends Schema.Class<DeleteProjectionProjectInput>(
+  "DeleteProjectionProjectInput",
+)({
   projectId: ProjectId,
-});
-export type DeleteProjectionProjectInput = typeof DeleteProjectionProjectInput.Type;
+}) {}
 
 /**
  * ProjectionProjectRepositoryShape - Service API for projected project records.

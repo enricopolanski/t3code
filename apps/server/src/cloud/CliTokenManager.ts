@@ -116,13 +116,12 @@ export const waitForLoopbackAuthorization = Effect.fn(
   );
 });
 
-const PersistedToken = Schema.Struct({
+class PersistedToken extends Schema.Class<PersistedToken>("PersistedToken")({
   accessToken: Schema.String,
   refreshToken: Schema.String,
   expiresAtEpochMs: Schema.Number,
   identity: Schema.optional(Schema.String),
-});
-export type PersistedToken = typeof PersistedToken.Type;
+}) {}
 
 const PersistedTokenJson = Schema.fromJsonString(PersistedToken);
 const decodePersistedToken = Schema.decodeUnknownEffect(PersistedTokenJson);
@@ -254,12 +253,12 @@ const exchangeToken = Effect.fn("cloud.cli_token.exchange")(function* (
   const now = yield* Clock.currentTimeMillis;
   const identity = idTokenIdentity(response.id_token);
   return {
-    token: {
+    token: new PersistedToken({
       accessToken: response.access_token,
       refreshToken: response.refresh_token ?? params.refresh_token ?? "",
       expiresAtEpochMs: now + response.expires_in * 1_000,
       ...(identity === null ? {} : { identity }),
-    } satisfies PersistedToken,
+    }),
     identity,
   };
 });
@@ -360,8 +359,10 @@ export const make = Effect.gen(function* () {
       refresh_token: token.refreshToken,
       client_id: metadata.clientId,
     });
+    // Spreading a class instance yields a plain object, which the top-level encode in
+    // persist() rejects nominally even though it typechecks. Rebuild the instance.
     return refreshed.identity === undefined && token.identity !== undefined
-      ? { ...refreshed, identity: token.identity }
+      ? new PersistedToken({ ...refreshed, identity: token.identity })
       : refreshed;
   });
 

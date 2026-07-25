@@ -14,35 +14,47 @@ import {
   ThreadId,
   TurnId,
 } from "@t3tools/contracts";
+import * as Option from "effect/Option";
+import * as Predicate from "effect/Predicate";
 import * as Schema from "effect/Schema";
+import * as SchemaGetter from "effect/SchemaGetter";
 import * as Context from "effect/Context";
 import type * as Effect from "effect/Effect";
 
 import type { ProjectionRepositoryError } from "../Errors.ts";
 
-export const ProjectionThreadActivity = Schema.Struct({
+const OptionalNonNegativeIntFromNull = Schema.optional(Schema.NullOr(NonNegativeInt)).pipe(
+  Schema.decodeTo(Schema.optional(Schema.toType(NonNegativeInt)), {
+    decode: SchemaGetter.transformOptional(Option.filter(Predicate.isNotNull)),
+    encode: SchemaGetter.passthrough(),
+  }),
+);
+
+export class ProjectionThreadActivity extends Schema.Class<ProjectionThreadActivity>(
+  "ProjectionThreadActivity",
+)({
   activityId: EventId,
   threadId: ThreadId,
   turnId: Schema.NullOr(TurnId),
   tone: OrchestrationThreadActivityTone,
   kind: Schema.String,
   summary: Schema.String,
-  payload: Schema.Unknown,
-  sequence: Schema.optional(NonNegativeInt),
+  payload: Schema.fromJsonString(Schema.Unknown),
+  sequence: OptionalNonNegativeIntFromNull,
   createdAt: IsoDateTime,
-});
-export type ProjectionThreadActivity = typeof ProjectionThreadActivity.Type;
+}) {}
 
-export const ListProjectionThreadActivitiesInput = Schema.Struct({
+export class ListProjectionThreadActivitiesInput extends Schema.Class<ListProjectionThreadActivitiesInput>(
+  "ListProjectionThreadActivitiesInput",
+)({
   threadId: ThreadId,
-});
-export type ListProjectionThreadActivitiesInput = typeof ListProjectionThreadActivitiesInput.Type;
+}) {}
 
-export const DeleteProjectionThreadActivitiesInput = Schema.Struct({
+export class DeleteProjectionThreadActivitiesInput extends Schema.Class<DeleteProjectionThreadActivitiesInput>(
+  "DeleteProjectionThreadActivitiesInput",
+)({
   threadId: ThreadId,
-});
-export type DeleteProjectionThreadActivitiesInput =
-  typeof DeleteProjectionThreadActivitiesInput.Type;
+}) {}
 
 /**
  * ProjectionThreadActivityRepositoryShape - Service API for projected thread activity.

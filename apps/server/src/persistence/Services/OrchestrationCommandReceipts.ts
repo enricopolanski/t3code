@@ -22,7 +22,9 @@ import type * as Effect from "effect/Effect";
 
 import type { OrchestrationCommandReceiptRepositoryError } from "../Errors.ts";
 
-export const OrchestrationCommandReceipt = Schema.Struct({
+export class OrchestrationCommandReceipt extends Schema.Class<OrchestrationCommandReceipt>(
+  "OrchestrationCommandReceipt",
+)({
   commandId: CommandId,
   aggregateKind: OrchestrationAggregateKind,
   aggregateId: Schema.Union([ProjectId, ThreadId]),
@@ -30,13 +32,11 @@ export const OrchestrationCommandReceipt = Schema.Struct({
   resultSequence: NonNegativeInt,
   status: OrchestrationCommandReceiptStatus,
   error: Schema.NullOr(Schema.String),
-});
-export type OrchestrationCommandReceipt = typeof OrchestrationCommandReceipt.Type;
+}) {}
 
-export const GetByCommandIdInput = Schema.Struct({
+export class GetByCommandIdInput extends Schema.Class<GetByCommandIdInput>("GetByCommandIdInput")({
   commandId: CommandId,
-});
-export type GetByCommandIdInput = typeof GetByCommandIdInput.Type;
+}) {}
 
 /**
  * OrchestrationCommandReceiptRepositoryShape - Service API for command receipts.

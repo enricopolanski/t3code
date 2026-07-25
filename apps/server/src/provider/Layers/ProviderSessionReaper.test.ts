@@ -245,19 +245,21 @@ describe("ProviderSessionReaper", () => {
     );
 
     await runtime!.runPromise(
-      repository.upsert({
-        threadId,
-        providerName: "claudeAgent",
-        providerInstanceId: null,
-        adapterKey: "claudeAgent",
-        runtimeMode: "full-access",
-        status: "running",
-        lastSeenAt: "2026-04-14T00:00:00.000Z",
-        resumeCursor: {
-          opaque: "resume-stale",
-        },
-        runtimePayload: null,
-      }),
+      repository.upsert(
+        new ProviderSessionRuntime.ProviderSessionRuntime({
+          threadId,
+          providerName: "claudeAgent",
+          providerInstanceId: null,
+          adapterKey: "claudeAgent",
+          runtimeMode: "full-access",
+          status: "running",
+          lastSeenAt: "2026-04-14T00:00:00.000Z",
+          resumeCursor: {
+            opaque: "resume-stale",
+          },
+          runtimePayload: null,
+        }),
+      ),
     );
 
     const reaper = await runtime!.runPromise(Effect.service(ProviderSessionReaper));
@@ -295,19 +297,21 @@ describe("ProviderSessionReaper", () => {
     );
 
     await runtime!.runPromise(
-      repository.upsert({
-        threadId,
-        providerName: "claudeAgent",
-        providerInstanceId: null,
-        adapterKey: "claudeAgent",
-        runtimeMode: "full-access",
-        status: "running",
-        lastSeenAt: "2026-04-14T00:00:00.000Z",
-        resumeCursor: {
-          opaque: "resume-active-turn",
-        },
-        runtimePayload: null,
-      }),
+      repository.upsert(
+        new ProviderSessionRuntime.ProviderSessionRuntime({
+          threadId,
+          providerName: "claudeAgent",
+          providerInstanceId: null,
+          adapterKey: "claudeAgent",
+          runtimeMode: "full-access",
+          status: "running",
+          lastSeenAt: "2026-04-14T00:00:00.000Z",
+          resumeCursor: {
+            opaque: "resume-active-turn",
+          },
+          runtimePayload: null,
+        }),
+      ),
     );
 
     const reaper = await runtime!.runPromise(Effect.service(ProviderSessionReaper));
@@ -316,7 +320,11 @@ describe("ProviderSessionReaper", () => {
     await Effect.runPromise(drainFibers);
 
     expect(harness.stopSession).not.toHaveBeenCalled();
-    const remaining = await runtime!.runPromise(repository.getByThreadId({ threadId }));
+    const remaining = await runtime!.runPromise(
+      repository.getByThreadId(
+        new ProviderSessionRuntime.GetProviderSessionRuntimeInput({ threadId }),
+      ),
+    );
     expect(Option.isSome(remaining)).toBe(true);
   });
 
@@ -344,19 +352,21 @@ describe("ProviderSessionReaper", () => {
     );
 
     await runtime!.runPromise(
-      repository.upsert({
-        threadId,
-        providerName: "claudeAgent",
-        providerInstanceId: null,
-        adapterKey: "claudeAgent",
-        runtimeMode: "full-access",
-        status: "running",
-        lastSeenAt: now,
-        resumeCursor: {
-          opaque: "resume-fresh",
-        },
-        runtimePayload: null,
-      }),
+      repository.upsert(
+        new ProviderSessionRuntime.ProviderSessionRuntime({
+          threadId,
+          providerName: "claudeAgent",
+          providerInstanceId: null,
+          adapterKey: "claudeAgent",
+          runtimeMode: "full-access",
+          status: "running",
+          lastSeenAt: now,
+          resumeCursor: {
+            opaque: "resume-fresh",
+          },
+          runtimePayload: null,
+        }),
+      ),
     );
 
     const reaper = await runtime!.runPromise(Effect.service(ProviderSessionReaper));
@@ -365,7 +375,11 @@ describe("ProviderSessionReaper", () => {
     await Effect.runPromise(drainFibers);
 
     expect(harness.stopSession).not.toHaveBeenCalled();
-    const remaining = await runtime!.runPromise(repository.getByThreadId({ threadId }));
+    const remaining = await runtime!.runPromise(
+      repository.getByThreadId(
+        new ProviderSessionRuntime.GetProviderSessionRuntimeInput({ threadId }),
+      ),
+    );
     expect(Option.isSome(remaining)).toBe(true);
   });
 
@@ -393,19 +407,21 @@ describe("ProviderSessionReaper", () => {
     );
 
     await runtime!.runPromise(
-      repository.upsert({
-        threadId,
-        providerName: "claudeAgent",
-        providerInstanceId: null,
-        adapterKey: "claudeAgent",
-        runtimeMode: "full-access",
-        status: "stopped",
-        lastSeenAt: "2026-04-14T00:00:00.000Z",
-        resumeCursor: {
-          opaque: "resume-stopped",
-        },
-        runtimePayload: null,
-      }),
+      repository.upsert(
+        new ProviderSessionRuntime.ProviderSessionRuntime({
+          threadId,
+          providerName: "claudeAgent",
+          providerInstanceId: null,
+          adapterKey: "claudeAgent",
+          runtimeMode: "full-access",
+          status: "stopped",
+          lastSeenAt: "2026-04-14T00:00:00.000Z",
+          resumeCursor: {
+            opaque: "resume-stopped",
+          },
+          runtimePayload: null,
+        }),
+      ),
     );
 
     const reaper = await runtime!.runPromise(Effect.service(ProviderSessionReaper));
@@ -414,7 +430,11 @@ describe("ProviderSessionReaper", () => {
     await Effect.runPromise(drainFibers);
 
     expect(harness.stopSession).not.toHaveBeenCalled();
-    const remaining = await runtime!.runPromise(repository.getByThreadId({ threadId }));
+    const remaining = await runtime!.runPromise(
+      repository.getByThreadId(
+        new ProviderSessionRuntime.GetProviderSessionRuntimeInput({ threadId }),
+      ),
+    );
     expect(Option.isSome(remaining)).toBe(true);
   });
 
@@ -464,34 +484,38 @@ describe("ProviderSessionReaper", () => {
     );
 
     await runtime!.runPromise(
-      repository.upsert({
-        threadId: failedThreadId,
-        providerName: "claudeAgent",
-        providerInstanceId: null,
-        adapterKey: "claudeAgent",
-        runtimeMode: "full-access",
-        status: "running",
-        lastSeenAt: "2026-04-14T00:00:00.000Z",
-        resumeCursor: {
-          opaque: "resume-failure",
-        },
-        runtimePayload: null,
-      }),
+      repository.upsert(
+        new ProviderSessionRuntime.ProviderSessionRuntime({
+          threadId: failedThreadId,
+          providerName: "claudeAgent",
+          providerInstanceId: null,
+          adapterKey: "claudeAgent",
+          runtimeMode: "full-access",
+          status: "running",
+          lastSeenAt: "2026-04-14T00:00:00.000Z",
+          resumeCursor: {
+            opaque: "resume-failure",
+          },
+          runtimePayload: null,
+        }),
+      ),
     );
     await runtime!.runPromise(
-      repository.upsert({
-        threadId: reapedThreadId,
-        providerName: "codex",
-        providerInstanceId: null,
-        adapterKey: "codex",
-        runtimeMode: "full-access",
-        status: "running",
-        lastSeenAt: "2026-04-14T00:01:00.000Z",
-        resumeCursor: {
-          opaque: "resume-success",
-        },
-        runtimePayload: null,
-      }),
+      repository.upsert(
+        new ProviderSessionRuntime.ProviderSessionRuntime({
+          threadId: reapedThreadId,
+          providerName: "codex",
+          providerInstanceId: null,
+          adapterKey: "codex",
+          runtimeMode: "full-access",
+          status: "running",
+          lastSeenAt: "2026-04-14T00:01:00.000Z",
+          resumeCursor: {
+            opaque: "resume-success",
+          },
+          runtimePayload: null,
+        }),
+      ),
     );
 
     const reaper = await runtime!.runPromise(Effect.service(ProviderSessionReaper));
@@ -547,34 +571,38 @@ describe("ProviderSessionReaper", () => {
     );
 
     await runtime!.runPromise(
-      repository.upsert({
-        threadId: defectThreadId,
-        providerName: "claudeAgent",
-        providerInstanceId: null,
-        adapterKey: "claudeAgent",
-        runtimeMode: "full-access",
-        status: "running",
-        lastSeenAt: "2026-04-14T00:00:00.000Z",
-        resumeCursor: {
-          opaque: "resume-defect",
-        },
-        runtimePayload: null,
-      }),
+      repository.upsert(
+        new ProviderSessionRuntime.ProviderSessionRuntime({
+          threadId: defectThreadId,
+          providerName: "claudeAgent",
+          providerInstanceId: null,
+          adapterKey: "claudeAgent",
+          runtimeMode: "full-access",
+          status: "running",
+          lastSeenAt: "2026-04-14T00:00:00.000Z",
+          resumeCursor: {
+            opaque: "resume-defect",
+          },
+          runtimePayload: null,
+        }),
+      ),
     );
     await runtime!.runPromise(
-      repository.upsert({
-        threadId: reapedThreadId,
-        providerName: "codex",
-        providerInstanceId: null,
-        adapterKey: "codex",
-        runtimeMode: "full-access",
-        status: "running",
-        lastSeenAt: "2026-04-14T00:01:00.000Z",
-        resumeCursor: {
-          opaque: "resume-after-defect",
-        },
-        runtimePayload: null,
-      }),
+      repository.upsert(
+        new ProviderSessionRuntime.ProviderSessionRuntime({
+          threadId: reapedThreadId,
+          providerName: "codex",
+          providerInstanceId: null,
+          adapterKey: "codex",
+          runtimeMode: "full-access",
+          status: "running",
+          lastSeenAt: "2026-04-14T00:01:00.000Z",
+          resumeCursor: {
+            opaque: "resume-after-defect",
+          },
+          runtimePayload: null,
+        }),
+      ),
     );
 
     const reaper = await runtime!.runPromise(Effect.service(ProviderSessionReaper));

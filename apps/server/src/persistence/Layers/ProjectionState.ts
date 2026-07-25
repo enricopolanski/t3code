@@ -5,7 +5,11 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 
-import { toPersistenceSqlError } from "../Errors.ts";
+import {
+  toPersistenceDecodeError,
+  toPersistenceSqlError,
+  type ProjectionRepositoryError,
+} from "../Errors.ts";
 
 import {
   ProjectionStateRepository,
@@ -17,6 +21,13 @@ import {
 const MinLastAppliedSequenceRowSchema = Schema.Struct({
   minLastAppliedSequence: Schema.NullOr(NonNegativeInt),
 });
+
+function toPersistenceSqlOrDecodeError(sqlOperation: string, decodeOperation: string) {
+  return (cause: unknown): ProjectionRepositoryError =>
+    Schema.isSchemaError(cause)
+      ? toPersistenceDecodeError(decodeOperation)(cause)
+      : toPersistenceSqlError(sqlOperation)(cause);
+}
 
 const makeProjectionStateRepository = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
@@ -83,23 +94,41 @@ const makeProjectionStateRepository = Effect.gen(function* () {
 
   const upsert: ProjectionStateRepositoryShape["upsert"] = (row) =>
     upsertProjectionStateRow(row).pipe(
-      Effect.mapError(toPersistenceSqlError("ProjectionStateRepository.upsert:query")),
+      Effect.mapError(
+        toPersistenceSqlOrDecodeError(
+          "ProjectionStateRepository.upsert:query",
+          "ProjectionStateRepository.upsert:encodeRequest",
+        ),
+      ),
     );
 
   const getByProjector: ProjectionStateRepositoryShape["getByProjector"] = (input) =>
     getProjectionStateRow(input).pipe(
-      Effect.mapError(toPersistenceSqlError("ProjectionStateRepository.getByProjector:query")),
+      Effect.mapError(
+        toPersistenceSqlOrDecodeError(
+          "ProjectionStateRepository.getByProjector:query",
+          "ProjectionStateRepository.getByProjector:decodeRow",
+        ),
+      ),
     );
 
   const listAll: ProjectionStateRepositoryShape["listAll"] = () =>
     listProjectionStateRows(undefined).pipe(
-      Effect.mapError(toPersistenceSqlError("ProjectionStateRepository.listAll:query")),
+      Effect.mapError(
+        toPersistenceSqlOrDecodeError(
+          "ProjectionStateRepository.listAll:query",
+          "ProjectionStateRepository.listAll:decodeRows",
+        ),
+      ),
     );
 
   const minLastAppliedSequence: ProjectionStateRepositoryShape["minLastAppliedSequence"] = () =>
     readMinLastAppliedSequence(undefined).pipe(
       Effect.mapError(
-        toPersistenceSqlError("ProjectionStateRepository.minLastAppliedSequence:query"),
+        toPersistenceSqlOrDecodeError(
+          "ProjectionStateRepository.minLastAppliedSequence:query",
+          "ProjectionStateRepository.minLastAppliedSequence:decodeRow",
+        ),
       ),
       Effect.map((row) => row.minLastAppliedSequence),
     );

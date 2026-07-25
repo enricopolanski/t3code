@@ -1,16 +1,13 @@
 import {
-  ChatAttachment,
   CheckpointRef,
   IsoDateTime,
   MessageId,
   NonNegativeInt,
-  OrchestrationCheckpointFile,
   OrchestrationProposedPlanId,
   OrchestrationReadModel,
   OrchestrationShellSnapshot,
   OrchestrationThread,
   OrchestrationThreadDetailSnapshot,
-  ProjectScript,
   TurnId,
   type OrchestrationCheckpointSummary,
   type OrchestrationLatestTurn,
@@ -21,7 +18,6 @@ import {
   type OrchestrationSession,
   type OrchestrationThreadActivity,
   type OrchestrationThreadShell,
-  ModelSelection,
   ProjectId,
   ThreadId,
 } from "@t3tools/contracts";
@@ -31,7 +27,6 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Result from "effect/Result";
 import * as Schema from "effect/Schema";
-import * as Struct from "effect/Struct";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";
 
@@ -62,36 +57,13 @@ import {
 const decodeReadModel = Schema.decodeUnknownEffect(OrchestrationReadModel);
 const decodeShellSnapshot = Schema.decodeUnknownEffect(OrchestrationShellSnapshot);
 const decodeThread = Schema.decodeUnknownEffect(OrchestrationThread);
-const ProjectionProjectDbRowSchema = ProjectionProject.mapFields(
-  Struct.assign({
-    defaultModelSelection: Schema.NullOr(Schema.fromJsonString(ModelSelection)),
-    scripts: Schema.fromJsonString(Schema.Array(ProjectScript)),
-  }),
-);
-const ProjectionThreadMessageDbRowSchema = ProjectionThreadMessage.mapFields(
-  Struct.assign({
-    isStreaming: Schema.Number,
-    attachments: Schema.NullOr(Schema.fromJsonString(Schema.Array(ChatAttachment))),
-  }),
-);
+const ProjectionProjectDbRowSchema = ProjectionProject;
+const ProjectionThreadMessageDbRowSchema = ProjectionThreadMessage;
 const ProjectionThreadProposedPlanDbRowSchema = ProjectionThreadProposedPlan;
-const ProjectionThreadDbRowSchema = ProjectionThread.mapFields(
-  Struct.assign({
-    modelSelection: Schema.fromJsonString(ModelSelection),
-  }),
-);
-const ProjectionThreadActivityDbRowSchema = ProjectionThreadActivity.mapFields(
-  Struct.assign({
-    payload: Schema.fromJsonString(Schema.Unknown),
-    sequence: Schema.NullOr(NonNegativeInt),
-  }),
-);
+const ProjectionThreadDbRowSchema = ProjectionThread;
+const ProjectionThreadActivityDbRowSchema = ProjectionThreadActivity;
 const ProjectionThreadSessionDbRowSchema = ProjectionThreadSession;
-const ProjectionCheckpointDbRowSchema = ProjectionCheckpoint.mapFields(
-  Struct.assign({
-    files: Schema.fromJsonString(Schema.Array(OrchestrationCheckpointFile)),
-  }),
-);
+const ProjectionCheckpointDbRowSchema = ProjectionCheckpoint;
 const ProjectionLatestTurnDbRowSchema = Schema.Struct({
   threadId: ProjectionThread.fields.threadId,
   turnId: TurnId,
@@ -1065,9 +1037,9 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
                   id: row.messageId,
                   role: row.role,
                   text: row.text,
-                  ...(row.attachments !== null ? { attachments: row.attachments } : {}),
+                  ...(row.attachments !== undefined ? { attachments: row.attachments } : {}),
                   turnId: row.turnId,
-                  streaming: row.isStreaming === 1,
+                  streaming: row.isStreaming,
                   createdAt: row.createdAt,
                   updatedAt: row.updatedAt,
                 });
@@ -1099,7 +1071,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
                   summary: row.summary,
                   payload: row.payload,
                   turnId: row.turnId,
-                  ...(row.sequence !== null ? { sequence: row.sequence } : {}),
+                  ...(row.sequence !== undefined ? { sequence: row.sequence } : {}),
                   createdAt: row.createdAt,
                 });
                 activitiesByThread.set(row.threadId, threadActivities);
@@ -2028,11 +2000,11 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
             role: row.role,
             text: row.text,
             turnId: row.turnId,
-            streaming: row.isStreaming === 1,
+            streaming: row.isStreaming,
             createdAt: row.createdAt,
             updatedAt: row.updatedAt,
           };
-          if (row.attachments !== null) {
+          if (row.attachments !== undefined) {
             return Object.assign(message, { attachments: row.attachments });
           }
           return message;
@@ -2048,7 +2020,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
             turnId: row.turnId,
             createdAt: row.createdAt,
           };
-          if (row.sequence !== null) {
+          if (row.sequence !== undefined) {
             return Object.assign(activity, { sequence: row.sequence });
           }
           return activity;

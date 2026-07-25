@@ -15,7 +15,7 @@ import {
   PersistenceSqlError,
 } from "./Errors.ts";
 
-export const AuthPairingLinkRecord = Schema.Struct({
+class AuthPairingLinkRecord extends Schema.Class<AuthPairingLinkRecord>("AuthPairingLinkRecord")({
   id: Schema.String,
   credential: Schema.String,
   method: Schema.Literals(["desktop-bootstrap", "one-time-token"]),
@@ -27,10 +27,11 @@ export const AuthPairingLinkRecord = Schema.Struct({
   expiresAt: Schema.DateTimeUtcFromString,
   consumedAt: Schema.NullOr(Schema.DateTimeUtcFromString),
   revokedAt: Schema.NullOr(Schema.DateTimeUtcFromString),
-});
-export type AuthPairingLinkRecord = typeof AuthPairingLinkRecord.Type;
+}) {}
 
-export const CreateAuthPairingLinkInput = Schema.Struct({
+export class CreateAuthPairingLinkInput extends Schema.Class<CreateAuthPairingLinkInput>(
+  "CreateAuthPairingLinkInput",
+)({
   id: Schema.String,
   credential: Schema.String,
   method: Schema.Literals(["desktop-bootstrap", "one-time-token"]),
@@ -40,34 +41,39 @@ export const CreateAuthPairingLinkInput = Schema.Struct({
   proofKeyThumbprint: Schema.NullOr(Schema.String),
   createdAt: Schema.DateTimeUtcFromString,
   expiresAt: Schema.DateTimeUtcFromString,
-});
-export type CreateAuthPairingLinkInput = typeof CreateAuthPairingLinkInput.Type;
+}) {}
 
-export const ConsumeAuthPairingLinkInput = Schema.Struct({
+export class ConsumeAuthPairingLinkInput extends Schema.Class<ConsumeAuthPairingLinkInput>(
+  "ConsumeAuthPairingLinkInput",
+)({
   credential: Schema.String,
   proofKeyThumbprint: Schema.NullOr(Schema.String),
   consumedAt: Schema.DateTimeUtcFromString,
   now: Schema.DateTimeUtcFromString,
-});
-export type ConsumeAuthPairingLinkInput = typeof ConsumeAuthPairingLinkInput.Type;
+}) {}
 
-export const ListActiveAuthPairingLinksInput = Schema.Struct({
+export class ListActiveAuthPairingLinksInput extends Schema.Class<ListActiveAuthPairingLinksInput>(
+  "ListActiveAuthPairingLinksInput",
+)({
   now: Schema.DateTimeUtcFromString,
-});
-export type ListActiveAuthPairingLinksInput = typeof ListActiveAuthPairingLinksInput.Type;
+}) {}
 
-export const RevokeAuthPairingLinkInput = Schema.Struct({
+export class RevokeAuthPairingLinkInput extends Schema.Class<RevokeAuthPairingLinkInput>(
+  "RevokeAuthPairingLinkInput",
+)({
   id: Schema.String,
   revokedAt: Schema.DateTimeUtcFromString,
-});
-export type RevokeAuthPairingLinkInput = typeof RevokeAuthPairingLinkInput.Type;
+}) {}
 
-export const GetAuthPairingLinkByCredentialInput = Schema.Struct({
+export class GetAuthPairingLinkByCredentialInput extends Schema.Class<GetAuthPairingLinkByCredentialInput>(
+  "GetAuthPairingLinkByCredentialInput",
+)({
   credential: Schema.String,
-});
-export type GetAuthPairingLinkByCredentialInput = typeof GetAuthPairingLinkByCredentialInput.Type;
+}) {}
 
-const AuthPairingLinkRawDbRow = Schema.Struct({
+class AuthPairingLinkRawDbRow extends Schema.Class<AuthPairingLinkRawDbRow>(
+  "AuthPairingLinkRawDbRow",
+)({
   id: Schema.String,
   credential: Schema.Unknown,
   method: Schema.Unknown,
@@ -79,7 +85,7 @@ const AuthPairingLinkRawDbRow = Schema.Struct({
   expiresAt: Schema.Unknown,
   consumedAt: Schema.Unknown,
   revokedAt: Schema.Unknown,
-});
+}) {}
 
 const decodeAuthPairingLinkDbRow = Schema.decodeUnknownEffect(AuthPairingLinkRecord);
 

@@ -3,10 +3,12 @@ import * as SqlSchema from "effect/unstable/sql/SqlSchema";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
-import * as Struct from "effect/Struct";
 
-import { ModelSelection, ProjectScript } from "@t3tools/contracts";
-import { toPersistenceSqlError } from "../Errors.ts";
+import {
+  toPersistenceDecodeError,
+  toPersistenceSqlError,
+  type ProjectionRepositoryError,
+} from "../Errors.ts";
 import {
   DeleteProjectionProjectInput,
   GetProjectionProjectInput,
@@ -15,13 +17,14 @@ import {
   type ProjectionProjectRepositoryShape,
 } from "../Services/ProjectionProjects.ts";
 
-const ProjectionProjectDbRow = ProjectionProject.mapFields(
-  Struct.assign({
-    defaultModelSelection: Schema.NullOr(Schema.fromJsonString(ModelSelection)),
-    scripts: Schema.fromJsonString(Schema.Array(ProjectScript)),
-  }),
-);
-type ProjectionProjectDbRow = typeof ProjectionProjectDbRow.Type;
+const ProjectionProjectDbRow = ProjectionProject;
+
+function toPersistenceSqlOrDecodeError(sqlOperation: string, decodeOperation: string) {
+  return (cause: unknown): ProjectionRepositoryError =>
+    Schema.isSchemaError(cause)
+      ? toPersistenceDecodeError(decodeOperation)(cause)
+      : toPersistenceSqlError(sqlOperation)(cause);
+}
 
 const makeProjectionProjectRepository = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
@@ -44,8 +47,8 @@ const makeProjectionProjectRepository = Effect.gen(function* () {
           ${row.projectId},
           ${row.title},
           ${row.workspaceRoot},
-          ${row.defaultModelSelection !== null ? JSON.stringify(row.defaultModelSelection) : null},
-          ${JSON.stringify(row.scripts)},
+          ${row.defaultModelSelection},
+          ${row.scripts},
           ${row.createdAt},
           ${row.updatedAt},
           ${row.deletedAt}
@@ -111,22 +114,42 @@ const makeProjectionProjectRepository = Effect.gen(function* () {
 
   const upsert: ProjectionProjectRepositoryShape["upsert"] = (row) =>
     upsertProjectionProjectRow(row).pipe(
-      Effect.mapError(toPersistenceSqlError("ProjectionProjectRepository.upsert:query")),
+      Effect.mapError(
+        toPersistenceSqlOrDecodeError(
+          "ProjectionProjectRepository.upsert:query",
+          "ProjectionProjectRepository.upsert:encodeRequest",
+        ),
+      ),
     );
 
   const getById: ProjectionProjectRepositoryShape["getById"] = (input) =>
     getProjectionProjectRow(input).pipe(
-      Effect.mapError(toPersistenceSqlError("ProjectionProjectRepository.getById:query")),
+      Effect.mapError(
+        toPersistenceSqlOrDecodeError(
+          "ProjectionProjectRepository.getById:query",
+          "ProjectionProjectRepository.getById:decodeRow",
+        ),
+      ),
     );
 
   const listAll: ProjectionProjectRepositoryShape["listAll"] = () =>
     listProjectionProjectRows().pipe(
-      Effect.mapError(toPersistenceSqlError("ProjectionProjectRepository.listAll:query")),
+      Effect.mapError(
+        toPersistenceSqlOrDecodeError(
+          "ProjectionProjectRepository.listAll:query",
+          "ProjectionProjectRepository.listAll:decodeRows",
+        ),
+      ),
     );
 
   const deleteById: ProjectionProjectRepositoryShape["deleteById"] = (input) =>
     deleteProjectionProjectRow(input).pipe(
-      Effect.mapError(toPersistenceSqlError("ProjectionProjectRepository.deleteById:query")),
+      Effect.mapError(
+        toPersistenceSqlOrDecodeError(
+          "ProjectionProjectRepository.deleteById:query",
+          "ProjectionProjectRepository.deleteById:encodeRequest",
+        ),
+      ),
     );
 
   return {

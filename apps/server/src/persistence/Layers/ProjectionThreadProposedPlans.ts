@@ -1,9 +1,10 @@
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Schema from "effect/Schema";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";
 
-import { toPersistenceSqlError } from "../Errors.ts";
+import { toPersistenceDecodeError, toPersistenceSqlError } from "../Errors.ts";
 import {
   DeleteProjectionThreadProposedPlansInput,
   ListProjectionThreadProposedPlansInput,
@@ -11,6 +12,13 @@ import {
   ProjectionThreadProposedPlanRepository,
   type ProjectionThreadProposedPlanRepositoryShape,
 } from "../Services/ProjectionThreadProposedPlans.ts";
+
+function toPersistenceSqlOrDecodeError(sqlOperation: string, decodeOperation: string) {
+  return (cause: unknown) =>
+    Schema.isSchemaError(cause)
+      ? toPersistenceDecodeError(decodeOperation)(cause)
+      : toPersistenceSqlError(sqlOperation)(cause);
+}
 
 const makeProjectionThreadProposedPlanRepository = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
@@ -79,13 +87,21 @@ const makeProjectionThreadProposedPlanRepository = Effect.gen(function* () {
 
   const upsert: ProjectionThreadProposedPlanRepositoryShape["upsert"] = (row) =>
     upsertProjectionThreadProposedPlanRow(row).pipe(
-      Effect.mapError(toPersistenceSqlError("ProjectionThreadProposedPlanRepository.upsert:query")),
+      Effect.mapError(
+        toPersistenceSqlOrDecodeError(
+          "ProjectionThreadProposedPlanRepository.upsert:query",
+          "ProjectionThreadProposedPlanRepository.upsert:encodeRequest",
+        ),
+      ),
     );
 
   const listByThreadId: ProjectionThreadProposedPlanRepositoryShape["listByThreadId"] = (input) =>
     listProjectionThreadProposedPlanRows(input).pipe(
       Effect.mapError(
-        toPersistenceSqlError("ProjectionThreadProposedPlanRepository.listByThreadId:query"),
+        toPersistenceSqlOrDecodeError(
+          "ProjectionThreadProposedPlanRepository.listByThreadId:query",
+          "ProjectionThreadProposedPlanRepository.listByThreadId:decodeRows",
+        ),
       ),
     );
 
@@ -94,7 +110,10 @@ const makeProjectionThreadProposedPlanRepository = Effect.gen(function* () {
   ) =>
     deleteProjectionThreadProposedPlanRows(input).pipe(
       Effect.mapError(
-        toPersistenceSqlError("ProjectionThreadProposedPlanRepository.deleteByThreadId:query"),
+        toPersistenceSqlOrDecodeError(
+          "ProjectionThreadProposedPlanRepository.deleteByThreadId:query",
+          "ProjectionThreadProposedPlanRepository.deleteByThreadId:encodeRequest",
+        ),
       ),
     );
 

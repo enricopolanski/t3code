@@ -23,11 +23,11 @@ import type * as Effect from "effect/Effect";
 
 import type { ProjectionRepositoryError } from "../Errors.ts";
 
-export const ProjectionThread = Schema.Struct({
+export class ProjectionThread extends Schema.Class<ProjectionThread>("ProjectionThread")({
   threadId: ThreadId,
   projectId: ProjectId,
   title: Schema.String,
-  modelSelection: ModelSelection,
+  modelSelection: Schema.fromJsonString(ModelSelection),
   runtimeMode: RuntimeMode,
   interactionMode: ProviderInteractionMode,
   branch: Schema.NullOr(Schema.String),
@@ -45,23 +45,25 @@ export const ProjectionThread = Schema.Struct({
   pendingUserInputCount: NonNegativeInt,
   hasActionableProposedPlan: NonNegativeInt,
   deletedAt: Schema.NullOr(IsoDateTime),
-});
-export type ProjectionThread = typeof ProjectionThread.Type;
+}) {}
 
-export const GetProjectionThreadInput = Schema.Struct({
+export class GetProjectionThreadInput extends Schema.Class<GetProjectionThreadInput>(
+  "GetProjectionThreadInput",
+)({
   threadId: ThreadId,
-});
-export type GetProjectionThreadInput = typeof GetProjectionThreadInput.Type;
+}) {}
 
-export const DeleteProjectionThreadInput = Schema.Struct({
+export class DeleteProjectionThreadInput extends Schema.Class<DeleteProjectionThreadInput>(
+  "DeleteProjectionThreadInput",
+)({
   threadId: ThreadId,
-});
-export type DeleteProjectionThreadInput = typeof DeleteProjectionThreadInput.Type;
+}) {}
 
-export const ListProjectionThreadsByProjectInput = Schema.Struct({
+export class ListProjectionThreadsByProjectInput extends Schema.Class<ListProjectionThreadsByProjectInput>(
+  "ListProjectionThreadsByProjectInput",
+)({
   projectId: ProjectId,
-});
-export type ListProjectionThreadsByProjectInput = typeof ListProjectionThreadsByProjectInput.Type;
+}) {}
 
 /**
  * ProjectionThreadRepositoryShape - Service API for projected thread records.

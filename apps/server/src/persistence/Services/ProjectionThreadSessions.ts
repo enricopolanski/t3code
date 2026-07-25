@@ -21,7 +21,9 @@ import type * as Effect from "effect/Effect";
 
 import type { ProjectionRepositoryError } from "../Errors.ts";
 
-export const ProjectionThreadSession = Schema.Struct({
+export class ProjectionThreadSession extends Schema.Class<ProjectionThreadSession>(
+  "ProjectionThreadSession",
+)({
   threadId: ThreadId,
   status: OrchestrationSessionStatus,
   providerName: Schema.NullOr(Schema.String),
@@ -30,18 +32,19 @@ export const ProjectionThreadSession = Schema.Struct({
   activeTurnId: Schema.NullOr(TurnId),
   lastError: Schema.NullOr(Schema.String),
   updatedAt: IsoDateTime,
-});
-export type ProjectionThreadSession = typeof ProjectionThreadSession.Type;
+}) {}
 
-export const GetProjectionThreadSessionInput = Schema.Struct({
+export class GetProjectionThreadSessionInput extends Schema.Class<GetProjectionThreadSessionInput>(
+  "GetProjectionThreadSessionInput",
+)({
   threadId: ThreadId,
-});
-export type GetProjectionThreadSessionInput = typeof GetProjectionThreadSessionInput.Type;
+}) {}
 
-export const DeleteProjectionThreadSessionInput = Schema.Struct({
+export class DeleteProjectionThreadSessionInput extends Schema.Class<DeleteProjectionThreadSessionInput>(
+  "DeleteProjectionThreadSessionInput",
+)({
   threadId: ThreadId,
-});
-export type DeleteProjectionThreadSessionInput = typeof DeleteProjectionThreadSessionInput.Type;
+}) {}
 
 /**
  * ProjectionThreadSessionRepositoryShape - Service API for projected thread sessions.

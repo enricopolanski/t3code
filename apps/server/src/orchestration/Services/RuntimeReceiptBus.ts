@@ -20,16 +20,19 @@ import * as Context from "effect/Context";
 import type * as Effect from "effect/Effect";
 import type * as Stream from "effect/Stream";
 
-export const CheckpointBaselineCapturedReceipt = Schema.Struct({
+export class CheckpointBaselineCapturedReceipt extends Schema.Class<CheckpointBaselineCapturedReceipt>(
+  "CheckpointBaselineCapturedReceipt",
+)({
   type: Schema.Literal("checkpoint.baseline.captured"),
   threadId: ThreadId,
   checkpointTurnCount: NonNegativeInt,
   checkpointRef: CheckpointRef,
   createdAt: IsoDateTime,
-});
-export type CheckpointBaselineCapturedReceipt = typeof CheckpointBaselineCapturedReceipt.Type;
+}) {}
 
-export const CheckpointDiffFinalizedReceipt = Schema.Struct({
+export class CheckpointDiffFinalizedReceipt extends Schema.Class<CheckpointDiffFinalizedReceipt>(
+  "CheckpointDiffFinalizedReceipt",
+)({
   type: Schema.Literal("checkpoint.diff.finalized"),
   threadId: ThreadId,
   turnId: TurnId,
@@ -37,17 +40,17 @@ export const CheckpointDiffFinalizedReceipt = Schema.Struct({
   checkpointRef: CheckpointRef,
   status: Schema.Literals(["ready", "missing", "error"]),
   createdAt: IsoDateTime,
-});
-export type CheckpointDiffFinalizedReceipt = typeof CheckpointDiffFinalizedReceipt.Type;
+}) {}
 
-export const TurnProcessingQuiescedReceipt = Schema.Struct({
+export class TurnProcessingQuiescedReceipt extends Schema.Class<TurnProcessingQuiescedReceipt>(
+  "TurnProcessingQuiescedReceipt",
+)({
   type: Schema.Literal("turn.processing.quiesced"),
   threadId: ThreadId,
   turnId: TurnId,
   checkpointTurnCount: NonNegativeInt,
   createdAt: IsoDateTime,
-});
-export type TurnProcessingQuiescedReceipt = typeof TurnProcessingQuiescedReceipt.Type;
+}) {}
 
 export const OrchestrationRuntimeReceipt = Schema.Union([
   CheckpointBaselineCapturedReceipt,

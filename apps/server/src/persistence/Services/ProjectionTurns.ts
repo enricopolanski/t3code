@@ -33,7 +33,7 @@ export const ProjectionTurnState = Schema.Literals([
 ]);
 export type ProjectionTurnState = typeof ProjectionTurnState.Type;
 
-export const ProjectionTurn = Schema.Struct({
+export class ProjectionTurn extends Schema.Class<ProjectionTurn>("ProjectionTurn")({
   threadId: ThreadId,
   turnId: Schema.NullOr(TurnId),
   pendingMessageId: Schema.NullOr(MessageId),
@@ -47,11 +47,10 @@ export const ProjectionTurn = Schema.Struct({
   checkpointTurnCount: Schema.NullOr(NonNegativeInt),
   checkpointRef: Schema.NullOr(CheckpointRef),
   checkpointStatus: Schema.NullOr(OrchestrationCheckpointStatus),
-  checkpointFiles: Schema.Array(OrchestrationCheckpointFile),
-});
-export type ProjectionTurn = typeof ProjectionTurn.Type;
+  checkpointFiles: Schema.fromJsonString(Schema.Array(OrchestrationCheckpointFile)),
+}) {}
 
-export const ProjectionTurnById = Schema.Struct({
+export class ProjectionTurnById extends Schema.Class<ProjectionTurnById>("ProjectionTurnById")({
   threadId: ThreadId,
   turnId: TurnId,
   pendingMessageId: Schema.NullOr(MessageId),
@@ -65,46 +64,51 @@ export const ProjectionTurnById = Schema.Struct({
   checkpointTurnCount: Schema.NullOr(NonNegativeInt),
   checkpointRef: Schema.NullOr(CheckpointRef),
   checkpointStatus: Schema.NullOr(OrchestrationCheckpointStatus),
-  checkpointFiles: Schema.Array(OrchestrationCheckpointFile),
-});
-export type ProjectionTurnById = typeof ProjectionTurnById.Type;
+  checkpointFiles: Schema.fromJsonString(Schema.Array(OrchestrationCheckpointFile)),
+}) {}
 
-export const ProjectionPendingTurnStart = Schema.Struct({
+export class ProjectionPendingTurnStart extends Schema.Class<ProjectionPendingTurnStart>(
+  "ProjectionPendingTurnStart",
+)({
   threadId: ThreadId,
   messageId: MessageId,
   sourceProposedPlanThreadId: Schema.NullOr(ThreadId),
   sourceProposedPlanId: Schema.NullOr(OrchestrationProposedPlanId),
   requestedAt: IsoDateTime,
-});
-export type ProjectionPendingTurnStart = typeof ProjectionPendingTurnStart.Type;
+}) {}
 
-export const ListProjectionTurnsByThreadInput = Schema.Struct({
+export class ListProjectionTurnsByThreadInput extends Schema.Class<ListProjectionTurnsByThreadInput>(
+  "ListProjectionTurnsByThreadInput",
+)({
   threadId: ThreadId,
-});
-export type ListProjectionTurnsByThreadInput = typeof ListProjectionTurnsByThreadInput.Type;
+}) {}
 
-export const GetProjectionTurnByTurnIdInput = Schema.Struct({
+export class GetProjectionTurnByTurnIdInput extends Schema.Class<GetProjectionTurnByTurnIdInput>(
+  "GetProjectionTurnByTurnIdInput",
+)({
   threadId: ThreadId,
   turnId: TurnId,
-});
-export type GetProjectionTurnByTurnIdInput = typeof GetProjectionTurnByTurnIdInput.Type;
+}) {}
 
-export const GetProjectionPendingTurnStartInput = Schema.Struct({
+export class GetProjectionPendingTurnStartInput extends Schema.Class<GetProjectionPendingTurnStartInput>(
+  "GetProjectionPendingTurnStartInput",
+)({
   threadId: ThreadId,
-});
-export type GetProjectionPendingTurnStartInput = typeof GetProjectionPendingTurnStartInput.Type;
+}) {}
 
-export const DeleteProjectionTurnsByThreadInput = Schema.Struct({
+export class DeleteProjectionTurnsByThreadInput extends Schema.Class<DeleteProjectionTurnsByThreadInput>(
+  "DeleteProjectionTurnsByThreadInput",
+)({
   threadId: ThreadId,
-});
-export type DeleteProjectionTurnsByThreadInput = typeof DeleteProjectionTurnsByThreadInput.Type;
+}) {}
 
-export const ClearCheckpointTurnConflictInput = Schema.Struct({
+export class ClearCheckpointTurnConflictInput extends Schema.Class<ClearCheckpointTurnConflictInput>(
+  "ClearCheckpointTurnConflictInput",
+)({
   threadId: ThreadId,
   turnId: TurnId,
   checkpointTurnCount: NonNegativeInt,
-});
-export type ClearCheckpointTurnConflictInput = typeof ClearCheckpointTurnConflictInput.Type;
+}) {}
 
 export interface ProjectionTurnRepositoryShape {
   /**

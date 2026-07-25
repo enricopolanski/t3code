@@ -7,14 +7,14 @@ import type * as EffectAcpSchema from "effect-acp/schema";
 
 import type * as AcpSessionRuntime from "./AcpSessionRuntime.ts";
 
-const XAiPromptCompleteNotification = Schema.Struct({
+class XAiPromptCompleteNotification extends Schema.Class<XAiPromptCompleteNotification>(
+  "XAiPromptCompleteNotification",
+)({
   sessionId: Schema.String,
   promptId: Schema.optional(Schema.String),
   stopReason: Schema.optional(Schema.String),
   agentResult: Schema.optional(Schema.NullOr(Schema.Unknown)),
-});
-
-type XAiPromptCompleteNotification = typeof XAiPromptCompleteNotification.Type;
+}) {}
 
 interface PendingXAiPromptCompletion {
   readonly sessionId: string;
@@ -311,12 +311,14 @@ const abortPendingPromptCompletions = (
         (entry) =>
           Deferred.succeed(
             entry.deferred,
-            promptResponseFromXAi({
-              sessionId: entry.sessionId,
-              promptId: entry.promptId,
-              stopReason: "cancelled",
-              agentResult: null,
-            }),
+            promptResponseFromXAi(
+              new XAiPromptCompleteNotification({
+                sessionId: entry.sessionId,
+                promptId: entry.promptId,
+                stopReason: "cancelled",
+                agentResult: null,
+              }),
+            ),
           ),
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),

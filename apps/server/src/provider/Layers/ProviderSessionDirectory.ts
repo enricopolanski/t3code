@@ -87,22 +87,26 @@ const makeProviderSessionDirectory = Effect.gen(function* () {
   const repository = yield* ProviderSessionRuntime.ProviderSessionRuntimeRepository;
 
   const getBinding = (threadId: ThreadId) =>
-    repository.getByThreadId({ threadId }).pipe(
-      Effect.mapError(toPersistenceError("ProviderSessionDirectory.getBinding:getByThreadId")),
-      Effect.flatMap((runtime) =>
-        Option.match(runtime, {
-          onNone: () => Effect.succeed(Option.none<ProviderRuntimeBinding>()),
-          onSome: (value) =>
-            toRuntimeBinding(value, "ProviderSessionDirectory.getBinding").pipe(
-              Effect.map((binding) => Option.some(binding)),
-            ),
-        }),
-      ),
-    );
+    repository
+      .getByThreadId(new ProviderSessionRuntime.GetProviderSessionRuntimeInput({ threadId }))
+      .pipe(
+        Effect.mapError(toPersistenceError("ProviderSessionDirectory.getBinding:getByThreadId")),
+        Effect.flatMap((runtime) =>
+          Option.match(runtime, {
+            onNone: () => Effect.succeed(Option.none<ProviderRuntimeBinding>()),
+            onSome: (value) =>
+              toRuntimeBinding(value, "ProviderSessionDirectory.getBinding").pipe(
+                Effect.map((binding) => Option.some(binding)),
+              ),
+          }),
+        ),
+      );
 
   const upsert: ProviderSessionDirectoryShape["upsert"] = Effect.fn(function* (binding) {
     const existing = yield* repository
-      .getByThreadId({ threadId: binding.threadId })
+      .getByThreadId(
+        new ProviderSessionRuntime.GetProviderSessionRuntimeInput({ threadId: binding.threadId }),
+      )
       .pipe(Effect.mapError(toPersistenceError("ProviderSessionDirectory.upsert:getByThreadId")));
 
     const existingRuntime = Option.getOrUndefined(existing);
@@ -126,25 +130,29 @@ const makeProviderSessionDirectory = Effect.gen(function* () {
       });
     }
     yield* repository
-      .upsert({
-        threadId: resolvedThreadId,
-        providerName: binding.provider,
-        providerInstanceId,
-        adapterKey:
-          binding.adapterKey ??
-          (providerChanged ? binding.provider : (existingRuntime?.adapterKey ?? binding.provider)),
-        runtimeMode: binding.runtimeMode ?? existingRuntime?.runtimeMode ?? "full-access",
-        status: binding.status ?? existingRuntime?.status ?? "running",
-        lastSeenAt: now,
-        resumeCursor:
-          binding.resumeCursor !== undefined
-            ? binding.resumeCursor
-            : (existingRuntime?.resumeCursor ?? null),
-        runtimePayload: mergeRuntimePayload(
-          existingRuntime?.runtimePayload ?? null,
-          binding.runtimePayload,
-        ),
-      })
+      .upsert(
+        new ProviderSessionRuntime.ProviderSessionRuntime({
+          threadId: resolvedThreadId,
+          providerName: binding.provider,
+          providerInstanceId,
+          adapterKey:
+            binding.adapterKey ??
+            (providerChanged
+              ? binding.provider
+              : (existingRuntime?.adapterKey ?? binding.provider)),
+          runtimeMode: binding.runtimeMode ?? existingRuntime?.runtimeMode ?? "full-access",
+          status: binding.status ?? existingRuntime?.status ?? "running",
+          lastSeenAt: now,
+          resumeCursor:
+            binding.resumeCursor !== undefined
+              ? binding.resumeCursor
+              : (existingRuntime?.resumeCursor ?? null),
+          runtimePayload: mergeRuntimePayload(
+            existingRuntime?.runtimePayload ?? null,
+            binding.runtimePayload,
+          ),
+        }),
+      )
       .pipe(Effect.mapError(toPersistenceError("ProviderSessionDirectory.upsert:upsert")));
   });
 

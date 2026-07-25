@@ -23,33 +23,35 @@ import type * as Effect from "effect/Effect";
 
 import type { ProjectionRepositoryError } from "../Errors.ts";
 
-export const ProjectionCheckpoint = Schema.Struct({
+export class ProjectionCheckpoint extends Schema.Class<ProjectionCheckpoint>(
+  "ProjectionCheckpoint",
+)({
   threadId: ThreadId,
   turnId: TurnId,
   checkpointTurnCount: NonNegativeInt,
   checkpointRef: CheckpointRef,
   status: OrchestrationCheckpointStatus,
-  files: Schema.Array(OrchestrationCheckpointFile),
+  files: Schema.fromJsonString(Schema.Array(OrchestrationCheckpointFile)),
   assistantMessageId: Schema.NullOr(MessageId),
   completedAt: IsoDateTime,
-});
-export type ProjectionCheckpoint = typeof ProjectionCheckpoint.Type;
+}) {}
 
-export const ListByThreadIdInput = Schema.Struct({
+export class ListByThreadIdInput extends Schema.Class<ListByThreadIdInput>("ListByThreadIdInput")({
   threadId: ThreadId,
-});
-export type ListByThreadIdInput = typeof ListByThreadIdInput.Type;
+}) {}
 
-export const GetByThreadAndTurnCountInput = Schema.Struct({
+export class GetByThreadAndTurnCountInput extends Schema.Class<GetByThreadAndTurnCountInput>(
+  "GetByThreadAndTurnCountInput",
+)({
   threadId: ThreadId,
   checkpointTurnCount: NonNegativeInt,
-});
-export type GetByThreadAndTurnCountInput = typeof GetByThreadAndTurnCountInput.Type;
+}) {}
 
-export const DeleteByThreadIdInput = Schema.Struct({
+export class DeleteByThreadIdInput extends Schema.Class<DeleteByThreadIdInput>(
+  "DeleteByThreadIdInput",
+)({
   threadId: ThreadId,
-});
-export type DeleteByThreadIdInput = typeof DeleteByThreadIdInput.Type;
+}) {}
 
 /**
  * ProjectionCheckpointRepositoryShape - Service API for projected checkpoints.

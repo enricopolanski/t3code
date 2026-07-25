@@ -14,17 +14,17 @@ import type * as Effect from "effect/Effect";
 
 import type { ProjectionRepositoryError } from "../Errors.ts";
 
-export const ProjectionState = Schema.Struct({
+export class ProjectionState extends Schema.Class<ProjectionState>("ProjectionState")({
   projector: Schema.String,
   lastAppliedSequence: NonNegativeInt,
   updatedAt: IsoDateTime,
-});
-export type ProjectionState = typeof ProjectionState.Type;
+}) {}
 
-export const GetProjectionStateInput = Schema.Struct({
+export class GetProjectionStateInput extends Schema.Class<GetProjectionStateInput>(
+  "GetProjectionStateInput",
+)({
   projector: Schema.String,
-});
-export type GetProjectionStateInput = typeof GetProjectionStateInput.Type;
+}) {}
 
 /**
  * ProjectionStateRepositoryShape - Service API for projector state records.

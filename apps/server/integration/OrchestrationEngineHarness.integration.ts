@@ -31,7 +31,10 @@ import { ProjectionPendingApprovalRepositoryLive } from "../src/persistence/Laye
 import { ProviderSessionRuntimeRepositoryLive } from "../src/persistence/Layers/ProviderSessionRuntime.ts";
 import { makeSqlitePersistenceLive } from "../src/persistence/Layers/Sqlite.ts";
 import { ProjectionCheckpointRepository } from "../src/persistence/Services/ProjectionCheckpoints.ts";
-import { ProjectionPendingApprovalRepository } from "../src/persistence/Services/ProjectionPendingApprovals.ts";
+import {
+  GetProjectionPendingApprovalInput,
+  ProjectionPendingApprovalRepository,
+} from "../src/persistence/Services/ProjectionPendingApprovals.ts";
 import { makeAdapterRegistryMock } from "../src/provider/testUtils/providerAdapterRegistryMock.ts";
 import { ProviderAdapterRegistry } from "../src/provider/Services/ProviderAdapterRegistry.ts";
 import { makeProviderRegistryLayer } from "../src/provider/testUtils/providerRegistryMock.ts";
@@ -460,7 +463,11 @@ export const makeOrchestrationIntegrationHarness = (
     ) =>
       waitFor(
         pendingApprovalRepository
-          .getByRequestId({ requestId: ApprovalRequestId.make(requestId) })
+          .getByRequestId(
+            new GetProjectionPendingApprovalInput({
+              requestId: ApprovalRequestId.make(requestId),
+            }),
+          )
           .pipe(
             Effect.map((row) =>
               Option.match(row, {

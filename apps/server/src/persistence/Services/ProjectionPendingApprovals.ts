@@ -21,7 +21,9 @@ import type * as Effect from "effect/Effect";
 
 import type { ProjectionRepositoryError } from "../Errors.ts";
 
-export const ProjectionPendingApproval = Schema.Struct({
+export class ProjectionPendingApproval extends Schema.Class<ProjectionPendingApproval>(
+  "ProjectionPendingApproval",
+)({
   requestId: ApprovalRequestId,
   threadId: ThreadId,
   turnId: Schema.NullOr(TurnId),
@@ -29,23 +31,25 @@ export const ProjectionPendingApproval = Schema.Struct({
   decision: ProjectionPendingApprovalDecision,
   createdAt: IsoDateTime,
   resolvedAt: Schema.NullOr(IsoDateTime),
-});
-export type ProjectionPendingApproval = typeof ProjectionPendingApproval.Type;
+}) {}
 
-export const ListProjectionPendingApprovalsInput = Schema.Struct({
+export class ListProjectionPendingApprovalsInput extends Schema.Class<ListProjectionPendingApprovalsInput>(
+  "ListProjectionPendingApprovalsInput",
+)({
   threadId: ThreadId,
-});
-export type ListProjectionPendingApprovalsInput = typeof ListProjectionPendingApprovalsInput.Type;
+}) {}
 
-export const GetProjectionPendingApprovalInput = Schema.Struct({
+export class GetProjectionPendingApprovalInput extends Schema.Class<GetProjectionPendingApprovalInput>(
+  "GetProjectionPendingApprovalInput",
+)({
   requestId: ApprovalRequestId,
-});
-export type GetProjectionPendingApprovalInput = typeof GetProjectionPendingApprovalInput.Type;
+}) {}
 
-export const DeleteProjectionPendingApprovalInput = Schema.Struct({
+export class DeleteProjectionPendingApprovalInput extends Schema.Class<DeleteProjectionPendingApprovalInput>(
+  "DeleteProjectionPendingApprovalInput",
+)({
   requestId: ApprovalRequestId,
-});
-export type DeleteProjectionPendingApprovalInput = typeof DeleteProjectionPendingApprovalInput.Type;
+}) {}
 
 /**
  * ProjectionPendingApprovalRepositoryShape - Service API for pending approvals.

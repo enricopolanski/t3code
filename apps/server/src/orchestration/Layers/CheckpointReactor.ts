@@ -29,7 +29,12 @@ import { ProviderService } from "../../provider/Services/ProviderService.ts";
 import { CheckpointReactor, type CheckpointReactorShape } from "../Services/CheckpointReactor.ts";
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../Services/ProjectionSnapshotQuery.ts";
-import { RuntimeReceiptBus } from "../Services/RuntimeReceiptBus.ts";
+import {
+  CheckpointBaselineCapturedReceipt,
+  CheckpointDiffFinalizedReceipt,
+  RuntimeReceiptBus,
+  TurnProcessingQuiescedReceipt,
+} from "../Services/RuntimeReceiptBus.ts";
 import type { CheckpointStoreError } from "../../checkpointing/Errors.ts";
 import type { OrchestrationDispatchError } from "../Errors.ts";
 import { isGitRepository } from "../../git/Utils.ts";
@@ -311,22 +316,26 @@ const make = Effect.gen(function* () {
       checkpointTurnCount: input.turnCount,
       createdAt: input.createdAt,
     });
-    yield* receiptBus.publish({
-      type: "checkpoint.diff.finalized",
-      threadId: input.threadId,
-      turnId: input.turnId,
-      checkpointTurnCount: input.turnCount,
-      checkpointRef: targetCheckpointRef,
-      status: input.status,
-      createdAt: input.createdAt,
-    });
-    yield* receiptBus.publish({
-      type: "turn.processing.quiesced",
-      threadId: input.threadId,
-      turnId: input.turnId,
-      checkpointTurnCount: input.turnCount,
-      createdAt: input.createdAt,
-    });
+    yield* receiptBus.publish(
+      new CheckpointDiffFinalizedReceipt({
+        type: "checkpoint.diff.finalized",
+        threadId: input.threadId,
+        turnId: input.turnId,
+        checkpointTurnCount: input.turnCount,
+        checkpointRef: targetCheckpointRef,
+        status: input.status,
+        createdAt: input.createdAt,
+      }),
+    );
+    yield* receiptBus.publish(
+      new TurnProcessingQuiescedReceipt({
+        type: "turn.processing.quiesced",
+        threadId: input.threadId,
+        turnId: input.turnId,
+        checkpointTurnCount: input.turnCount,
+        createdAt: input.createdAt,
+      }),
+    );
 
     yield* orchestrationEngine.dispatch({
       type: "thread.activity.append",
@@ -516,13 +525,15 @@ const make = Effect.gen(function* () {
         cwd: checkpointCwd,
         checkpointRef: baselineCheckpointRef,
       });
-      yield* receiptBus.publish({
-        type: "checkpoint.baseline.captured",
-        threadId: thread.id,
-        checkpointTurnCount: currentTurnCount,
-        checkpointRef: baselineCheckpointRef,
-        createdAt: event.createdAt,
-      });
+      yield* receiptBus.publish(
+        new CheckpointBaselineCapturedReceipt({
+          type: "checkpoint.baseline.captured",
+          threadId: thread.id,
+          checkpointTurnCount: currentTurnCount,
+          checkpointRef: baselineCheckpointRef,
+          createdAt: event.createdAt,
+        }),
+      );
     },
   );
 
@@ -598,13 +609,15 @@ const make = Effect.gen(function* () {
       cwd: checkpointCwd,
       checkpointRef: baselineCheckpointRef,
     });
-    yield* receiptBus.publish({
-      type: "checkpoint.baseline.captured",
-      threadId,
-      checkpointTurnCount: currentTurnCount,
-      checkpointRef: baselineCheckpointRef,
-      createdAt: event.occurredAt,
-    });
+    yield* receiptBus.publish(
+      new CheckpointBaselineCapturedReceipt({
+        type: "checkpoint.baseline.captured",
+        threadId,
+        checkpointTurnCount: currentTurnCount,
+        checkpointRef: baselineCheckpointRef,
+        createdAt: event.occurredAt,
+      }),
+    );
   });
 
   const handleRevertRequested = Effect.fn("handleRevertRequested")(function* (

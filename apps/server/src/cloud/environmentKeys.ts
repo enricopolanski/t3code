@@ -9,11 +9,10 @@ const CLOUD_LINK_KEY_PAIR = "cloud-link-ed25519-key-pair";
 const CLOUD_LINK_PRIVATE_KEY = "cloud-link-ed25519-private-key";
 const CLOUD_LINK_PUBLIC_KEY = "cloud-link-ed25519-public-key";
 
-const EnvironmentKeyPair = Schema.Struct({
+export class EnvironmentKeyPair extends Schema.Class<EnvironmentKeyPair>("EnvironmentKeyPair")({
   privateKey: Schema.String,
   publicKey: Schema.String,
-});
-type EnvironmentKeyPair = typeof EnvironmentKeyPair.Type;
+}) {}
 
 const EnvironmentKeyPairJson = Schema.fromJsonString(EnvironmentKeyPair);
 const decodeEnvironmentKeyPair = Schema.decodeUnknownEffect(EnvironmentKeyPairJson);
@@ -86,18 +85,24 @@ export const getOrCreateEnvironmentKeyPairFromSecretStore = Effect.fn(function* 
   const existingPrivate = yield* secrets.get(CLOUD_LINK_PRIVATE_KEY);
   const existingPublic = yield* secrets.get(CLOUD_LINK_PUBLIC_KEY);
   if (Option.isSome(existingPrivate) && Option.isSome(existingPublic)) {
-    return yield* persistEnvironmentKeyPair(secrets, {
-      privateKey: bytesToString(existingPrivate.value),
-      publicKey: bytesToString(existingPublic.value),
-    });
+    return yield* persistEnvironmentKeyPair(
+      secrets,
+      new EnvironmentKeyPair({
+        privateKey: bytesToString(existingPrivate.value),
+        publicKey: bytesToString(existingPublic.value),
+      }),
+    );
   }
 
   const keyPair = NodeCrypto.generateKeyPairSync("ed25519", {
     privateKeyEncoding: { format: "pem", type: "pkcs8" },
     publicKeyEncoding: { format: "pem", type: "spki" },
   });
-  return yield* persistEnvironmentKeyPair(secrets, {
-    privateKey: keyPair.privateKey,
-    publicKey: keyPair.publicKey,
-  });
+  return yield* persistEnvironmentKeyPair(
+    secrets,
+    new EnvironmentKeyPair({
+      privateKey: keyPair.privateKey,
+      publicKey: keyPair.publicKey,
+    }),
+  );
 });

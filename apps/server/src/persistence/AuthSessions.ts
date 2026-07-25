@@ -20,17 +20,18 @@ import {
   PersistenceSqlError,
 } from "./Errors.ts";
 
-export const AuthSessionClientMetadataRecord = Schema.Struct({
+class AuthSessionClientMetadataRecord extends Schema.Class<AuthSessionClientMetadataRecord>(
+  "AuthSessionClientMetadataRecord",
+)({
   label: Schema.NullOr(Schema.String),
   ipAddress: Schema.NullOr(Schema.String),
   userAgent: Schema.NullOr(Schema.String),
   deviceType: AuthClientMetadataDeviceType,
   os: Schema.NullOr(Schema.String),
   browser: Schema.NullOr(Schema.String),
-});
-export type AuthSessionClientMetadataRecord = typeof AuthSessionClientMetadataRecord.Type;
+}) {}
 
-export const AuthSessionRecord = Schema.Struct({
+class AuthSessionRecord extends Schema.Class<AuthSessionRecord>("AuthSessionRecord")({
   sessionId: AuthSessionId,
   subject: Schema.String,
   scopes: AuthEnvironmentScopes,
@@ -40,10 +41,11 @@ export const AuthSessionRecord = Schema.Struct({
   expiresAt: Schema.DateTimeUtcFromString,
   lastConnectedAt: Schema.NullOr(Schema.DateTimeUtcFromString),
   revokedAt: Schema.NullOr(Schema.DateTimeUtcFromString),
-});
-export type AuthSessionRecord = typeof AuthSessionRecord.Type;
+}) {}
 
-export const CreateAuthSessionInput = Schema.Struct({
+export class CreateAuthSessionInput extends Schema.Class<CreateAuthSessionInput>(
+  "CreateAuthSessionInput",
+)({
   sessionId: AuthSessionId,
   subject: Schema.String,
   scopes: AuthEnvironmentScopes,
@@ -51,36 +53,40 @@ export const CreateAuthSessionInput = Schema.Struct({
   client: AuthSessionClientMetadataRecord,
   issuedAt: Schema.DateTimeUtcFromString,
   expiresAt: Schema.DateTimeUtcFromString,
-});
-export type CreateAuthSessionInput = typeof CreateAuthSessionInput.Type;
+}) {}
 
-export const GetAuthSessionByIdInput = Schema.Struct({
+export class GetAuthSessionByIdInput extends Schema.Class<GetAuthSessionByIdInput>(
+  "GetAuthSessionByIdInput",
+)({
   sessionId: AuthSessionId,
-});
-export type GetAuthSessionByIdInput = typeof GetAuthSessionByIdInput.Type;
+}) {}
 
-export const ListActiveAuthSessionsInput = Schema.Struct({
+export class ListActiveAuthSessionsInput extends Schema.Class<ListActiveAuthSessionsInput>(
+  "ListActiveAuthSessionsInput",
+)({
   now: Schema.DateTimeUtcFromString,
-});
-export type ListActiveAuthSessionsInput = typeof ListActiveAuthSessionsInput.Type;
+}) {}
 
-export const RevokeAuthSessionInput = Schema.Struct({
+export class RevokeAuthSessionInput extends Schema.Class<RevokeAuthSessionInput>(
+  "RevokeAuthSessionInput",
+)({
   sessionId: AuthSessionId,
   revokedAt: Schema.DateTimeUtcFromString,
-});
-export type RevokeAuthSessionInput = typeof RevokeAuthSessionInput.Type;
+}) {}
 
-export const RevokeOtherAuthSessionsInput = Schema.Struct({
+export class RevokeOtherAuthSessionsInput extends Schema.Class<RevokeOtherAuthSessionsInput>(
+  "RevokeOtherAuthSessionsInput",
+)({
   currentSessionId: AuthSessionId,
   revokedAt: Schema.DateTimeUtcFromString,
-});
-export type RevokeOtherAuthSessionsInput = typeof RevokeOtherAuthSessionsInput.Type;
+}) {}
 
-export const SetAuthSessionLastConnectedAtInput = Schema.Struct({
+export class SetAuthSessionLastConnectedAtInput extends Schema.Class<SetAuthSessionLastConnectedAtInput>(
+  "SetAuthSessionLastConnectedAtInput",
+)({
   sessionId: AuthSessionId,
   lastConnectedAt: Schema.DateTimeUtcFromString,
-});
-export type SetAuthSessionLastConnectedAtInput = typeof SetAuthSessionLastConnectedAtInput.Type;
+}) {}
 
 export class AuthSessionRepository extends Context.Service<
   AuthSessionRepository,

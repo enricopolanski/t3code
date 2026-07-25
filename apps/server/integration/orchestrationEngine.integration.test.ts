@@ -31,10 +31,15 @@ import {
   type OrchestrationIntegrationHarness,
 } from "./OrchestrationEngineHarness.integration.ts";
 import { checkpointRefForThreadTurn } from "../src/checkpointing/Utils.ts";
-import type {
-  CheckpointDiffFinalizedReceipt,
-  TurnProcessingQuiescedReceipt,
+import {
+  CheckpointBaselineCapturedReceipt,
+  type CheckpointDiffFinalizedReceipt,
+  type TurnProcessingQuiescedReceipt,
 } from "../src/orchestration/Services/RuntimeReceiptBus.ts";
+import {
+  GetByThreadAndTurnCountInput,
+  ListByThreadIdInput,
+} from "../src/persistence/Services/ProjectionCheckpoints.ts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 
 const asMessageId = (value: string): MessageId => MessageId.make(value);
@@ -219,6 +224,14 @@ it.live("runs a single turn end-to-end and persists checkpoint state in sqlite +
         messageId: "msg-user-single",
         text: "Say hello",
       });
+      const baselineReceipt = yield* harness.waitForReceipt(
+        (receipt): receipt is CheckpointBaselineCapturedReceipt =>
+          receipt.type === "checkpoint.baseline.captured" &&
+          receipt.threadId === THREAD_ID &&
+          receipt.checkpointTurnCount === 0,
+      );
+      assert.instanceOf(baselineReceipt, CheckpointBaselineCapturedReceipt);
+
       const finalizedReceipt = yield* harness.waitForReceipt(
         (receipt): receipt is CheckpointDiffFinalizedReceipt =>
           receipt.type === "checkpoint.diff.finalized" &&
@@ -248,9 +261,11 @@ it.live("runs a single turn end-to-end and persists checkpoint state in sqlite +
       assert.equal(thread.checkpoints[0]?.status, "ready");
       assert.equal(thread.checkpoints[0]?.checkpointTurnCount, 1);
 
-      const checkpointRows = yield* harness.checkpointRepository.listByThreadId({
-        threadId: THREAD_ID,
-      });
+      const checkpointRows = yield* harness.checkpointRepository.listByThreadId(
+        new ListByThreadIdInput({
+          threadId: THREAD_ID,
+        }),
+      );
       assert.equal(checkpointRows.length, 1);
       assert.equal(checkpointRows[0]?.checkpointTurnCount, 1);
       assert.equal(checkpointRows[0]?.status, "ready");
@@ -498,9 +513,11 @@ it.live("runs multi-turn file edits and persists checkpoint diffs", () =>
         true,
       );
 
-      const checkpointRows = yield* harness.checkpointRepository.listByThreadId({
-        threadId: THREAD_ID,
-      });
+      const checkpointRows = yield* harness.checkpointRepository.listByThreadId(
+        new ListByThreadIdInput({
+          threadId: THREAD_ID,
+        }),
+      );
       assert.deepEqual(
         checkpointRows.map((row) => row.checkpointTurnCount),
         [1, 2],
@@ -688,10 +705,12 @@ it.live("records failed turn runtime state and checkpoint status as error", () =
       assert.equal(thread.session?.status, "error");
       assert.equal(thread.checkpoints[0]?.status, "error");
 
-      const checkpointRow = yield* harness.checkpointRepository.getByThreadAndTurnCount({
-        threadId: THREAD_ID,
-        checkpointTurnCount: 1,
-      });
+      const checkpointRow = yield* harness.checkpointRepository.getByThreadAndTurnCount(
+        new GetByThreadAndTurnCountInput({
+          threadId: THREAD_ID,
+          checkpointTurnCount: 1,
+        }),
+      );
       assert.equal(Option.isSome(checkpointRow), true);
       if (Option.isSome(checkpointRow)) {
         assert.equal(checkpointRow.value.status, "error");
@@ -879,9 +898,11 @@ it.live("reverts to an earlier checkpoint and trims checkpoint projections + git
       );
       assert.deepEqual(harness.adapterHarness!.getRollbackCalls(THREAD_ID), [1]);
 
-      const checkpointRows = yield* harness.checkpointRepository.listByThreadId({
-        threadId: THREAD_ID,
-      });
+      const checkpointRows = yield* harness.checkpointRepository.listByThreadId(
+        new ListByThreadIdInput({
+          threadId: THREAD_ID,
+        }),
+      );
       assert.equal(checkpointRows.length, 1);
     }),
   ),

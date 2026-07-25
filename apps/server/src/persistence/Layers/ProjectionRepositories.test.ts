@@ -8,8 +8,16 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { SqlitePersistenceMemory } from "./Sqlite.ts";
 import { ProjectionProjectRepositoryLive } from "./ProjectionProjects.ts";
 import { ProjectionThreadRepositoryLive } from "./ProjectionThreads.ts";
-import { ProjectionProjectRepository } from "../Services/ProjectionProjects.ts";
-import { ProjectionThreadRepository } from "../Services/ProjectionThreads.ts";
+import {
+  GetProjectionProjectInput,
+  ProjectionProject,
+  ProjectionProjectRepository,
+} from "../Services/ProjectionProjects.ts";
+import {
+  GetProjectionThreadInput,
+  ProjectionThread,
+  ProjectionThreadRepository,
+} from "../Services/ProjectionThreads.ts";
 
 const projectionRepositoriesLayer = it.layer(
   Layer.mergeAll(
@@ -25,19 +33,21 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
       const projects = yield* ProjectionProjectRepository;
       const sql = yield* SqlClient.SqlClient;
 
-      yield* projects.upsert({
-        projectId: ProjectId.make("project-null-options"),
-        title: "Null options project",
-        workspaceRoot: "/tmp/project-null-options",
-        defaultModelSelection: {
-          instanceId: ProviderInstanceId.make("codex"),
-          model: "gpt-5.4",
-        },
-        scripts: [],
-        createdAt: "2026-03-24T00:00:00.000Z",
-        updatedAt: "2026-03-24T00:00:00.000Z",
-        deletedAt: null,
-      });
+      yield* projects.upsert(
+        new ProjectionProject({
+          projectId: ProjectId.make("project-null-options"),
+          title: "Null options project",
+          workspaceRoot: "/tmp/project-null-options",
+          defaultModelSelection: {
+            instanceId: ProviderInstanceId.make("codex"),
+            model: "gpt-5.4",
+          },
+          scripts: [],
+          createdAt: "2026-03-24T00:00:00.000Z",
+          updatedAt: "2026-03-24T00:00:00.000Z",
+          deletedAt: null,
+        }),
+      );
 
       const rows = yield* sql<{
         readonly defaultModelSelection: string | null;
@@ -60,9 +70,11 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
         }),
       );
 
-      const persisted = yield* projects.getById({
-        projectId: ProjectId.make("project-null-options"),
-      });
+      const persisted = yield* projects.getById(
+        new GetProjectionProjectInput({
+          projectId: ProjectId.make("project-null-options"),
+        }),
+      );
       assert.deepStrictEqual(Option.getOrNull(persisted)?.defaultModelSelection, {
         instanceId: ProviderInstanceId.make("codex"),
         model: "gpt-5.4",
@@ -75,32 +87,34 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
       const threads = yield* ProjectionThreadRepository;
       const sql = yield* SqlClient.SqlClient;
 
-      yield* threads.upsert({
-        threadId: ThreadId.make("thread-null-options"),
-        projectId: ProjectId.make("project-null-options"),
-        title: "Null options thread",
-        modelSelection: {
-          instanceId: ProviderInstanceId.make("claudeAgent"),
-          model: "claude-opus-4-6",
-        },
-        runtimeMode: "full-access",
-        interactionMode: "default",
-        branch: null,
-        worktreePath: null,
-        latestTurnId: null,
-        createdAt: "2026-03-24T00:00:00.000Z",
-        updatedAt: "2026-03-24T00:00:00.000Z",
-        archivedAt: null,
-        settledOverride: null,
-        settledAt: null,
-        snoozedUntil: null,
-        snoozedAt: null,
-        latestUserMessageAt: null,
-        pendingApprovalCount: 0,
-        pendingUserInputCount: 0,
-        hasActionableProposedPlan: 0,
-        deletedAt: null,
-      });
+      yield* threads.upsert(
+        new ProjectionThread({
+          threadId: ThreadId.make("thread-null-options"),
+          projectId: ProjectId.make("project-null-options"),
+          title: "Null options thread",
+          modelSelection: {
+            instanceId: ProviderInstanceId.make("claudeAgent"),
+            model: "claude-opus-4-6",
+          },
+          runtimeMode: "full-access",
+          interactionMode: "default",
+          branch: null,
+          worktreePath: null,
+          latestTurnId: null,
+          createdAt: "2026-03-24T00:00:00.000Z",
+          updatedAt: "2026-03-24T00:00:00.000Z",
+          archivedAt: null,
+          settledOverride: null,
+          settledAt: null,
+          snoozedUntil: null,
+          snoozedAt: null,
+          latestUserMessageAt: null,
+          pendingApprovalCount: 0,
+          pendingUserInputCount: 0,
+          hasActionableProposedPlan: 0,
+          deletedAt: null,
+        }),
+      );
 
       const rows = yield* sql<{
         readonly modelSelection: string | null;
@@ -123,9 +137,11 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
         }),
       );
 
-      const persisted = yield* threads.getById({
-        threadId: ThreadId.make("thread-null-options"),
-      });
+      const persisted = yield* threads.getById(
+        new GetProjectionThreadInput({
+          threadId: ThreadId.make("thread-null-options"),
+        }),
+      );
       assert.deepStrictEqual(Option.getOrNull(persisted)?.modelSelection, {
         instanceId: ProviderInstanceId.make("claudeAgent"),
         model: "claude-opus-4-6",
@@ -137,36 +153,40 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
     Effect.gen(function* () {
       const threads = yield* ProjectionThreadRepository;
 
-      yield* threads.upsert({
-        threadId: ThreadId.make("thread-settled"),
-        projectId: ProjectId.make("project-1"),
-        title: "Settled thread",
-        modelSelection: {
-          instanceId: ProviderInstanceId.make("codex"),
-          model: "gpt-5.4",
-        },
-        runtimeMode: "full-access",
-        interactionMode: "default",
-        branch: null,
-        worktreePath: null,
-        latestTurnId: null,
-        createdAt: "2026-03-24T00:00:00.000Z",
-        updatedAt: "2026-03-25T00:00:00.000Z",
-        archivedAt: null,
-        settledOverride: "settled",
-        settledAt: "2026-03-25T00:00:00.000Z",
-        snoozedUntil: "2026-03-26T09:00:00.000Z",
-        snoozedAt: "2026-03-25T00:00:00.000Z",
-        latestUserMessageAt: null,
-        pendingApprovalCount: 0,
-        pendingUserInputCount: 0,
-        hasActionableProposedPlan: 0,
-        deletedAt: null,
-      });
+      yield* threads.upsert(
+        new ProjectionThread({
+          threadId: ThreadId.make("thread-settled"),
+          projectId: ProjectId.make("project-1"),
+          title: "Settled thread",
+          modelSelection: {
+            instanceId: ProviderInstanceId.make("codex"),
+            model: "gpt-5.4",
+          },
+          runtimeMode: "full-access",
+          interactionMode: "default",
+          branch: null,
+          worktreePath: null,
+          latestTurnId: null,
+          createdAt: "2026-03-24T00:00:00.000Z",
+          updatedAt: "2026-03-25T00:00:00.000Z",
+          archivedAt: null,
+          settledOverride: "settled",
+          settledAt: "2026-03-25T00:00:00.000Z",
+          snoozedUntil: "2026-03-26T09:00:00.000Z",
+          snoozedAt: "2026-03-25T00:00:00.000Z",
+          latestUserMessageAt: null,
+          pendingApprovalCount: 0,
+          pendingUserInputCount: 0,
+          hasActionableProposedPlan: 0,
+          deletedAt: null,
+        }),
+      );
 
-      const persisted = yield* threads.getById({
-        threadId: ThreadId.make("thread-settled"),
-      });
+      const persisted = yield* threads.getById(
+        new GetProjectionThreadInput({
+          threadId: ThreadId.make("thread-settled"),
+        }),
+      );
       const row = Option.getOrNull(persisted);
       if (!row) {
         return yield* Effect.die("Expected settled projection_threads row to exist.");
@@ -178,16 +198,20 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
 
       // Un-settle to the keep-active pin and wake the snooze; confirm the
       // flips persist.
-      yield* threads.upsert({
-        ...row,
-        settledOverride: "active",
-        settledAt: null,
-        snoozedUntil: null,
-        snoozedAt: null,
-      });
-      const repersisted = yield* threads.getById({
-        threadId: ThreadId.make("thread-settled"),
-      });
+      yield* threads.upsert(
+        new ProjectionThread({
+          ...row,
+          settledOverride: "active",
+          settledAt: null,
+          snoozedUntil: null,
+          snoozedAt: null,
+        }),
+      );
+      const repersisted = yield* threads.getById(
+        new GetProjectionThreadInput({
+          threadId: ThreadId.make("thread-settled"),
+        }),
+      );
       const updated = Option.getOrNull(repersisted);
       assert.strictEqual(updated?.settledOverride, "active");
       assert.strictEqual(updated?.settledAt, null);

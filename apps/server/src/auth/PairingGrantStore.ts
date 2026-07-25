@@ -334,7 +334,9 @@ export const make = Effect.gen(function* () {
   )(
     function* () {
       const now = yield* DateTime.now;
-      const rows = yield* pairingLinks.listActive({ now });
+      const rows = yield* pairingLinks.listActive(
+        new AuthPairingLinks.ListActiveAuthPairingLinksInput({ now }),
+      );
 
       return rows.map((row) =>
         row.label
@@ -364,10 +366,12 @@ export const make = Effect.gen(function* () {
     function* (id) {
       const revokedAt = yield* DateTime.now;
       const revoked = yield* pairingLinks
-        .revoke({
-          id,
-          revokedAt,
-        })
+        .revoke(
+          new AuthPairingLinks.RevokeAuthPairingLinkInput({
+            id,
+            revokedAt,
+          }),
+        )
         .pipe(Effect.mapError((cause) => new PairingLinkRevokeError({ pairingLinkId: id, cause })));
       if (revoked) {
         yield* emitRemoved(id);
@@ -400,17 +404,19 @@ export const make = Effect.gen(function* () {
     };
     const subject = input?.subject ?? "one-time-token";
     yield* pairingLinks
-      .create({
-        id,
-        credential,
-        method: "one-time-token",
-        scopes: input?.scopes ?? AuthStandardClientScopes,
-        subject,
-        label: input?.label ?? null,
-        proofKeyThumbprint: input?.proofKeyThumbprint ?? null,
-        createdAt: now,
-        expiresAt: expiresAt,
-      })
+      .create(
+        new AuthPairingLinks.CreateAuthPairingLinkInput({
+          id,
+          credential,
+          method: "one-time-token",
+          scopes: input?.scopes ?? AuthStandardClientScopes,
+          subject,
+          label: input?.label ?? null,
+          proofKeyThumbprint: input?.proofKeyThumbprint ?? null,
+          createdAt: now,
+          expiresAt: expiresAt,
+        }),
+      )
       .pipe(
         Effect.mapError(
           (cause) =>
@@ -515,12 +521,14 @@ export const make = Effect.gen(function* () {
       }
 
       const consumed = yield* pairingLinks
-        .consumeAvailable({
-          credential,
-          proofKeyThumbprint: input?.proofKeyThumbprint ?? null,
-          consumedAt: now,
-          now,
-        })
+        .consumeAvailable(
+          new AuthPairingLinks.ConsumeAuthPairingLinkInput({
+            credential,
+            proofKeyThumbprint: input?.proofKeyThumbprint ?? null,
+            consumedAt: now,
+            now,
+          }),
+        )
         .pipe(Effect.mapError((cause) => new BootstrapCredentialConsumeAvailableError({ cause })));
 
       if (Option.isSome(consumed)) {
@@ -538,7 +546,7 @@ export const make = Effect.gen(function* () {
       }
 
       const matching = yield* pairingLinks
-        .getByCredential({ credential })
+        .getByCredential(new AuthPairingLinks.GetAuthPairingLinkByCredentialInput({ credential }))
         .pipe(Effect.mapError((cause) => new BootstrapCredentialLookupError({ cause })));
       if (Option.isNone(matching)) {
         return yield* new UnknownBootstrapCredentialError({});

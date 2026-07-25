@@ -27,14 +27,14 @@ describe("serverRuntimeState", () => {
         prefix: "t3-server-runtime-state-test-",
       });
       const statePath = path.join(root, "runtime", "server.json");
-      const state: ServerRuntimeState.PersistedServerRuntimeState = {
+      const state = new ServerRuntimeState.PersistedServerRuntimeState({
         version: 1,
         pid: 123,
         host: "127.0.0.1",
         port: 4_971,
         origin: "http://127.0.0.1:4971",
         startedAt: "2026-06-20T00:00:00.000Z",
-      };
+      });
 
       yield* ServerRuntimeState.persistServerRuntimeState({ path: statePath, state });
       const restored = yield* ServerRuntimeState.readPersistedServerRuntimeState(statePath);
@@ -146,13 +146,13 @@ describe("serverRuntimeState", () => {
 
       const error = yield* ServerRuntimeState.persistServerRuntimeState({
         path: statePath,
-        state: {
+        state: new ServerRuntimeState.PersistedServerRuntimeState({
           version: 1,
           pid: 123,
           port: 4_971,
           origin: "http://127.0.0.1:4971",
           startedAt: "2026-06-20T00:00:00.000Z",
-        },
+        }),
       }).pipe(Effect.flip);
 
       assert.isTrue(isServerRuntimeStateError(error));

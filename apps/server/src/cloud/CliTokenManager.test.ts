@@ -14,6 +14,8 @@ import * as Terminal from "effect/Terminal";
 import * as HttpClient from "effect/unstable/http/HttpClient";
 import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse";
 
+import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
+import * as ExternalLauncher from "../process/externalLauncher.ts";
 import * as CliTokenManager from "./CliTokenManager.ts";
 import type { OutOfBandOAuthPromptInput } from "./CliTokenManager.ts";
 
@@ -81,6 +83,94 @@ const makeTokenEndpointLayer = (
       }),
     ),
   );
+
+// Clerk omits id_token on refresh grants, so this response has no identity to derive.
+const TestRefreshResponseJson = Schema.fromJsonString(
+  Schema.Struct({
+    access_token: Schema.String,
+    refresh_token: Schema.String,
+    expires_in: Schema.Number,
+    token_type: Schema.String,
+  }),
+);
+const encodeTestRefreshResponse = Schema.encodeSync(TestRefreshResponseJson);
+
+const makeTokenEndpointLayerWithoutIdToken = (requests: Array<RecordedTokenRequest>) =>
+  Layer.succeed(
+    HttpClient.HttpClient,
+    HttpClient.make((request) =>
+      Effect.sync(() => {
+        const body =
+          request.body._tag === "Uint8Array" ? new TextDecoder().decode(request.body.body) : "";
+        requests.push({ url: request.url, params: new URLSearchParams(body) });
+        return HttpClientResponse.fromWeb(
+          request,
+          new Response(
+            encodeTestRefreshResponse({
+              access_token: "access-token-1",
+              refresh_token: "refresh-token-1",
+              expires_in: 3600,
+              token_type: "bearer",
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          ),
+        );
+      }),
+    ),
+  );
+
+// Mirrors the private constant and PersistedToken shape in CliTokenManager.ts; the module
+// exports neither. Structural here on purpose -- the test asserts on the persisted bytes,
+// not on the class identity.
+const CLOUD_CLI_OAUTH_TOKEN_SECRET = "cloud-cli-oauth-token";
+
+const TestPersistedTokenJson = Schema.fromJsonString(
+  Schema.Struct({
+    accessToken: Schema.String,
+    refreshToken: Schema.String,
+    expiresAtEpochMs: Schema.Number,
+    identity: Schema.optional(Schema.String),
+  }),
+);
+const encodeTestPersistedToken = Schema.encodeSync(TestPersistedTokenJson);
+const decodeTestPersistedToken = Schema.decodeSync(TestPersistedTokenJson);
+
+function makeMemorySecretStore() {
+  const values = new Map<string, Uint8Array>();
+  const store = {
+    get: ((name) =>
+      Effect.sync(() => {
+        const value = values.get(name);
+        return value === undefined ? Option.none() : Option.some(Uint8Array.from(value));
+      })) satisfies ServerSecretStore.ServerSecretStore["Service"]["get"],
+    set: ((name, value) =>
+      Effect.sync(() => {
+        values.set(name, Uint8Array.from(value));
+      })) satisfies ServerSecretStore.ServerSecretStore["Service"]["set"],
+    create: ((name, value) =>
+      Effect.sync(() => {
+        values.set(name, Uint8Array.from(value));
+      })) satisfies ServerSecretStore.ServerSecretStore["Service"]["create"],
+    getOrCreateRandom: ((name, bytes) =>
+      Effect.sync(() => {
+        const existing = values.get(name);
+        if (existing) {
+          return existing;
+        }
+        const generated = new Uint8Array(bytes);
+        values.set(name, generated);
+        return generated;
+      })) satisfies ServerSecretStore.ServerSecretStore["Service"]["getOrCreateRandom"],
+    remove: ((name) =>
+      Effect.sync(() => {
+        values.delete(name);
+      })) satisfies ServerSecretStore.ServerSecretStore["Service"]["remove"],
+  } satisfies ServerSecretStore.ServerSecretStore["Service"];
+  return {
+    store,
+    setString: (name: string, value: string) => store.set(name, new TextEncoder().encode(value)),
+  };
+}
 
 const provideTestEnv = Effect.provide(
   ConfigProvider.layer(ConfigProvider.fromEnv({ env: TEST_ENV })),
@@ -259,6 +349,73 @@ it.layer(NodeServices.layer)("CliTokenManager.outOfBandOAuthLogin", (it) => {
 
       assert.lengthOf(requests, 0);
       assert.isTrue(isAuthorizationError(result));
+    }),
+  );
+});
+
+// Refresh responses legitimately omit id_token, so the stored identity has to be carried
+// forward onto the refreshed token. That carry-forward is the one branch that rebuilds the
+// token from a spread, and spreading a Schema.Class yields a plain object that the encode in
+// persist() rejects nominally -- while still typechecking. Only an end-to-end getExisting
+// exercises it, because persist is internal.
+it.layer(NodeServices.layer)("CliTokenManager.getExisting", (it) => {
+  it.effect("carries the stored identity onto a refreshed token that omits id_token", () =>
+    Effect.gen(function* () {
+      const requests: Array<RecordedTokenRequest> = [];
+      const secrets = makeMemorySecretStore();
+      // expiresAtEpochMs 0 forces the refresh branch rather than returning the stored token.
+      yield* secrets.setString(
+        CLOUD_CLI_OAUTH_TOKEN_SECRET,
+        encodeTestPersistedToken({
+          accessToken: "access-token-0",
+          refreshToken: "refresh-token-0",
+          expiresAtEpochMs: 0,
+          identity: "theo@example.test",
+        }),
+      );
+
+      const token = yield* Effect.gen(function* () {
+        const manager = yield* CliTokenManager.CloudCliTokenManager;
+        return yield* manager.getExisting;
+      }).pipe(
+        Effect.provide(
+          CliTokenManager.layer.pipe(
+            Layer.provide([
+              makeTokenEndpointLayerWithoutIdToken(requests),
+              Layer.succeed(ServerSecretStore.ServerSecretStore, secrets.store),
+              Layer.succeed(ExternalLauncher.ExternalLauncher, {
+                resolveAvailableEditors: () => Effect.succeed([]),
+                launchBrowser: () => Effect.void,
+                launchEditor: () => Effect.void,
+              }),
+            ]),
+          ),
+        ),
+        provideTestEnv,
+      );
+
+      assert.isTrue(Option.isSome(token));
+      const refreshed = Option.getOrThrow(token);
+      assert.equal(refreshed.accessToken, "access-token-1");
+      assert.equal(refreshed.identity, "theo@example.test");
+
+      assert.lengthOf(requests, 1);
+      assert.equal(requests[0]!.params.get("grant_type"), "refresh_token");
+      assert.equal(requests[0]!.params.get("refresh_token"), "refresh-token-0");
+
+      // The refreshed token must have round-tripped through persist()'s encode. Reading it
+      // back is what would have caught the plain-object regression.
+      const stored = yield* secrets.store.get(CLOUD_CLI_OAUTH_TOKEN_SECRET);
+      assert.isTrue(Option.isSome(stored));
+      const persisted = decodeTestPersistedToken(
+        new TextDecoder().decode(Option.getOrThrow(stored)),
+      );
+      assert.deepStrictEqual(persisted, {
+        accessToken: "access-token-1",
+        refreshToken: "refresh-token-1",
+        expiresAtEpochMs: refreshed.expiresAtEpochMs,
+        identity: "theo@example.test",
+      });
     }),
   );
 });
