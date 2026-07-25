@@ -297,6 +297,37 @@ describe("OrchestrationEngine", () => {
     await system.dispose();
   });
 
+  it("returns the persisted result without appending events for a repeated command id", async () => {
+    const system = await createOrchestrationSystem();
+    const { engine } = system;
+    const command = {
+      type: "project.create" as const,
+      commandId: CommandId.make("cmd-project-idempotent-create"),
+      projectId: asProjectId("project-idempotent"),
+      title: "Idempotent Project",
+      workspaceRoot: "/tmp/project-idempotent",
+      defaultModelSelection: {
+        instanceId: ProviderInstanceId.make("codex"),
+        model: "gpt-5-codex",
+      },
+      createdAt: now(),
+    };
+
+    const firstResult = await system.run(engine.dispatch(command));
+    const repeatedResult = await system.run(engine.dispatch(command));
+    const events = await system.run(
+      Stream.runCollect(engine.readEvents(0)).pipe(
+        Effect.map((chunk): OrchestrationEvent[] => Array.from(chunk)),
+      ),
+    );
+
+    expect(repeatedResult).toEqual(firstResult);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.commandId).toBe(command.commandId);
+
+    await system.dispose();
+  });
+
   it("archives and unarchives threads through orchestration commands", async () => {
     const system = await createOrchestrationSystem();
     const { engine } = system;

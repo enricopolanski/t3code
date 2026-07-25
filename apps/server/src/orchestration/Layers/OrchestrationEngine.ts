@@ -31,7 +31,6 @@ import {
 import { toPersistenceSqlError } from "../../persistence/Errors.ts";
 import { OrchestrationEventStore } from "../../persistence/Services/OrchestrationEventStore.ts";
 import {
-  GetByCommandIdInput,
   OrchestrationCommandReceipt,
   OrchestrationCommandReceiptRepository,
 } from "../../persistence/Services/OrchestrationCommandReceipts.ts";
@@ -140,9 +139,7 @@ const makeOrchestrationEngine = Effect.gen(function* () {
         });
 
         const existingReceipt = yield* commandReceiptRepository.getByCommandId(
-          new GetByCommandIdInput({
-            commandId: envelope.command.commandId,
-          }),
+          envelope.command.commandId,
         );
         if (Option.isSome(existingReceipt)) {
           if (existingReceipt.value.status === "accepted") {

@@ -1,3 +1,4 @@
+import { CommandId } from "@t3tools/contracts";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";
 import * as Effect from "effect/Effect";
@@ -6,7 +7,6 @@ import * as Layer from "effect/Layer";
 import { toPersistenceSqlError } from "../Errors.ts";
 
 import {
-  GetByCommandIdInput,
   OrchestrationCommandReceipt,
   OrchestrationCommandReceiptRepository,
   type OrchestrationCommandReceiptRepositoryShape,
@@ -49,9 +49,9 @@ const makeOrchestrationCommandReceiptRepository = Effect.gen(function* () {
   });
 
   const findReceiptByCommandId = SqlSchema.findOneOption({
-    Request: GetByCommandIdInput,
+    Request: CommandId,
     Result: OrchestrationCommandReceipt,
-    execute: ({ commandId }) =>
+    execute: (commandId) =>
       sql`
         SELECT
           command_id AS "commandId",
@@ -71,8 +71,10 @@ const makeOrchestrationCommandReceiptRepository = Effect.gen(function* () {
       Effect.mapError(toPersistenceSqlError("OrchestrationCommandReceiptRepository.upsert:query")),
     );
 
-  const getByCommandId: OrchestrationCommandReceiptRepositoryShape["getByCommandId"] = (input) =>
-    findReceiptByCommandId(input).pipe(
+  const getByCommandId: OrchestrationCommandReceiptRepositoryShape["getByCommandId"] = (
+    commandId,
+  ) =>
+    findReceiptByCommandId(commandId).pipe(
       Effect.mapError(
         toPersistenceSqlError("OrchestrationCommandReceiptRepository.getByCommandId:query"),
       ),

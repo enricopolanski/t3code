@@ -34,10 +34,6 @@ export class OrchestrationCommandReceipt extends Schema.Class<OrchestrationComma
   error: Schema.NullOr(Schema.String),
 }) {}
 
-export class GetByCommandIdInput extends Schema.Class<GetByCommandIdInput>("GetByCommandIdInput")({
-  commandId: CommandId,
-}) {}
-
 /**
  * OrchestrationCommandReceiptRepositoryShape - Service API for command receipts.
  */
@@ -55,7 +51,7 @@ export interface OrchestrationCommandReceiptRepositoryShape {
    * Read a command receipt by command id.
    */
   readonly getByCommandId: (
-    input: GetByCommandIdInput,
+    commandId: CommandId,
   ) => Effect.Effect<
     Option.Option<OrchestrationCommandReceipt>,
     OrchestrationCommandReceiptRepositoryError
