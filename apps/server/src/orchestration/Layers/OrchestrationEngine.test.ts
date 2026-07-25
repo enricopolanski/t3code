@@ -21,12 +21,8 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { PersistenceSqlError } from "../../persistence/Errors.ts";
 import { OrchestrationCommandReceiptRepository } from "../../persistence/Services/OrchestrationCommandReceipts.ts";
-import { OrchestrationEventStoreLive } from "../../persistence/Layers/OrchestrationEventStore.ts";
 import { SqlitePersistenceMemory } from "../../persistence/Layers/Sqlite.ts";
-import {
-  OrchestrationEventStore,
-  type OrchestrationEventStoreShape,
-} from "../../persistence/Services/OrchestrationEventStore.ts";
+import { OrchestrationEventStore } from "../../persistence/Services/OrchestrationEventStore.ts";
 import * as RepositoryIdentityResolver from "../../project/RepositoryIdentityResolver.ts";
 import { OrchestrationEngineLive } from "./OrchestrationEngine.ts";
 import { OrchestrationProjectionPipelineLive } from "./ProjectionPipeline.ts";
@@ -38,6 +34,8 @@ import {
 } from "../Services/ProjectionPipeline.ts";
 import { ProjectionSnapshotQuery } from "../Services/ProjectionSnapshotQuery.ts";
 import { ServerConfig } from "../../config.ts";
+
+type EventStoreService = OrchestrationEventStore["Service"];
 
 const asProjectId = (value: string): ProjectId => ProjectId.make(value);
 const asMessageId = (value: string): MessageId => MessageId.make(value);
@@ -55,7 +53,7 @@ async function createOrchestrationSystem() {
     ),
     OrchestrationProjectionSnapshotQueryLive,
   ).pipe(
-    Layer.provide(OrchestrationEventStoreLive),
+    Layer.provide(OrchestrationEventStore.layer),
     Layer.provide(OrchestrationCommandReceiptRepository.layer),
     Layer.provide(RepositoryIdentityResolver.layer),
     Layer.provide(SqlitePersistenceMemory),
@@ -91,7 +89,7 @@ const hasMetricSnapshot = (
 describe("OrchestrationEngine", () => {
   it("bootstraps command handling from persisted projections without reading the full snapshot", async () => {
     let nextSequence = 8;
-    const eventStore: OrchestrationEventStoreShape = {
+    const eventStore: EventStoreService = {
       append: (event) =>
         Effect.sync(() => {
           const savedEvent = {
@@ -778,14 +776,12 @@ describe("OrchestrationEngine", () => {
 
   it("keeps processing queued commands after a storage failure", async () => {
     type StoredEvent =
-      ReturnType<OrchestrationEventStoreShape["append"]> extends Effect.Effect<infer A, any, any>
-        ? A
-        : never;
+      ReturnType<EventStoreService["append"]> extends Effect.Effect<infer A, any, any> ? A : never;
     const events: StoredEvent[] = [];
     let nextSequence = 1;
     let shouldFailFirstAppend = true;
 
-    const flakyStore: OrchestrationEventStoreShape = {
+    const flakyStore: EventStoreService = {
       append(event) {
         if (shouldFailFirstAppend && event.commandId === CommandId.make("cmd-flaky-1")) {
           shouldFailFirstAppend = false;
@@ -925,7 +921,7 @@ describe("OrchestrationEngine", () => {
       OrchestrationEngineLive.pipe(
         Layer.provide(OrchestrationProjectionSnapshotQueryLive),
         Layer.provide(Layer.succeed(OrchestrationProjectionPipeline, flakyProjectionPipeline)),
-        Layer.provide(OrchestrationEventStoreLive),
+        Layer.provide(OrchestrationEventStore.layer),
         Layer.provide(OrchestrationCommandReceiptRepository.layer),
         Layer.provide(RepositoryIdentityResolver.layer),
         Layer.provide(SqlitePersistenceMemory),
@@ -1020,13 +1016,11 @@ describe("OrchestrationEngine", () => {
 
   it("reconciles command state when append persists but projection fails", async () => {
     type StoredEvent =
-      ReturnType<OrchestrationEventStoreShape["append"]> extends Effect.Effect<infer A, any, any>
-        ? A
-        : never;
+      ReturnType<EventStoreService["append"]> extends Effect.Effect<infer A, any, any> ? A : never;
     const events: StoredEvent[] = [];
     let nextSequence = 1;
 
-    const nonTransactionalStore: OrchestrationEventStoreShape = {
+    const nonTransactionalStore: EventStoreService = {
       append(event) {
         const savedEvent = {
           ...event,

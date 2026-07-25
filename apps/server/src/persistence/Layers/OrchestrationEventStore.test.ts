@@ -8,12 +8,11 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import { PersistenceDecodeError } from "../Errors.ts";
 import { OrchestrationEventStore } from "../Services/OrchestrationEventStore.ts";
-import { OrchestrationEventStoreLive } from "./OrchestrationEventStore.ts";
 import { SqlitePersistenceMemory } from "./Sqlite.ts";
 const isPersistenceDecodeError = Schema.is(PersistenceDecodeError);
 
 const layer = it.layer(
-  OrchestrationEventStoreLive.pipe(Layer.provideMerge(SqlitePersistenceMemory)),
+  OrchestrationEventStore.layer.pipe(Layer.provideMerge(SqlitePersistenceMemory)),
 );
 
 layer("OrchestrationEventStore", (it) => {
