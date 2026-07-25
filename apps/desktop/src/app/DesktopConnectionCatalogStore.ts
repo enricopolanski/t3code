@@ -26,11 +26,12 @@ import * as ElectronSafeStorage from "../electron/ElectronSafeStorage.ts";
 import * as DesktopSavedEnvironments from "../settings/DesktopSavedEnvironments.ts";
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";
 
-const EncryptedConnectionCatalogDocument = Schema.Struct({
+class EncryptedConnectionCatalogDocument extends Schema.Class<EncryptedConnectionCatalogDocument>(
+  "EncryptedConnectionCatalogDocument",
+)({
   version: Schema.Literal(1),
   encryptedCatalog: Schema.String,
-});
-type EncryptedConnectionCatalogDocument = typeof EncryptedConnectionCatalogDocument.Type;
+}) {}
 
 const EncryptedConnectionCatalogDocumentJson = fromLenientJson(EncryptedConnectionCatalogDocument);
 const decodeEncryptedConnectionCatalogDocumentJson = Schema.decodeEffect(
@@ -423,7 +424,10 @@ export const make = Effect.gen(function* () {
       fileSystem,
       path,
       catalogPath,
-      document: { version: 1, encryptedCatalog },
+      document: new EncryptedConnectionCatalogDocument({
+        version: 1,
+        encryptedCatalog,
+      }),
       suffix,
     });
   });

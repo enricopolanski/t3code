@@ -235,7 +235,12 @@ describe("DesktopSettings", () => {
         );
 
         assert.deepEqual(yield* settings.load, {
-          mainWindowBounds: { x: 120, y: 80, width: 1280, height: 900 },
+          mainWindowBounds: new DesktopAppSettings.DesktopWindowBounds({
+            x: 120,
+            y: 80,
+            width: 1280,
+            height: 900,
+          }),
           mainWindowMaximized: false,
           serverExposureMode: "network-accessible",
           tailscaleServeEnabled: true,
@@ -275,7 +280,10 @@ describe("DesktopSettings", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const settings = yield* DesktopAppSettings.DesktopAppSettings;
 
-        yield* settings.setMainWindowBounds({ x: -1200, y: 40, width: 1440, height: 960 }, true);
+        yield* settings.setMainWindowBounds(
+          new DesktopAppSettings.DesktopWindowBounds({ x: -1200, y: 40, width: 1440, height: 960 }),
+          true,
+        );
         yield* settings.setServerExposureMode("network-accessible");
 
         const persisted = yield* decodeDesktopSettingsPatch(
