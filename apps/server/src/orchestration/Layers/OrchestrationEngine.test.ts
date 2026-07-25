@@ -20,7 +20,7 @@ import * as Stream from "effect/Stream";
 import { describe, expect, it } from "vite-plus/test";
 
 import { PersistenceSqlError } from "../../persistence/Errors.ts";
-import { OrchestrationCommandReceiptRepositoryLive } from "../../persistence/Layers/OrchestrationCommandReceipts.ts";
+import { OrchestrationCommandReceiptRepository } from "../../persistence/Services/OrchestrationCommandReceipts.ts";
 import { OrchestrationEventStoreLive } from "../../persistence/Layers/OrchestrationEventStore.ts";
 import { SqlitePersistenceMemory } from "../../persistence/Layers/Sqlite.ts";
 import {
@@ -56,7 +56,7 @@ async function createOrchestrationSystem() {
     OrchestrationProjectionSnapshotQueryLive,
   ).pipe(
     Layer.provide(OrchestrationEventStoreLive),
-    Layer.provide(OrchestrationCommandReceiptRepositoryLive),
+    Layer.provide(OrchestrationCommandReceiptRepository.layer),
     Layer.provide(RepositoryIdentityResolver.layer),
     Layer.provide(SqlitePersistenceMemory),
     Layer.provideMerge(ServerConfigLayer),
@@ -212,7 +212,7 @@ describe("OrchestrationEngine", () => {
         } satisfies OrchestrationProjectionPipelineShape),
       ),
       Layer.provide(Layer.succeed(OrchestrationEventStore, eventStore)),
-      Layer.provide(OrchestrationCommandReceiptRepositoryLive),
+      Layer.provide(OrchestrationCommandReceiptRepository.layer),
       Layer.provide(SqlitePersistenceMemory),
       Layer.provideMerge(NodeServices.layer),
     );
@@ -821,7 +821,7 @@ describe("OrchestrationEngine", () => {
         Layer.provide(OrchestrationProjectionSnapshotQueryLive),
         Layer.provide(OrchestrationProjectionPipelineLive),
         Layer.provide(Layer.succeed(OrchestrationEventStore, flakyStore)),
-        Layer.provide(OrchestrationCommandReceiptRepositoryLive),
+        Layer.provide(OrchestrationCommandReceiptRepository.layer),
         Layer.provide(RepositoryIdentityResolver.layer),
         Layer.provide(SqlitePersistenceMemory),
         Layer.provideMerge(ServerConfigLayer),
@@ -926,7 +926,7 @@ describe("OrchestrationEngine", () => {
         Layer.provide(OrchestrationProjectionSnapshotQueryLive),
         Layer.provide(Layer.succeed(OrchestrationProjectionPipeline, flakyProjectionPipeline)),
         Layer.provide(OrchestrationEventStoreLive),
-        Layer.provide(OrchestrationCommandReceiptRepositoryLive),
+        Layer.provide(OrchestrationCommandReceiptRepository.layer),
         Layer.provide(RepositoryIdentityResolver.layer),
         Layer.provide(SqlitePersistenceMemory),
         Layer.provide(NodeServices.layer),
@@ -1069,7 +1069,7 @@ describe("OrchestrationEngine", () => {
         Layer.provide(OrchestrationProjectionSnapshotQueryLive),
         Layer.provide(Layer.succeed(OrchestrationProjectionPipeline, flakyProjectionPipeline)),
         Layer.provide(Layer.succeed(OrchestrationEventStore, nonTransactionalStore)),
-        Layer.provide(OrchestrationCommandReceiptRepositoryLive),
+        Layer.provide(OrchestrationCommandReceiptRepository.layer),
         Layer.provide(RepositoryIdentityResolver.layer),
         Layer.provide(SqlitePersistenceMemory),
         Layer.provide(NodeServices.layer),

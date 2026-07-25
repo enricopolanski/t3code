@@ -1,6 +1,6 @@
 import * as Layer from "effect/Layer";
 
-import { OrchestrationCommandReceiptRepositoryLive } from "../persistence/Layers/OrchestrationCommandReceipts.ts";
+import { OrchestrationCommandReceiptRepository } from "../persistence/Services/OrchestrationCommandReceipts.ts";
 import { OrchestrationEventStoreLive } from "../persistence/Layers/OrchestrationEventStore.ts";
 import { OrchestrationEngineLive } from "./Layers/OrchestrationEngine.ts";
 import { OrchestrationProjectionPipelineLive } from "./Layers/ProjectionPipeline.ts";
@@ -8,7 +8,7 @@ import { OrchestrationProjectionSnapshotQueryLive } from "./Layers/ProjectionSna
 
 export const OrchestrationEventInfrastructureLayerLive = Layer.mergeAll(
   OrchestrationEventStoreLive,
-  OrchestrationCommandReceiptRepositoryLive,
+  OrchestrationCommandReceiptRepository.layer,
 );
 
 export const OrchestrationProjectionPipelineLayerLive = OrchestrationProjectionPipelineLive.pipe(
