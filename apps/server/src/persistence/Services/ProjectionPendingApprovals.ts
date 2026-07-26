@@ -33,24 +33,6 @@ export class ProjectionPendingApproval extends Schema.Class<ProjectionPendingApp
   resolvedAt: Schema.NullOr(IsoDateTime),
 }) {}
 
-export class ListProjectionPendingApprovalsInput extends Schema.Class<ListProjectionPendingApprovalsInput>(
-  "ListProjectionPendingApprovalsInput",
-)({
-  threadId: ThreadId,
-}) {}
-
-export class GetProjectionPendingApprovalInput extends Schema.Class<GetProjectionPendingApprovalInput>(
-  "GetProjectionPendingApprovalInput",
-)({
-  requestId: ApprovalRequestId,
-}) {}
-
-export class DeleteProjectionPendingApprovalInput extends Schema.Class<DeleteProjectionPendingApprovalInput>(
-  "DeleteProjectionPendingApprovalInput",
-)({
-  requestId: ApprovalRequestId,
-}) {}
-
 /**
  * ProjectionPendingApprovalRepositoryShape - Service API for pending approvals.
  */
@@ -70,21 +52,21 @@ export interface ProjectionPendingApprovalRepositoryShape {
    * Returned in ascending creation order.
    */
   readonly listByThreadId: (
-    input: ListProjectionPendingApprovalsInput,
+    threadId: ThreadId,
   ) => Effect.Effect<ReadonlyArray<ProjectionPendingApproval>, ProjectionRepositoryError>;
 
   /**
    * Read a pending approval row by request id.
    */
   readonly getByRequestId: (
-    input: GetProjectionPendingApprovalInput,
+    requestId: ApprovalRequestId,
   ) => Effect.Effect<Option.Option<ProjectionPendingApproval>, ProjectionRepositoryError>;
 
   /**
    * Delete a pending approval row by request id.
    */
   readonly deleteByRequestId: (
-    input: DeleteProjectionPendingApprovalInput,
+    requestId: ApprovalRequestId,
   ) => Effect.Effect<void, ProjectionRepositoryError>;
 }
 

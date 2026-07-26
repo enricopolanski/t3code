@@ -16,8 +16,6 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { toPersistenceSqlError, type ProjectionRepositoryError } from "../../persistence/Errors.ts";
 import { OrchestrationEventStore } from "../../persistence/Services/OrchestrationEventStore.ts";
 import {
-  GetProjectionPendingApprovalInput,
-  ListProjectionPendingApprovalsInput,
   ProjectionPendingApproval,
   ProjectionPendingApprovalRepository,
 } from "../../persistence/Services/ProjectionPendingApprovals.ts";
@@ -613,9 +611,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
         projectionThreadActivityRepository.listByThreadId(
           new ListProjectionThreadActivitiesInput({ threadId }),
         ),
-        projectionPendingApprovalRepository.listByThreadId(
-          new ListProjectionPendingApprovalsInput({ threadId }),
-        ),
+        projectionPendingApprovalRepository.listByThreadId(threadId),
       ]);
 
       let latestUserMessageAt: string | null = null;
@@ -1623,11 +1619,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
           if (requestId === null) {
             return;
           }
-          const existingRow = yield* projectionPendingApprovalRepository.getByRequestId(
-            new GetProjectionPendingApprovalInput({
-              requestId,
-            }),
-          );
+          const existingRow = yield* projectionPendingApprovalRepository.getByRequestId(requestId);
           if (event.payload.activity.kind === "approval.resolved") {
             const resolvedDecisionRaw =
               typeof event.payload.activity.payload === "object" &&
@@ -1720,9 +1712,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
 
         case "thread.approval-response-requested": {
           const existingRow = yield* projectionPendingApprovalRepository.getByRequestId(
-            new GetProjectionPendingApprovalInput({
-              requestId: event.payload.requestId,
-            }),
+            event.payload.requestId,
           );
           yield* projectionPendingApprovalRepository.upsert(
             new ProjectionPendingApproval({

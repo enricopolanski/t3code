@@ -30,10 +30,7 @@ import { makeSqlitePersistenceLive } from "../src/persistence/Layers/Sqlite.ts";
 import { OrchestrationCommandReceiptRepository } from "../src/persistence/Services/OrchestrationCommandReceipts.ts";
 import { OrchestrationEventStore } from "../src/persistence/Services/OrchestrationEventStore.ts";
 import { ProjectionCheckpointRepository } from "../src/persistence/Services/ProjectionCheckpoints.ts";
-import {
-  GetProjectionPendingApprovalInput,
-  ProjectionPendingApprovalRepository,
-} from "../src/persistence/Services/ProjectionPendingApprovals.ts";
+import { ProjectionPendingApprovalRepository } from "../src/persistence/Services/ProjectionPendingApprovals.ts";
 import { makeAdapterRegistryMock } from "../src/provider/testUtils/providerAdapterRegistryMock.ts";
 import { ProviderAdapterRegistry } from "../src/provider/Services/ProviderAdapterRegistry.ts";
 import { makeProviderRegistryLayer } from "../src/provider/testUtils/providerRegistryMock.ts";
@@ -461,24 +458,18 @@ export const makeOrchestrationIntegrationHarness = (
       timeoutMs,
     ) =>
       waitFor(
-        pendingApprovalRepository
-          .getByRequestId(
-            new GetProjectionPendingApprovalInput({
-              requestId: ApprovalRequestId.make(requestId),
-            }),
-          )
-          .pipe(
-            Effect.map((row) =>
-              Option.match(row, {
-                onNone: () => null,
-                onSome: (value) => ({
-                  status: value.status,
-                  decision: value.decision,
-                  resolvedAt: value.resolvedAt,
-                }),
+        pendingApprovalRepository.getByRequestId(ApprovalRequestId.make(requestId)).pipe(
+          Effect.map((row) =>
+            Option.match(row, {
+              onNone: () => null,
+              onSome: (value) => ({
+                status: value.status,
+                decision: value.decision,
+                resolvedAt: value.resolvedAt,
               }),
-            ),
+            }),
           ),
+        ),
         (
           row,
         ): row is {
