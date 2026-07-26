@@ -56,13 +56,11 @@ import {
   ProjectionTurnRepository,
 } from "../../persistence/Services/ProjectionTurns.ts";
 import {
-  GetProjectionThreadInput,
   ProjectionThread,
   ProjectionThreadRepository,
 } from "../../persistence/Services/ProjectionThreads.ts";
 import { ProjectionThreadSessionRepositoryLive } from "../../persistence/Layers/ProjectionThreadSessions.ts";
 import { ProjectionTurnRepositoryLive } from "../../persistence/Layers/ProjectionTurns.ts";
-import { ProjectionThreadRepositoryLive } from "../../persistence/Layers/ProjectionThreads.ts";
 import { ServerConfig } from "../../config.ts";
 import {
   OrchestrationProjectionPipeline,
@@ -569,11 +567,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
     const refreshThreadShellSummary = Effect.fn("refreshThreadShellSummary")(function* (
       threadId: ThreadId,
     ) {
-      const existingRow = yield* projectionThreadRepository.getById(
-        new GetProjectionThreadInput({
-          threadId,
-        }),
-      );
+      const existingRow = yield* projectionThreadRepository.getById(threadId);
       if (Option.isNone(existingRow)) {
         return;
       }
@@ -648,11 +642,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
           return;
 
         case "thread.archived": {
-          const existingRow = yield* projectionThreadRepository.getById(
-            new GetProjectionThreadInput({
-              threadId: event.payload.threadId,
-            }),
-          );
+          const existingRow = yield* projectionThreadRepository.getById(event.payload.threadId);
           if (Option.isNone(existingRow)) {
             return;
           }
@@ -667,11 +657,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
         }
 
         case "thread.unarchived": {
-          const existingRow = yield* projectionThreadRepository.getById(
-            new GetProjectionThreadInput({
-              threadId: event.payload.threadId,
-            }),
-          );
+          const existingRow = yield* projectionThreadRepository.getById(event.payload.threadId);
           if (Option.isNone(existingRow)) {
             return;
           }
@@ -686,11 +672,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
         }
 
         case "thread.settled": {
-          const existingRow = yield* projectionThreadRepository.getById(
-            new GetProjectionThreadInput({
-              threadId: event.payload.threadId,
-            }),
-          );
+          const existingRow = yield* projectionThreadRepository.getById(event.payload.threadId);
           if (Option.isNone(existingRow)) {
             return;
           }
@@ -706,11 +688,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
         }
 
         case "thread.unsettled": {
-          const existingRow = yield* projectionThreadRepository.getById(
-            new GetProjectionThreadInput({
-              threadId: event.payload.threadId,
-            }),
-          );
+          const existingRow = yield* projectionThreadRepository.getById(event.payload.threadId);
           if (Option.isNone(existingRow)) {
             return;
           }
@@ -726,11 +704,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
         }
 
         case "thread.snoozed": {
-          const existingRow = yield* projectionThreadRepository.getById(
-            new GetProjectionThreadInput({
-              threadId: event.payload.threadId,
-            }),
-          );
+          const existingRow = yield* projectionThreadRepository.getById(event.payload.threadId);
           if (Option.isNone(existingRow)) {
             return;
           }
@@ -746,11 +720,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
         }
 
         case "thread.unsnoozed": {
-          const existingRow = yield* projectionThreadRepository.getById(
-            new GetProjectionThreadInput({
-              threadId: event.payload.threadId,
-            }),
-          );
+          const existingRow = yield* projectionThreadRepository.getById(event.payload.threadId);
           if (Option.isNone(existingRow)) {
             return;
           }
@@ -766,11 +736,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
         }
 
         case "thread.meta-updated": {
-          const existingRow = yield* projectionThreadRepository.getById(
-            new GetProjectionThreadInput({
-              threadId: event.payload.threadId,
-            }),
-          );
+          const existingRow = yield* projectionThreadRepository.getById(event.payload.threadId);
           if (Option.isNone(existingRow)) {
             return;
           }
@@ -792,11 +758,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
         }
 
         case "thread.runtime-mode-set": {
-          const existingRow = yield* projectionThreadRepository.getById(
-            new GetProjectionThreadInput({
-              threadId: event.payload.threadId,
-            }),
-          );
+          const existingRow = yield* projectionThreadRepository.getById(event.payload.threadId);
           if (Option.isNone(existingRow)) {
             return;
           }
@@ -811,11 +773,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
         }
 
         case "thread.interaction-mode-set": {
-          const existingRow = yield* projectionThreadRepository.getById(
-            new GetProjectionThreadInput({
-              threadId: event.payload.threadId,
-            }),
-          );
+          const existingRow = yield* projectionThreadRepository.getById(event.payload.threadId);
           if (Option.isNone(existingRow)) {
             return;
           }
@@ -831,11 +789,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
 
         case "thread.deleted": {
           attachmentSideEffects.deletedThreadIds.add(event.payload.threadId);
-          const existingRow = yield* projectionThreadRepository.getById(
-            new GetProjectionThreadInput({
-              threadId: event.payload.threadId,
-            }),
-          );
+          const existingRow = yield* projectionThreadRepository.getById(event.payload.threadId);
           if (Option.isNone(existingRow)) {
             return;
           }
@@ -854,11 +808,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
         case "thread.activity-appended":
         case "thread.approval-response-requested":
         case "thread.user-input-response-requested": {
-          const existingRow = yield* projectionThreadRepository.getById(
-            new GetProjectionThreadInput({
-              threadId: event.payload.threadId,
-            }),
-          );
+          const existingRow = yield* projectionThreadRepository.getById(event.payload.threadId);
           if (Option.isNone(existingRow)) {
             return;
           }
@@ -873,11 +823,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
         }
 
         case "thread.session-set": {
-          const existingRow = yield* projectionThreadRepository.getById(
-            new GetProjectionThreadInput({
-              threadId: event.payload.threadId,
-            }),
-          );
+          const existingRow = yield* projectionThreadRepository.getById(event.payload.threadId);
           if (Option.isNone(existingRow)) {
             return;
           }
@@ -893,11 +839,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
         }
 
         case "thread.turn-diff-completed": {
-          const existingRow = yield* projectionThreadRepository.getById(
-            new GetProjectionThreadInput({
-              threadId: event.payload.threadId,
-            }),
-          );
+          const existingRow = yield* projectionThreadRepository.getById(event.payload.threadId);
           if (Option.isNone(existingRow)) {
             return;
           }
@@ -913,11 +855,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
         }
 
         case "thread.reverted": {
-          const existingRow = yield* projectionThreadRepository.getById(
-            new GetProjectionThreadInput({
-              threadId: event.payload.threadId,
-            }),
-          );
+          const existingRow = yield* projectionThreadRepository.getById(event.payload.threadId);
           if (Option.isNone(existingRow)) {
             return;
           }
@@ -1820,7 +1758,7 @@ export const OrchestrationProjectionPipelineLive = Layer.effect(
   makeOrchestrationProjectionPipeline(),
 ).pipe(
   Layer.provideMerge(ProjectionProjectRepository.layer),
-  Layer.provideMerge(ProjectionThreadRepositoryLive),
+  Layer.provideMerge(ProjectionThreadRepository.layer),
   Layer.provideMerge(ProjectionThreadMessageRepository.layer),
   Layer.provideMerge(ProjectionThreadProposedPlanRepository.layer),
   Layer.provideMerge(ProjectionThreadActivityRepository.layer),

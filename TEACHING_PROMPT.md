@@ -12,6 +12,14 @@ When asked "what is X" — a directory, a module, a service, an app — answer w
 
 ## Rules
 
+- **One new idea per paragraph, admitted when the narrative needs it.** Not when
+  it is true, not when it is interesting, not because you just verified it.
+  Linearity is the thing the reader actually feels; a correct aside costs more
+  than it gives, and every extra idea is a place confusion can start.
+- **Verify comprehensively, write narrowly.** Exhaustive checking is what catches
+  the table that doesn't exist and the pure function that was quietly given a
+  write. Exhaustive prose is what makes a chapter unreadable. Material that is
+  verified but not yet needed goes in a note _under_ the draft, never inside it.
 - **Name the kind of thing, at the register you're speaking in.** A definition of
   purpose takes a purpose-level kind: an application, a schema package, a read
   model. How the thing ships or runs — a binary, a process, a script — is beside
@@ -47,6 +55,10 @@ When asked "what is X" — a directory, a module, a service, an app — answer w
   _adapter_, _ingestion_ name roles, not kinds. A reader who can't tell whether
   one is a function they call or a subscription that is always running has no
   picture of the system. "The decider: a single function that…" costs four words.
+- **Don't spend a term twice.** _View_ already means the desktop, web and mobile
+  apps; calling projections views as well — even by analogy, even once — costs
+  the distinction the chapter is built on. If an analogy needs the word, reach
+  for the precise one instead: a projection is a materialized view, not MVC's.
 - **Don't smuggle in domain assumptions.** A workspace holds files, not
   necessarily code. State the general case unless the narrow one is guaranteed.
 - **Don't invent oppositions.** "A, or else B" is false when B is a kind of A.
@@ -86,13 +98,39 @@ When asked "what is X" — a directory, a module, a service, an app — answer w
   not request/response" has somewhere to put everything that follows. Describing
   the mechanism accurately while withholding its name reads as plain prose but
   forces the reader to reconstruct a label the writer already had.
+- **Justify structure by what the product has to do.** A projection is not
+  earned by read-model theory; it is earned by the sidebar listing threads by
+  recency and the badge counting the ones blocked on an approval. Name the
+  behaviour that would break without the structure, and the structure explains
+  itself. Put it first. A mechanism introduced ahead of the problem it solves
+  has to be carried unmotivated until the justification arrives, and a
+  subordinate clause — "so that opening a thread doesn't mean replaying it" —
+  is not enough weight to hold it up.
+- **Say what question it answers, and who is asking.** A list of capabilities is
+  not a purpose. The log answers _what happened_; the projections answer _what is
+  true now_, and it is the views asking, on every render. Two questions and two
+  askers explain the split that a paragraph of queries never will.
+- **A negative claim binds every later sentence.** Having established that the
+  decider performs no IO, the next paragraph may not hand it a write; having
+  said a view never reads the log, the last step may not send it events. Reread
+  what you promised before writing what happens next.
+- **Don't count what the reader will want to audit.** "A turn-start event wakes
+  two of them" turns an illustration into a claim about the whole set, and the
+  next questions are always _which two, are there others, is this the only case?_
+  Say "one of them" and "another", and mark an example as one.
 - **Don't overstate the guarantee.** Claim what the system actually promises.
   "Revert all the changes" claimed more than the truth, which is that the
   workspace can be restored to a recorded point.
 - **Verify a disputed claim in the code before conceding or defending it.** The
   approval gate looked load-bearing until `DEFAULT_RUNTIME_MODE` turned out to
   be `full-access`, at which point the argument had to be rebuilt on restoration
-  instead.
+  instead. Verify the undisputed ones too: "one row per checkpoint" survived four
+  drafts unchallenged, and there is no such table — checkpoints are not projected
+  at all. An illustrative example is still a claim.
+- **When handed a draft with named corrections, make those and nothing else.**
+  Rewriting the rest — even into something defensible — throws away the author's
+  structure and forces them to re-argue choices they had already made. Fix what
+  was named, fix outright errors of fact, leave the voice alone.
 - **Don't hedge and don't flatter.** If the user's own definition is better,
   say so plainly and say precisely which word is doing the work.
 
@@ -125,9 +163,37 @@ When asked "what is X" — a directory, a module, a service, an app — answer w
 - Spend the _"does not X, instead Y"_ shape only where a real misconception
   needs displacing. It is the strongest move available and it goes flat if every
   step uses it; two or three per chapter, on the claims that carry the thesis.
+- A diagram is a claim, so check it against the sentences around it. The chapter
+  said the command is never stored and the diagram drew an arrow from the view to
+  the log labelled `command`; a node standing in for something it isn't — `log`
+  meaning "the server" — generates a question at every step that touches it.
+- Draw diagrams in mermaid, not aligned ASCII. Box-drawing characters and
+  hand-counted columns break the moment anyone copies them.
 - A diagram is an outline, so walk it. Take the arrows and nodes in order and
   say what happens at each; prose after a diagram that doesn't follow its
   structure ends up restating it in sentences.
+- Open a step by closing the previous one. The reader is standing where the last
+  step left them — inside an open transaction, holding an unanswered command —
+  and the first sentence has to move them from there. "The appended events are
+  then published" starts on a new subject and makes the reader go back and check
+  what they missed; "once that transaction commits" costs four words and lands
+  them on the same ground the previous paragraph ended on.
+- Don't point back with a bare "there" or "here" — name the thing again. And
+  state a component's role before listing what it enforces: "every rule lives
+  there" gestures where "the decider is where the server works out what a
+  command means, and the only place that does" explains.
+- Claim at each step only what is true at that step. "Durable and visible in
+  every view" was true of the commit only for the durable half; the views learn
+  later, at the step where they are told. Borrowing a later step's payoff makes
+  the sentence read well and the sequence read wrong.
+- Asked to make something concrete, reach for a behaviour, not a schema. Naming
+  the tables answered the request literally and dragged the register down with
+  it; "a message is sent, so the thread moves to the top of the list" is the
+  same concreteness with none of the detail the reader can't use yet.
+- A term-of-art verb hides the mechanism it names. "Applies each event to its
+  projections" gives the reader nothing to picture; "a message was sent, so its
+  row appears and the thread moves to the top of the list" does. Show one
+  concrete update, then name the pattern.
 - Keep enumerations paired. "The first" obliges a "the second".
 - Watch for comma splices.
 - Keep each item in a run-on list to one verb and one object. "Makes the

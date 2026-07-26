@@ -6,18 +6,13 @@ import * as Option from "effect/Option";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import { SqlitePersistenceMemory } from "./Sqlite.ts";
-import { ProjectionThreadRepositoryLive } from "./ProjectionThreads.ts";
 import { ProjectionProject, ProjectionProjectRepository } from "../Services/ProjectionProjects.ts";
-import {
-  GetProjectionThreadInput,
-  ProjectionThread,
-  ProjectionThreadRepository,
-} from "../Services/ProjectionThreads.ts";
+import { ProjectionThread, ProjectionThreadRepository } from "../Services/ProjectionThreads.ts";
 
 const projectionRepositoriesLayer = it.layer(
   Layer.mergeAll(
     ProjectionProjectRepository.layer.pipe(Layer.provideMerge(SqlitePersistenceMemory)),
-    ProjectionThreadRepositoryLive.pipe(Layer.provideMerge(SqlitePersistenceMemory)),
+    ProjectionThreadRepository.layer.pipe(Layer.provideMerge(SqlitePersistenceMemory)),
     SqlitePersistenceMemory,
   ),
 );
@@ -128,11 +123,7 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
         }),
       );
 
-      const persisted = yield* threads.getById(
-        new GetProjectionThreadInput({
-          threadId: ThreadId.make("thread-null-options"),
-        }),
-      );
+      const persisted = yield* threads.getById(ThreadId.make("thread-null-options"));
       assert.deepStrictEqual(Option.getOrNull(persisted)?.modelSelection, {
         instanceId: ProviderInstanceId.make("claudeAgent"),
         model: "claude-opus-4-6",
@@ -173,11 +164,7 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
         }),
       );
 
-      const persisted = yield* threads.getById(
-        new GetProjectionThreadInput({
-          threadId: ThreadId.make("thread-settled"),
-        }),
-      );
+      const persisted = yield* threads.getById(ThreadId.make("thread-settled"));
       const row = Option.getOrNull(persisted);
       if (!row) {
         return yield* Effect.die("Expected settled projection_threads row to exist.");
@@ -198,11 +185,7 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
           snoozedAt: null,
         }),
       );
-      const repersisted = yield* threads.getById(
-        new GetProjectionThreadInput({
-          threadId: ThreadId.make("thread-settled"),
-        }),
-      );
+      const repersisted = yield* threads.getById(ThreadId.make("thread-settled"));
       const updated = Option.getOrNull(repersisted);
       assert.strictEqual(updated?.settledOverride, "active");
       assert.strictEqual(updated?.settledAt, null);
