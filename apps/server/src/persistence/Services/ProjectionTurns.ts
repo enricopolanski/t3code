@@ -50,21 +50,10 @@ export class ProjectionTurn extends Schema.Class<ProjectionTurn>("ProjectionTurn
   checkpointFiles: Schema.fromJsonString(Schema.Array(OrchestrationCheckpointFile)),
 }) {}
 
-export class ProjectionTurnById extends Schema.Class<ProjectionTurnById>("ProjectionTurnById")({
-  threadId: ThreadId,
+export class ProjectionTurnById extends ProjectionTurn.extend<ProjectionTurnById>(
+  "ProjectionTurnById",
+)({
   turnId: TurnId,
-  pendingMessageId: Schema.NullOr(MessageId),
-  sourceProposedPlanThreadId: Schema.NullOr(ThreadId),
-  sourceProposedPlanId: Schema.NullOr(OrchestrationProposedPlanId),
-  assistantMessageId: Schema.NullOr(MessageId),
-  state: ProjectionTurnState,
-  requestedAt: IsoDateTime,
-  startedAt: Schema.NullOr(IsoDateTime),
-  completedAt: Schema.NullOr(IsoDateTime),
-  checkpointTurnCount: Schema.NullOr(NonNegativeInt),
-  checkpointRef: Schema.NullOr(CheckpointRef),
-  checkpointStatus: Schema.NullOr(OrchestrationCheckpointStatus),
-  checkpointFiles: Schema.fromJsonString(Schema.Array(OrchestrationCheckpointFile)),
 }) {}
 
 export class ProjectionPendingTurnStart extends Schema.Class<ProjectionPendingTurnStart>(
