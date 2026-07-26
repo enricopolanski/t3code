@@ -28,11 +28,7 @@ import * as Stream from "effect/Stream";
 import { makeDrainableWorker } from "@t3tools/shared/DrainableWorker";
 
 import { ProviderService } from "../../provider/Services/ProviderService.ts";
-import {
-  GetProjectionPendingTurnStartInput,
-  ProjectionTurnRepository,
-} from "../../persistence/Services/ProjectionTurns.ts";
-import { ProjectionTurnRepositoryLive } from "../../persistence/Layers/ProjectionTurns.ts";
+import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";
 import { isGitRepository } from "../../git/Utils.ts";
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../Services/ProjectionSnapshotQuery.ts";
@@ -1220,11 +1216,8 @@ const make = Effect.gen(function* () {
   const getSourceProposedPlanReferenceForPendingTurnStart = Effect.fn(
     "getSourceProposedPlanReferenceForPendingTurnStart",
   )(function* (threadId: ThreadId) {
-    const pendingTurnStart = yield* projectionTurnRepository.getPendingTurnStartByThreadId(
-      new GetProjectionPendingTurnStartInput({
-        threadId,
-      }),
-    );
+    const pendingTurnStart =
+      yield* projectionTurnRepository.getPendingTurnStartByThreadId(threadId);
     if (Option.isNone(pendingTurnStart)) {
       return null;
     }
@@ -1314,9 +1307,7 @@ const make = Effect.gen(function* () {
       const eventTurnId = toTurnId(event.turnId);
       const activeTurnId = thread.session?.activeTurnId ?? null;
       const pendingTurnStart = yield* projectionTurnRepository.getPendingTurnStartByThreadId(
-        new GetProjectionPendingTurnStartInput({
-          threadId: thread.id,
-        }),
+        thread.id,
       );
       const hasPendingTurnStart =
         Option.isSome(pendingTurnStart) && thread.session?.status === "starting";
@@ -1835,4 +1826,4 @@ const make = Effect.gen(function* () {
 export const ProviderRuntimeIngestionLive = Layer.effect(
   ProviderRuntimeIngestionService,
   make,
-).pipe(Layer.provide(ProjectionTurnRepositoryLive));
+).pipe(Layer.provide(ProjectionTurnRepository.layer));

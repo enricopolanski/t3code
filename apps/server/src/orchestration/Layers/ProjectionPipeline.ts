@@ -45,10 +45,6 @@ import {
 } from "../../persistence/Services/ProjectionThreadSessions.ts";
 import {
   ClearCheckpointTurnConflictInput,
-  DeleteProjectionTurnsByThreadInput,
-  GetProjectionPendingTurnStartInput,
-  GetProjectionTurnByTurnIdInput,
-  ListProjectionTurnsByThreadInput,
   ProjectionPendingTurnStart,
   ProjectionTurn,
   ProjectionTurnById,
@@ -58,7 +54,6 @@ import {
   ProjectionThread,
   ProjectionThreadRepository,
 } from "../../persistence/Services/ProjectionThreads.ts";
-import { ProjectionTurnRepositoryLive } from "../../persistence/Layers/ProjectionTurns.ts";
 import { ServerConfig } from "../../config.ts";
 import {
   OrchestrationProjectionPipeline,
@@ -859,9 +854,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
           }
 
           const retainedTurns = yield* projectionTurnRepository.listByThreadId(
-            new ListProjectionTurnsByThreadInput({
-              threadId: event.payload.threadId,
-            }),
+            event.payload.threadId,
           );
           let latestTurnId: ProjectionTurn["turnId"] = null;
           let latestCheckpointTurnCount = -1;
@@ -949,9 +942,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
           }
 
           const existingTurns = yield* projectionTurnRepository.listByThreadId(
-            new ListProjectionTurnsByThreadInput({
-              threadId: event.payload.threadId,
-            }),
+            event.payload.threadId,
           );
           const keptRows = retainProjectionMessagesAfterRevert(
             existingRows,
@@ -1006,9 +997,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
           }
 
           const existingTurns = yield* projectionTurnRepository.listByThreadId(
-            new ListProjectionTurnsByThreadInput({
-              threadId: event.payload.threadId,
-            }),
+            event.payload.threadId,
           );
           const keptRows = retainProjectionProposedPlansAfterRevert(
             existingRows,
@@ -1061,9 +1050,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
             return;
           }
           const existingTurns = yield* projectionTurnRepository.listByThreadId(
-            new ListProjectionTurnsByThreadInput({
-              threadId: event.payload.threadId,
-            }),
+            event.payload.threadId,
           );
           const keptRows = retainProjectionActivitiesAfterRevert(
             existingRows,
@@ -1131,9 +1118,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
               event.payload.session.status === "interrupted"
             ) {
               yield* projectionTurnRepository.deletePendingTurnStartByThreadId(
-                new GetProjectionPendingTurnStartInput({
-                  threadId: event.payload.threadId,
-                }),
+                event.payload.threadId,
               );
             }
             // Leaving the "running" session status is the turn-end signal:
@@ -1144,9 +1129,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
               return;
             }
             const existingTurns = yield* projectionTurnRepository.listByThreadId(
-              new ListProjectionTurnsByThreadInput({
-                threadId: event.payload.threadId,
-              }),
+              event.payload.threadId,
             );
             yield* Effect.forEach(
               existingTurns.filter((turn) => turn.turnId !== null && turn.state === "running"),
@@ -1173,9 +1156,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
           // thread — steering can open a new turn without the provider ever
           // completing the previous one.
           const otherRunningTurns = yield* projectionTurnRepository.listByThreadId(
-            new ListProjectionTurnsByThreadInput({
-              threadId: event.payload.threadId,
-            }),
+            event.payload.threadId,
           );
           yield* Effect.forEach(
             otherRunningTurns.filter(
@@ -1196,15 +1177,11 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
           );
 
           const existingTurn = yield* projectionTurnRepository.getByTurnId(
-            new GetProjectionTurnByTurnIdInput({
-              threadId: event.payload.threadId,
-              turnId,
-            }),
+            event.payload.threadId,
+            turnId,
           );
           const pendingTurnStart = yield* projectionTurnRepository.getPendingTurnStartByThreadId(
-            new GetProjectionPendingTurnStartInput({
-              threadId: event.payload.threadId,
-            }),
+            event.payload.threadId,
           );
           if (Option.isSome(existingTurn)) {
             const nextState =
@@ -1271,11 +1248,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
             );
           }
 
-          yield* projectionTurnRepository.deletePendingTurnStartByThreadId(
-            new GetProjectionPendingTurnStartInput({
-              threadId: event.payload.threadId,
-            }),
-          );
+          yield* projectionTurnRepository.deletePendingTurnStartByThreadId(event.payload.threadId);
           return;
         }
 
@@ -1297,10 +1270,8 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
             session.value.activeTurnId === event.payload.turnId;
           const settlesTurn = !event.payload.streaming && !turnStillRunning;
           const existingTurn = yield* projectionTurnRepository.getByTurnId(
-            new GetProjectionTurnByTurnIdInput({
-              threadId: event.payload.threadId,
-              turnId: event.payload.turnId,
-            }),
+            event.payload.threadId,
+            event.payload.turnId,
           );
           if (Option.isSome(existingTurn)) {
             yield* projectionTurnRepository.upsertByTurnId(
@@ -1349,10 +1320,8 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
             return;
           }
           const existingTurn = yield* projectionTurnRepository.getByTurnId(
-            new GetProjectionTurnByTurnIdInput({
-              threadId: event.payload.threadId,
-              turnId: event.payload.turnId,
-            }),
+            event.payload.threadId,
+            event.payload.turnId,
           );
           if (Option.isSome(existingTurn)) {
             yield* projectionTurnRepository.upsertByTurnId(
@@ -1398,10 +1367,8 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
             session.value.status === "running" &&
             session.value.activeTurnId === event.payload.turnId;
           const existingTurn = yield* projectionTurnRepository.getByTurnId(
-            new GetProjectionTurnByTurnIdInput({
-              threadId: event.payload.threadId,
-              turnId: event.payload.turnId,
-            }),
+            event.payload.threadId,
+            event.payload.turnId,
           );
           const nextState = event.payload.status === "error" ? "error" : "completed";
           yield* projectionTurnRepository.clearCheckpointTurnConflict(
@@ -1452,9 +1419,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
 
         case "thread.reverted": {
           const existingTurns = yield* projectionTurnRepository.listByThreadId(
-            new ListProjectionTurnsByThreadInput({
-              threadId: event.payload.threadId,
-            }),
+            event.payload.threadId,
           );
           const keptTurns = existingTurns.filter(
             (turn) =>
@@ -1462,11 +1427,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
               turn.checkpointTurnCount !== null &&
               turn.checkpointTurnCount <= event.payload.turnCount,
           );
-          yield* projectionTurnRepository.deleteByThreadId(
-            new DeleteProjectionTurnsByThreadInput({
-              threadId: event.payload.threadId,
-            }),
-          );
+          yield* projectionTurnRepository.deleteByThreadId(event.payload.threadId);
           yield* Effect.forEach(
             keptTurns,
             (turn) =>
@@ -1757,7 +1718,7 @@ export const OrchestrationProjectionPipelineLive = Layer.effect(
   Layer.provideMerge(ProjectionThreadProposedPlanRepository.layer),
   Layer.provideMerge(ProjectionThreadActivityRepository.layer),
   Layer.provideMerge(ProjectionThreadSessionRepository.layer),
-  Layer.provideMerge(ProjectionTurnRepositoryLive),
+  Layer.provideMerge(ProjectionTurnRepository.layer),
   Layer.provideMerge(ProjectionPendingApprovalRepository.layer),
   Layer.provideMerge(ProjectionStateRepository.layer),
 );
