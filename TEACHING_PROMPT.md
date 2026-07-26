@@ -61,6 +61,20 @@ When asked "what is X" — a directory, a module, a service, an app — answer w
   makes possible even where it does not require it. "Product built on top"
   understated a real dependency — the server can offer terminals and previews
   precisely because it already owns the workspace they live in.
+- **Overview before trace.** A flow gets two passes: what happens, then where it
+  happens. File names, function names and table names in the first pass drag the
+  reader into the code before they know the shape, and the shape is what makes
+  the code legible afterwards. If a sentence would survive a rewrite of the
+  module, it belongs in the first pass; if it names a file, it belongs in the
+  second. The first pass is still a map — the stages and the arrows between
+  them, stated flatly. Naming the stages is technical content; naming the files
+  is not. Dropping the stages too and telling the story in plain words produces
+  something that reads as an evasion, not an introduction.
+- **An overview has one load-bearing insight.** Find the fact that reorganises
+  the reader's model — here, that the view and the agent are never connected —
+  and build the picture around it. A diagram with every component and every
+  arrow on it is a schematic; it is complete and it teaches nothing, because
+  the one edge that matters is indistinguishable from the twelve that don't.
 - **Don't overstate the guarantee.** Claim what the system actually promises.
   "Revert all the changes" claimed more than the truth, which is that the
   workspace can be restored to a recorded point.
