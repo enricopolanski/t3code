@@ -24,7 +24,6 @@ import * as Stream from "effect/Stream";
 
 import * as CheckpointStore from "../src/checkpointing/CheckpointStore.ts";
 import { TextGeneration, type TextGenerationShape } from "../src/textGeneration/TextGeneration.ts";
-import { ProjectionPendingApprovalRepositoryLive } from "../src/persistence/Layers/ProjectionPendingApprovals.ts";
 import { ProviderSessionRuntimeRepositoryLive } from "../src/persistence/Layers/ProviderSessionRuntime.ts";
 import { makeSqlitePersistenceLive } from "../src/persistence/Layers/Sqlite.ts";
 import { OrchestrationCommandReceiptRepository } from "../src/persistence/Services/OrchestrationCommandReceipts.ts";
@@ -300,7 +299,7 @@ export const makeOrchestrationIntegrationHarness = (
       projectionSnapshotQueryLayer,
       orchestrationLayer.pipe(Layer.provide(projectionSnapshotQueryLayer)),
       ProjectionCheckpointRepository.layer,
-      ProjectionPendingApprovalRepositoryLive,
+      ProjectionPendingApprovalRepository.layer,
       checkpointStoreLayer,
       providerLayer,
       RuntimeReceiptBusTest,
