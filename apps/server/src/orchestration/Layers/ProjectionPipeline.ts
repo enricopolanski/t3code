@@ -67,7 +67,6 @@ import {
   ProjectionThread,
   ProjectionThreadRepository,
 } from "../../persistence/Services/ProjectionThreads.ts";
-import { ProjectionStateRepositoryLive } from "../../persistence/Layers/ProjectionState.ts";
 import { ProjectionThreadActivityRepositoryLive } from "../../persistence/Layers/ProjectionThreadActivities.ts";
 import { ProjectionThreadMessageRepositoryLive } from "../../persistence/Layers/ProjectionThreadMessages.ts";
 import { ProjectionThreadProposedPlanRepositoryLive } from "../../persistence/Layers/ProjectionThreadProposedPlans.ts";
@@ -1864,5 +1863,5 @@ export const OrchestrationProjectionPipelineLive = Layer.effect(
   Layer.provideMerge(ProjectionThreadSessionRepositoryLive),
   Layer.provideMerge(ProjectionTurnRepositoryLive),
   Layer.provideMerge(ProjectionPendingApprovalRepository.layer),
-  Layer.provideMerge(ProjectionStateRepositoryLive),
+  Layer.provideMerge(ProjectionStateRepository.layer),
 );
