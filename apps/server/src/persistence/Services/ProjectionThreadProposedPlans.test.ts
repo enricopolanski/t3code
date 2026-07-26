@@ -7,7 +7,7 @@ import {
   ProjectionThreadProposedPlan,
   ProjectionThreadProposedPlanRepository,
 } from "../Services/ProjectionThreadProposedPlans.ts";
-import { SqlitePersistenceMemory } from "./Sqlite.ts";
+import { SqlitePersistenceMemory } from "../Layers/Sqlite.ts";
 
 const layer = it.layer(
   ProjectionThreadProposedPlanRepository.layer.pipe(Layer.provideMerge(SqlitePersistenceMemory)),

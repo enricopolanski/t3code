@@ -5,9 +5,9 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
-import { SqlitePersistenceMemory } from "./Sqlite.ts";
-import { ProjectionProject, ProjectionProjectRepository } from "../Services/ProjectionProjects.ts";
-import { ProjectionThread, ProjectionThreadRepository } from "../Services/ProjectionThreads.ts";
+import { ProjectionProject, ProjectionProjectRepository } from "./ProjectionProjects.ts";
+import { ProjectionThread, ProjectionThreadRepository } from "./ProjectionThreads.ts";
+import { SqlitePersistenceMemory } from "../Layers/Sqlite.ts";
 
 const projectionRepositoriesLayer = it.layer(
   Layer.mergeAll(

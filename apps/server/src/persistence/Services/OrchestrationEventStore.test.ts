@@ -7,8 +7,8 @@ import * as Stream from "effect/Stream";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import { PersistenceDecodeError } from "../Errors.ts";
-import { OrchestrationEventStore } from "../Services/OrchestrationEventStore.ts";
-import { SqlitePersistenceMemory } from "./Sqlite.ts";
+import { OrchestrationEventStore } from "./OrchestrationEventStore.ts";
+import { SqlitePersistenceMemory } from "../Layers/Sqlite.ts";
 const isPersistenceDecodeError = Schema.is(PersistenceDecodeError);
 
 const layer = it.layer(

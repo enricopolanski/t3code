@@ -8,7 +8,7 @@ import {
   ProjectionThreadSession,
   ProjectionThreadSessionRepository,
 } from "../Services/ProjectionThreadSessions.ts";
-import { SqlitePersistenceMemory } from "./Sqlite.ts";
+import { SqlitePersistenceMemory } from "../Layers/Sqlite.ts";
 
 const layer = it.layer(
   ProjectionThreadSessionRepository.layer.pipe(Layer.provideMerge(SqlitePersistenceMemory)),
