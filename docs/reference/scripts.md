@@ -12,7 +12,11 @@
 - `vp run start` — Runs the production server (serves built web app as static files).
 - `vp run build` — Builds contracts, web app, and server.
 - `vp run typecheck` — Strict TypeScript checks for all packages.
-- `vp run test` — Runs workspace tests.
+- `vp run test` — Runs workspace tests in two concurrent lanes: the single-worker server
+  suite and a resource-bounded lane for every other package. By default the package lane
+  runs at most two package tasks with two Vitest workers each. Use
+  `--package-concurrency <n>` and `--package-max-workers <n>` to tune those limits, or
+  `--exclude-mobile` to omit the mobile package.
 - `node apps/server/scripts/t3-sqlite-state.ts <query|exec> --base-dir <path> ...` — Inspects or seeds an isolated T3 SQLite database; writes create a private backup first.
 - `vp run dist:desktop:artifact -- --platform <mac|linux|win> --target <target> --arch <arch>` — Builds a desktop artifact for a specific platform/target/arch.
 - `vp run dist:desktop:dmg` — Builds a shareable macOS `.dmg` into `./release`.
