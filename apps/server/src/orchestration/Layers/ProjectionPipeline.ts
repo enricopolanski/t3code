@@ -20,7 +20,6 @@ import {
   ProjectionPendingApprovalRepository,
 } from "../../persistence/Services/ProjectionPendingApprovals.ts";
 import {
-  GetProjectionProjectInput,
   ProjectionProject,
   ProjectionProjectRepository,
 } from "../../persistence/Services/ProjectionProjects.ts";
@@ -69,7 +68,6 @@ import {
   ProjectionThread,
   ProjectionThreadRepository,
 } from "../../persistence/Services/ProjectionThreads.ts";
-import { ProjectionProjectRepositoryLive } from "../../persistence/Layers/ProjectionProjects.ts";
 import { ProjectionStateRepositoryLive } from "../../persistence/Layers/ProjectionState.ts";
 import { ProjectionThreadActivityRepositoryLive } from "../../persistence/Layers/ProjectionThreadActivities.ts";
 import { ProjectionThreadMessageRepositoryLive } from "../../persistence/Layers/ProjectionThreadMessages.ts";
@@ -539,11 +537,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
           return;
 
         case "project.meta-updated": {
-          const existingRow = yield* projectionProjectRepository.getById(
-            new GetProjectionProjectInput({
-              projectId: event.payload.projectId,
-            }),
-          );
+          const existingRow = yield* projectionProjectRepository.getById(event.payload.projectId);
           if (Option.isNone(existingRow)) {
             return;
           }
@@ -565,11 +559,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
         }
 
         case "project.deleted": {
-          const existingRow = yield* projectionProjectRepository.getById(
-            new GetProjectionProjectInput({
-              projectId: event.payload.projectId,
-            }),
-          );
+          const existingRow = yield* projectionProjectRepository.getById(event.payload.projectId);
           if (Option.isNone(existingRow)) {
             return;
           }
@@ -1871,7 +1861,7 @@ export const OrchestrationProjectionPipelineLive = Layer.effect(
   OrchestrationProjectionPipeline,
   makeOrchestrationProjectionPipeline(),
 ).pipe(
-  Layer.provideMerge(ProjectionProjectRepositoryLive),
+  Layer.provideMerge(ProjectionProjectRepository.layer),
   Layer.provideMerge(ProjectionThreadRepositoryLive),
   Layer.provideMerge(ProjectionThreadMessageRepositoryLive),
   Layer.provideMerge(ProjectionThreadProposedPlanRepositoryLive),

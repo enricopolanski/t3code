@@ -6,13 +6,8 @@ import * as Option from "effect/Option";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import { SqlitePersistenceMemory } from "./Sqlite.ts";
-import { ProjectionProjectRepositoryLive } from "./ProjectionProjects.ts";
 import { ProjectionThreadRepositoryLive } from "./ProjectionThreads.ts";
-import {
-  GetProjectionProjectInput,
-  ProjectionProject,
-  ProjectionProjectRepository,
-} from "../Services/ProjectionProjects.ts";
+import { ProjectionProject, ProjectionProjectRepository } from "../Services/ProjectionProjects.ts";
 import {
   GetProjectionThreadInput,
   ProjectionThread,
@@ -21,7 +16,7 @@ import {
 
 const projectionRepositoriesLayer = it.layer(
   Layer.mergeAll(
-    ProjectionProjectRepositoryLive.pipe(Layer.provideMerge(SqlitePersistenceMemory)),
+    ProjectionProjectRepository.layer.pipe(Layer.provideMerge(SqlitePersistenceMemory)),
     ProjectionThreadRepositoryLive.pipe(Layer.provideMerge(SqlitePersistenceMemory)),
     SqlitePersistenceMemory,
   ),
@@ -70,11 +65,7 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
         }),
       );
 
-      const persisted = yield* projects.getById(
-        new GetProjectionProjectInput({
-          projectId: ProjectId.make("project-null-options"),
-        }),
-      );
+      const persisted = yield* projects.getById(ProjectId.make("project-null-options"));
       assert.deepStrictEqual(Option.getOrNull(persisted)?.defaultModelSelection, {
         instanceId: ProviderInstanceId.make("codex"),
         model: "gpt-5.4",
