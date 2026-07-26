@@ -36,10 +36,17 @@ When asked "what is X" — a directory, a module, a service, an app — answer w
 - **Try the plainest sentence first.** If the thing reduces to one clause, that
   clause is the definition. Extra qualification reads as precision but rarely is.
   _A workspace is the directory an agent has access to_ beat every longer attempt.
+  A sentence turning on a distinction the reader must hold in their head — "what
+  reaches the log is not the command but what the command turned out to mean" —
+  is clever, not clear. Lead with the plain half: "the command is never stored."
 - **Define terms in the order you use them.** Leaning on a word the reader hasn't
   been given yet — thread, turn, projection — makes the definition circular.
   _Project_ is the repeat offender: it reads as ordinary English, so it slips in
   unnoticed. If only _workspace_ has been defined, say workspace.
+- **Say what kind of thing a role name is, at first use.** _Decider_, _reactor_,
+  _adapter_, _ingestion_ name roles, not kinds. A reader who can't tell whether
+  one is a function they call or a subscription that is always running has no
+  picture of the system. "The decider: a single function that…" costs four words.
 - **Don't smuggle in domain assumptions.** A workspace holds files, not
   necessarily code. State the general case unless the narrow one is guaranteed.
 - **Don't invent oppositions.** "A, or else B" is false when B is a kind of A.
@@ -106,6 +113,18 @@ When asked "what is X" — a directory, a module, a service, an app — answer w
 - Cut the sentence that announces what the paragraph is going to be — "the rest
   does not follow from the definition, though..." says nothing the heading and
   the first real claim don't already carry. Open on the claim.
+- Don't enumerate a payload's fields at overview register. Say a message carries
+  what it needs, not which keys it holds — the reader can't use the field names
+  yet, they're the first thing a refactor changes, and they compete with the
+  claim the sentence exists to make.
+- Give each step a concrete subject, with an example where the noun is abstract
+  ("a view — the desktop app, a phone"). Telegraphic labelling reads as notes;
+  a full sentence with a real actor in it reads as explanation. Every step, not
+  just the first — "the command is never stored" drops the server out of its own
+  chapter and leaves the reader to guess who is refusing to store it.
+- Spend the _"does not X, instead Y"_ shape only where a real misconception
+  needs displacing. It is the strongest move available and it goes flat if every
+  step uses it; two or three per chapter, on the claims that carry the thesis.
 - A diagram is an outline, so walk it. Take the arrows and nodes in order and
   say what happens at each; prose after a diagram that doesn't follow its
   structure ends up restating it in sentences.
