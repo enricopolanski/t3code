@@ -36,8 +36,6 @@ import {
   ProjectionThreadMessageRepository,
 } from "../../persistence/Services/ProjectionThreadMessages.ts";
 import {
-  DeleteProjectionThreadProposedPlansInput,
-  ListProjectionThreadProposedPlansInput,
   ProjectionThreadProposedPlan,
   ProjectionThreadProposedPlanRepository,
 } from "../../persistence/Services/ProjectionThreadProposedPlans.ts";
@@ -62,7 +60,6 @@ import {
   ProjectionThread,
   ProjectionThreadRepository,
 } from "../../persistence/Services/ProjectionThreads.ts";
-import { ProjectionThreadProposedPlanRepositoryLive } from "../../persistence/Layers/ProjectionThreadProposedPlans.ts";
 import { ProjectionThreadSessionRepositoryLive } from "../../persistence/Layers/ProjectionThreadSessions.ts";
 import { ProjectionTurnRepositoryLive } from "../../persistence/Layers/ProjectionTurns.ts";
 import { ProjectionThreadRepositoryLive } from "../../persistence/Layers/ProjectionThreads.ts";
@@ -583,9 +580,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
 
       const [messages, proposedPlans, activities, pendingApprovals] = yield* Effect.all([
         projectionThreadMessageRepository.listByThreadId(threadId),
-        projectionThreadProposedPlanRepository.listByThreadId(
-          new ListProjectionThreadProposedPlansInput({ threadId }),
-        ),
+        projectionThreadProposedPlanRepository.listByThreadId(threadId),
         projectionThreadActivityRepository.listByThreadId(threadId),
         projectionPendingApprovalRepository.listByThreadId(threadId),
       ]);
@@ -1068,9 +1063,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
 
         case "thread.reverted": {
           const existingRows = yield* projectionThreadProposedPlanRepository.listByThreadId(
-            new ListProjectionThreadProposedPlansInput({
-              threadId: event.payload.threadId,
-            }),
+            event.payload.threadId,
           );
           if (existingRows.length === 0) {
             return;
@@ -1090,11 +1083,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
             return;
           }
 
-          yield* projectionThreadProposedPlanRepository.deleteByThreadId(
-            new DeleteProjectionThreadProposedPlansInput({
-              threadId: event.payload.threadId,
-            }),
-          );
+          yield* projectionThreadProposedPlanRepository.deleteByThreadId(event.payload.threadId);
           yield* Effect.forEach(keptRows, projectionThreadProposedPlanRepository.upsert, {
             concurrency: 1,
           }).pipe(Effect.asVoid);
@@ -1833,7 +1822,7 @@ export const OrchestrationProjectionPipelineLive = Layer.effect(
   Layer.provideMerge(ProjectionProjectRepository.layer),
   Layer.provideMerge(ProjectionThreadRepositoryLive),
   Layer.provideMerge(ProjectionThreadMessageRepository.layer),
-  Layer.provideMerge(ProjectionThreadProposedPlanRepositoryLive),
+  Layer.provideMerge(ProjectionThreadProposedPlanRepository.layer),
   Layer.provideMerge(ProjectionThreadActivityRepository.layer),
   Layer.provideMerge(ProjectionThreadSessionRepositoryLive),
   Layer.provideMerge(ProjectionTurnRepositoryLive),

@@ -16,7 +16,8 @@
   suite and a resource-bounded lane for every other package. By default the package lane
   runs at most two package tasks with two Vitest workers each. Use
   `--package-concurrency <n>` and `--package-max-workers <n>` to tune those limits, or
-  `--exclude-mobile` to omit the mobile package.
+  `--exclude-mobile` to omit the mobile package. The command fails fast: a lane failure
+  interrupts the other lane and reports the failing lane and command.
 - `node apps/server/scripts/t3-sqlite-state.ts <query|exec> --base-dir <path> ...` — Inspects or seeds an isolated T3 SQLite database; writes create a private backup first.
 - `vp run dist:desktop:artifact -- --platform <mac|linux|win> --target <target> --arch <arch>` — Builds a desktop artifact for a specific platform/target/arch.
 - `vp run dist:desktop:dmg` — Builds a shareable macOS `.dmg` into `./release`.

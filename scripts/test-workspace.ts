@@ -39,38 +39,38 @@ export type WorkspaceTestLaneOutcome =
 
 export type WorkspaceTestLaneRunner<R = never> = (
   lane: WorkspaceTestLane,
-) => Effect.Effect<WorkspaceTestLaneOutcome, never, R>;
+) => Effect.Effect<WorkspaceTestLaneOutcome, WorkspaceTestLaneProcessError, R>;
 
 export class WorkspaceTestLaneProcessError extends Schema.TaggedErrorClass<WorkspaceTestLaneProcessError>()(
   "WorkspaceTestLaneProcessError",
   {
     lane: Schema.Literals(["server", "workspace"]),
-    operation: Schema.Literals(["resolve-command", "spawn", "wait-for-exit"]),
+    operation: Schema.Literals(["resolve-command", "spawn", "wait-for-exit", "exit"]),
+    command: Schema.Array(Schema.String),
+    exitCode: Schema.Number,
     cause: Schema.Defect(),
   },
 ) {
   override get message(): string {
-    return `Workspace test ${this.lane} lane failed to ${this.operation}.`;
-  }
-}
-
-export class WorkspaceTestRunError extends Schema.TaggedErrorClass<WorkspaceTestRunError>()(
-  "WorkspaceTestRunError",
-  {
-    failures: Schema.Array(Schema.String),
-  },
-) {
-  override get message(): string {
-    return `Workspace tests failed:\n${this.failures.map((failure) => `- ${failure}`).join("\n")}`;
+    const command = this.command.join(" ");
+    const detail = this.cause instanceof Error ? this.cause.message : String(this.cause);
+    const exitCode = this.operation === "exit" ? ` with exit code ${this.exitCode}` : "";
+    return `Workspace test ${this.lane} lane failed${exitCode} (${command}): ${detail}`;
   }
 }
 
 export function createWorkspaceTestPlan(
   input: WorkspaceTestInput,
 ): ReadonlyArray<WorkspaceTestLane> {
-  const workspaceFilters = input.excludeMobile
-    ? ["--filter=!t3", "--filter=!@t3tools/mobile"]
-    : ["--filter=!t3"];
+  const workspaceFilters = [
+    "--filter=./apps/*",
+    "--filter=./infra/*",
+    "--filter=./packages/*",
+    "--filter=./oxlint-plugin-t3code",
+    "--filter=./scripts",
+    "--filter=!t3",
+    ...(input.excludeMobile ? ["--filter=!@t3tools/mobile"] : []),
+  ];
 
   return [
     {
@@ -81,7 +81,6 @@ export function createWorkspaceTestPlan(
       name: "workspace",
       args: [
         "run",
-        "--recursive",
         "--parallel",
         `--concurrency-limit=${input.packageConcurrency}`,
         ...workspaceFilters,
@@ -90,17 +89,6 @@ export function createWorkspaceTestPlan(
       ],
     },
   ];
-}
-
-export function getWorkspaceTestFailures(
-  outcomes: ReadonlyArray<WorkspaceTestLaneOutcome>,
-): ReadonlyArray<string> {
-  return outcomes.flatMap((outcome) => {
-    if ("error" in outcome) {
-      return [`${outcome.lane}: ${outcome.error}`];
-    }
-    return outcome.exitCode === 0 ? [] : [`${outcome.lane}: exited with code ${outcome.exitCode}`];
-  });
 }
 
 const runWorkspaceTestLane = Effect.fn("test-workspace.runLane")(function* (
@@ -115,6 +103,8 @@ const runWorkspaceTestLane = Effect.fn("test-workspace.runLane")(function* (
         new WorkspaceTestLaneProcessError({
           lane: lane.name,
           operation: "resolve-command",
+          command: ["vp", ...lane.args],
+          exitCode: -1,
           cause,
         }),
     ),
@@ -135,6 +125,8 @@ const runWorkspaceTestLane = Effect.fn("test-workspace.runLane")(function* (
         new WorkspaceTestLaneProcessError({
           lane: lane.name,
           operation: "spawn",
+          command: [spawnCommand.command, ...spawnCommand.args],
+          exitCode: -1,
           cause,
         }),
     ),
@@ -146,40 +138,37 @@ const runWorkspaceTestLane = Effect.fn("test-workspace.runLane")(function* (
         new WorkspaceTestLaneProcessError({
           lane: lane.name,
           operation: "wait-for-exit",
+          command: [spawnCommand.command, ...spawnCommand.args],
+          exitCode: -1,
           cause,
         }),
     ),
   );
 
+  const numericExitCode = Number(exitCode);
+  if (numericExitCode !== 0) {
+    return yield* new WorkspaceTestLaneProcessError({
+      lane: lane.name,
+      operation: "exit",
+      command: [spawnCommand.command, ...spawnCommand.args],
+      exitCode: numericExitCode,
+      cause: new Error(`child process exited with code ${numericExitCode}`),
+    });
+  }
+
   return {
     lane: lane.name,
-    exitCode: Number(exitCode),
+    exitCode: numericExitCode,
   } satisfies WorkspaceTestLaneOutcome;
 });
-
-function runWorkspaceTestLaneSafely(lane: WorkspaceTestLane, env: NodeJS.ProcessEnv) {
-  return runWorkspaceTestLane(lane, env).pipe(
-    Effect.catch((error) =>
-      Effect.succeed({
-        lane: lane.name,
-        error: error.message,
-      } satisfies WorkspaceTestLaneOutcome),
-    ),
-  );
-}
 
 export const runWorkspaceTestsWith = Effect.fn("test-workspace.run")(function* <R>(
   input: WorkspaceTestInput,
   runLane: WorkspaceTestLaneRunner<R>,
 ) {
-  const outcomes = yield* Effect.forEach(createWorkspaceTestPlan(input), runLane, {
+  yield* Effect.forEach(createWorkspaceTestPlan(input), runLane, {
     concurrency: "unbounded",
   });
-  const failures = getWorkspaceTestFailures(outcomes);
-
-  if (failures.length > 0) {
-    return yield* new WorkspaceTestRunError({ failures: [...failures] });
-  }
 
   yield* Effect.logInfo("[workspace-tests] all lanes passed");
 });
@@ -188,7 +177,7 @@ export const runWorkspaceTests = Effect.fn("test-workspace.runFromCli")(function
   input: WorkspaceTestInput,
 ) {
   const env = yield* HostProcessEnvironment;
-  return yield* runWorkspaceTestsWith(input, (lane) => runWorkspaceTestLaneSafely(lane, env));
+  return yield* runWorkspaceTestsWith(input, (lane) => runWorkspaceTestLane(lane, env));
 });
 
 const positiveInteger = Schema.Int.check(Schema.isGreaterThanOrEqualTo(1));

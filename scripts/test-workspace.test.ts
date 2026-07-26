@@ -5,9 +5,9 @@ import * as Ref from "effect/Ref";
 
 import {
   createWorkspaceTestPlan,
-  getWorkspaceTestFailures,
   runWorkspaceTestsWith,
   type WorkspaceTestInput,
+  WorkspaceTestLaneProcessError,
   type WorkspaceTestLaneOutcome,
 } from "./test-workspace.ts";
 
@@ -29,9 +29,13 @@ describe("createWorkspaceTestPlan", () => {
           name: "workspace",
           args: [
             "run",
-            "--recursive",
             "--parallel",
             "--concurrency-limit=2",
+            "--filter=./apps/*",
+            "--filter=./infra/*",
+            "--filter=./packages/*",
+            "--filter=./oxlint-plugin-t3code",
+            "--filter=./scripts",
             "--filter=!t3",
             "test",
             "--maxWorkers=2",
@@ -50,9 +54,13 @@ describe("createWorkspaceTestPlan", () => {
 
       assert.deepStrictEqual(workspaceLane?.args, [
         "run",
-        "--recursive",
         "--parallel",
         "--concurrency-limit=2",
+        "--filter=./apps/*",
+        "--filter=./infra/*",
+        "--filter=./packages/*",
+        "--filter=./oxlint-plugin-t3code",
+        "--filter=./scripts",
         "--filter=!t3",
         "--filter=!@t3tools/mobile",
         "test",
@@ -63,14 +71,20 @@ describe("createWorkspaceTestPlan", () => {
 });
 
 describe("runWorkspaceTestsWith", () => {
-  it.effect("waits for both lanes and reports every failure", () =>
+  it.effect("starts both lanes and fails as soon as one lane fails", () =>
     Effect.gen(function* () {
       const started = yield* Ref.make<ReadonlyArray<string>>([]);
       const bothStarted = yield* Deferred.make<void>();
 
       const outcomeByLane = {
-        server: { lane: "server", exitCode: 1 },
-        workspace: { lane: "workspace", error: "could not spawn" },
+        server: new WorkspaceTestLaneProcessError({
+          lane: "server",
+          operation: "spawn",
+          command: ["vp", "run", "--filter=t3", "test"],
+          exitCode: -1,
+          cause: new Error("could not spawn"),
+        }),
+        workspace: { lane: "workspace", exitCode: 0 },
       } as const satisfies Record<string, WorkspaceTestLaneOutcome>;
 
       const error = yield* runWorkspaceTestsWith(defaultInput, (lane) =>
@@ -80,29 +94,14 @@ describe("runWorkspaceTestsWith", () => {
             yield* Deferred.succeed(bothStarted, undefined);
           }
           yield* Deferred.await(bothStarted);
-          return outcomeByLane[lane.name];
+          return lane.name === "server" ? yield* outcomeByLane.server : outcomeByLane.workspace;
         }),
       ).pipe(Effect.flip);
 
       assert.deepStrictEqual(yield* Ref.get(started), ["server", "workspace"]);
-      assert.deepStrictEqual(error.failures, [
-        "server: exited with code 1",
-        "workspace: could not spawn",
-      ]);
-    }),
-  );
-});
-
-describe("getWorkspaceTestFailures", () => {
-  it.effect("accepts successful lane outcomes", () =>
-    Effect.sync(() => {
-      assert.deepStrictEqual(
-        getWorkspaceTestFailures([
-          { lane: "server", exitCode: 0 },
-          { lane: "workspace", exitCode: 0 },
-        ]),
-        [],
-      );
+      assert.equal(error.lane, "server");
+      assert.equal(error.operation, "spawn");
+      assert.match(error.message, /could not spawn/);
     }),
   );
 });
