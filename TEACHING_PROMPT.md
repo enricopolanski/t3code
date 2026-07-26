@@ -75,6 +75,10 @@ When asked "what is X" — a directory, a module, a service, an app — answer w
   and build the picture around it. A diagram with every component and every
   arrow on it is a schematic; it is complete and it teaches nothing, because
   the one edge that matters is indistinguishable from the twelve that don't.
+- **Name the pattern, and name what it replaces.** A reader told "event-sourced,
+  not request/response" has somewhere to put everything that follows. Describing
+  the mechanism accurately while withholding its name reads as plain prose but
+  forces the reader to reconstruct a label the writer already had.
 - **Don't overstate the guarantee.** Claim what the system actually promises.
   "Revert all the changes" claimed more than the truth, which is that the
   workspace can be restored to a recorded point.
@@ -102,6 +106,9 @@ When asked "what is X" — a directory, a module, a service, an app — answer w
 - Cut the sentence that announces what the paragraph is going to be — "the rest
   does not follow from the definition, though..." says nothing the heading and
   the first real claim don't already carry. Open on the claim.
+- A diagram is an outline, so walk it. Take the arrows and nodes in order and
+  say what happens at each; prose after a diagram that doesn't follow its
+  structure ends up restating it in sentences.
 - Keep enumerations paired. "The first" obliges a "the second".
 - Watch for comma splices.
 - Keep each item in a run-on list to one verb and one object. "Makes the
