@@ -4,16 +4,13 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
 import {
-  GetProjectionThreadMessageInput,
-  ListProjectionThreadMessagesInput,
   ProjectionThreadMessage,
   ProjectionThreadMessageRepository,
 } from "../Services/ProjectionThreadMessages.ts";
-import { ProjectionThreadMessageRepositoryLive } from "./ProjectionThreadMessages.ts";
 import { SqlitePersistenceMemory } from "./Sqlite.ts";
 
 const layer = it.layer(
-  ProjectionThreadMessageRepositoryLive.pipe(Layer.provideMerge(SqlitePersistenceMemory)),
+  ProjectionThreadMessageRepository.layer.pipe(Layer.provideMerge(SqlitePersistenceMemory)),
 );
 
 layer("ProjectionThreadMessageRepository", (it) => {
@@ -61,16 +58,12 @@ layer("ProjectionThreadMessageRepository", (it) => {
         }),
       );
 
-      const rows = yield* repository.listByThreadId(
-        new ListProjectionThreadMessagesInput({ threadId }),
-      );
+      const rows = yield* repository.listByThreadId(threadId);
       assert.equal(rows.length, 1);
       assert.equal(rows[0]?.text, "updated");
       assert.deepEqual(rows[0]?.attachments, persistedAttachments);
 
-      const rowById = yield* repository.getByMessageId(
-        new GetProjectionThreadMessageInput({ messageId }),
-      );
+      const rowById = yield* repository.getByMessageId(messageId);
       assert.equal(rowById._tag, "Some");
       if (rowById._tag === "Some") {
         assert.equal(rowById.value.text, "updated");
@@ -122,9 +115,7 @@ layer("ProjectionThreadMessageRepository", (it) => {
         }),
       );
 
-      const rows = yield* repository.listByThreadId(
-        new ListProjectionThreadMessagesInput({ threadId }),
-      );
+      const rows = yield* repository.listByThreadId(threadId);
       assert.equal(rows.length, 1);
       assert.equal(rows[0]?.text, "cleared");
       assert.deepEqual(rows[0]?.attachments, []);
