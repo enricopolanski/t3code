@@ -20,12 +20,6 @@ export class ProjectionState extends Schema.Class<ProjectionState>("ProjectionSt
   updatedAt: IsoDateTime,
 }) {}
 
-export class GetProjectionStateInput extends Schema.Class<GetProjectionStateInput>(
-  "GetProjectionStateInput",
-)({
-  projector: Schema.String,
-}) {}
-
 /**
  * ProjectionStateRepositoryShape - Service API for projector state records.
  */
@@ -41,7 +35,7 @@ export interface ProjectionStateRepositoryShape {
    * Read projection cursor state for a projector key.
    */
   readonly getByProjector: (
-    input: GetProjectionStateInput,
+    projector: string,
   ) => Effect.Effect<Option.Option<ProjectionState>, ProjectionRepositoryError>;
 
   /**

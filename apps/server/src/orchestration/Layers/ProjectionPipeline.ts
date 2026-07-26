@@ -24,7 +24,6 @@ import {
   ProjectionProjectRepository,
 } from "../../persistence/Services/ProjectionProjects.ts";
 import {
-  GetProjectionStateInput,
   ProjectionState,
   ProjectionStateRepository,
 } from "../../persistence/Services/ProjectionState.ts";

@@ -14,7 +14,6 @@ import {
 import {
   ProjectionStateRepository,
   type ProjectionStateRepositoryShape,
-  GetProjectionStateInput,
   ProjectionState,
 } from "../Services/ProjectionState.ts";
 
@@ -54,9 +53,9 @@ const makeProjectionStateRepository = Effect.gen(function* () {
   });
 
   const getProjectionStateRow = SqlSchema.findOneOption({
-    Request: GetProjectionStateInput,
+    Request: Schema.String,
     Result: ProjectionState,
-    execute: ({ projector }) =>
+    execute: (projector) =>
       sql`
         SELECT
           projector,
