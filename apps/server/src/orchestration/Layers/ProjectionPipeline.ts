@@ -40,7 +40,6 @@ import {
   ProjectionThreadProposedPlanRepository,
 } from "../../persistence/Services/ProjectionThreadProposedPlans.ts";
 import {
-  GetProjectionThreadSessionInput,
   ProjectionThreadSession,
   ProjectionThreadSessionRepository,
 } from "../../persistence/Services/ProjectionThreadSessions.ts";
@@ -59,7 +58,6 @@ import {
   ProjectionThread,
   ProjectionThreadRepository,
 } from "../../persistence/Services/ProjectionThreads.ts";
-import { ProjectionThreadSessionRepositoryLive } from "../../persistence/Layers/ProjectionThreadSessions.ts";
 import { ProjectionTurnRepositoryLive } from "../../persistence/Layers/ProjectionTurns.ts";
 import { ServerConfig } from "../../config.ts";
 import {
@@ -1291,9 +1289,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
           // the turn must stay unsettled until the provider reports turn end
           // (projected as thread.session-set leaving the "running" status).
           const session = yield* projectionThreadSessionRepository.getByThreadId(
-            new GetProjectionThreadSessionInput({
-              threadId: event.payload.threadId,
-            }),
+            event.payload.threadId,
           );
           const turnStillRunning =
             Option.isSome(session) &&
@@ -1395,9 +1391,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
           // Mid-turn diff updates produce placeholder checkpoints; record the
           // checkpoint, but don't settle a turn its session is still running.
           const session = yield* projectionThreadSessionRepository.getByThreadId(
-            new GetProjectionThreadSessionInput({
-              threadId: event.payload.threadId,
-            }),
+            event.payload.threadId,
           );
           const turnStillRunning =
             Option.isSome(session) &&
@@ -1762,7 +1756,7 @@ export const OrchestrationProjectionPipelineLive = Layer.effect(
   Layer.provideMerge(ProjectionThreadMessageRepository.layer),
   Layer.provideMerge(ProjectionThreadProposedPlanRepository.layer),
   Layer.provideMerge(ProjectionThreadActivityRepository.layer),
-  Layer.provideMerge(ProjectionThreadSessionRepositoryLive),
+  Layer.provideMerge(ProjectionThreadSessionRepository.layer),
   Layer.provideMerge(ProjectionTurnRepositoryLive),
   Layer.provideMerge(ProjectionPendingApprovalRepository.layer),
   Layer.provideMerge(ProjectionStateRepository.layer),
