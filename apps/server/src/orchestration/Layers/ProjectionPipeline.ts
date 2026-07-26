@@ -1801,11 +1801,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
 
     const bootstrapProjector = (projector: ProjectorDefinition) =>
       projectionStateRepository
-        .getByProjector(
-          new GetProjectionStateInput({
-            projector: projector.name,
-          }),
-        )
+        .getByProjector(projector.name)
         .pipe(
           Effect.flatMap((stateRow) =>
             Stream.runForEach(
