@@ -485,9 +485,7 @@ export const make = Effect.gen(function* () {
 
   const loadActiveSession = (sessionId: AuthSessionId) =>
     Effect.gen(function* () {
-      const row = yield* authSessions.getById(
-        new AuthSessions.GetAuthSessionByIdInput({ sessionId }),
-      );
+      const row = yield* authSessions.getById(sessionId);
       if (Option.isNone(row) || row.value.revokedAt !== null) {
         return Option.none<AuthClientSession>();
       }
@@ -689,7 +687,7 @@ export const make = Effect.gen(function* () {
       }
 
       const row = yield* authSessions
-        .getById(new AuthSessions.GetAuthSessionByIdInput({ sessionId: claims.sid }))
+        .getById(claims.sid)
         .pipe(
           Effect.mapError(
             (cause) => new SessionCredentialVerificationError({ sessionId: claims.sid, cause }),
@@ -788,7 +786,7 @@ export const make = Effect.gen(function* () {
     }
 
     const row = yield* authSessions
-      .getById(new AuthSessions.GetAuthSessionByIdInput({ sessionId: claims.sid }))
+      .getById(claims.sid)
       .pipe(
         Effect.mapError(
           (cause) => new WebSocketTokenVerificationError({ sessionId: claims.sid, cause }),
@@ -826,9 +824,7 @@ export const make = Effect.gen(function* () {
     function* () {
       const now = yield* DateTime.now;
       const connectedSessions = yield* Ref.get(connectedSessionsRef);
-      const rows = yield* authSessions.listActive(
-        new AuthSessions.ListActiveAuthSessionsInput({ now }),
-      );
+      const rows = yield* authSessions.listActive(now);
 
       return rows.map((row) =>
         toAuthClientSession({

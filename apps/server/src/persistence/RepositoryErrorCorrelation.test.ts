@@ -57,9 +57,7 @@ describe("persistence error correlation", () => {
         WHERE session_id = ${sessionId}
       `;
 
-      const decodeError = yield* Effect.flip(
-        sessions.listActive(new AuthSessions.ListActiveAuthSessionsInput({ now })),
-      );
+      const decodeError = yield* Effect.flip(sessions.listActive(now));
       assert.instanceOf(decodeError, PersistenceErrors.PersistenceDecodeError);
       assert.deepStrictEqual(decodeError.correlation, { sessionId });
       assert.equal(

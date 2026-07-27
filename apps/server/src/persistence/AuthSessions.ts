@@ -19,6 +19,7 @@ import {
   type PersistenceErrorCorrelation,
   PersistenceSqlError,
 } from "./Errors.ts";
+import type { DateTime } from "effect";
 
 class AuthSessionClientMetadataRecord extends Schema.Class<AuthSessionClientMetadataRecord>(
   "AuthSessionClientMetadataRecord",
@@ -55,29 +56,10 @@ export class CreateAuthSessionInput extends Schema.Class<CreateAuthSessionInput>
   expiresAt: Schema.DateTimeUtcFromString,
 }) {}
 
-export class GetAuthSessionByIdInput extends Schema.Class<GetAuthSessionByIdInput>(
-  "GetAuthSessionByIdInput",
-)({
-  sessionId: AuthSessionId,
-}) {}
-
-export class ListActiveAuthSessionsInput extends Schema.Class<ListActiveAuthSessionsInput>(
-  "ListActiveAuthSessionsInput",
-)({
-  now: Schema.DateTimeUtcFromString,
-}) {}
-
 export class RevokeAuthSessionInput extends Schema.Class<RevokeAuthSessionInput>(
   "RevokeAuthSessionInput",
 )({
   sessionId: AuthSessionId,
-  revokedAt: Schema.DateTimeUtcFromString,
-}) {}
-
-export class RevokeOtherAuthSessionsInput extends Schema.Class<RevokeOtherAuthSessionsInput>(
-  "RevokeOtherAuthSessionsInput",
-)({
-  currentSessionId: AuthSessionId,
   revokedAt: Schema.DateTimeUtcFromString,
 }) {}
 
@@ -95,16 +77,16 @@ export class AuthSessionRepository extends Context.Service<
       input: CreateAuthSessionInput,
     ) => Effect.Effect<void, AuthSessionRepositoryError>;
     readonly getById: (
-      input: GetAuthSessionByIdInput,
+      sessionId: AuthSessionId,
     ) => Effect.Effect<Option.Option<AuthSessionRecord>, AuthSessionRepositoryError>;
     readonly listActive: (
-      input: ListActiveAuthSessionsInput,
+      now: DateTime.Utc,
     ) => Effect.Effect<ReadonlyArray<AuthSessionRecord>, AuthSessionRepositoryError>;
     readonly revoke: (
       input: RevokeAuthSessionInput,
     ) => Effect.Effect<boolean, AuthSessionRepositoryError>;
     readonly revokeAllExcept: (
-      input: RevokeOtherAuthSessionsInput,
+      input: RevokeAuthSessionInput,
     ) => Effect.Effect<ReadonlyArray<AuthSessionId>, AuthSessionRepositoryError>;
     readonly setLastConnectedAt: (
       input: SetAuthSessionLastConnectedAtInput,
@@ -225,9 +207,9 @@ export const make = Effect.gen(function* () {
   });
 
   const getSessionRowById = SqlSchema.findOneOption({
-    Request: GetAuthSessionByIdInput,
+    Request: AuthSessionId,
     Result: AuthSessionRawDbRow,
-    execute: ({ sessionId }) =>
+    execute: (sessionId) =>
       sql`
         SELECT
           session_id AS "sessionId",
@@ -250,9 +232,9 @@ export const make = Effect.gen(function* () {
   });
 
   const listActiveSessionRows = SqlSchema.findAll({
-    Request: ListActiveAuthSessionsInput,
+    Request: Schema.DateTimeUtcFromString,
     Result: AuthSessionRawDbRow,
-    execute: ({ now }) =>
+    execute: (now) =>
       sql`
         SELECT
           session_id AS "sessionId",
@@ -301,13 +283,13 @@ export const make = Effect.gen(function* () {
   });
 
   const revokeOtherSessionRows = SqlSchema.findAll({
-    Request: RevokeOtherAuthSessionsInput,
+    Request: RevokeAuthSessionInput,
     Result: Schema.Struct({ sessionId: AuthSessionId }),
-    execute: ({ currentSessionId, revokedAt }) =>
+    execute: ({ sessionId, revokedAt }) =>
       sql`
         UPDATE auth_sessions
         SET revoked_at = ${revokedAt}
-        WHERE session_id <> ${currentSessionId}
+        WHERE session_id <> ${sessionId}
           AND revoked_at IS NULL
         RETURNING session_id AS "sessionId"
       `,
@@ -324,13 +306,13 @@ export const make = Effect.gen(function* () {
       ),
     );
 
-  const getById: AuthSessionRepository["Service"]["getById"] = (input) =>
-    getSessionRowById(input).pipe(
+  const getById: AuthSessionRepository["Service"]["getById"] = (sessionId) =>
+    getSessionRowById(sessionId).pipe(
       Effect.mapError(
         toPersistenceSqlOrDecodeError(
           "AuthSessionRepository.getById:query",
           "AuthSessionRepository.getById:decodeRow",
-          { sessionId: input.sessionId },
+          { sessionId: sessionId },
         ),
       ),
       Effect.flatMap((rowOption) =>
@@ -342,7 +324,7 @@ export const make = Effect.gen(function* () {
                 PersistenceDecodeError.fromSchemaError(
                   "AuthSessionRepository.getById:decodeRow",
                   cause,
-                  { sessionId: input.sessionId },
+                  { sessionId: sessionId },
                 ),
               ),
               Effect.map((decodedRow) => Option.some(toAuthSessionRecord(decodedRow))),
@@ -393,7 +375,7 @@ export const make = Effect.gen(function* () {
         toPersistenceSqlOrDecodeError(
           "AuthSessionRepository.revokeAllExcept:query",
           "AuthSessionRepository.revokeAllExcept:decodeRows",
-          { currentSessionId: input.currentSessionId },
+          { currentSessionId: input.sessionId },
         ),
       ),
       Effect.map((rows) => rows.map((row) => row.sessionId)),
