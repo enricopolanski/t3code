@@ -17,7 +17,7 @@ const now = DateTime.makeUnsafe("2026-06-21T00:00:00.000Z");
 const scopes: ReadonlyArray<AuthEnvironmentScope> = ["access:read"];
 
 const authSessionLayer = AuthSessions.layer.pipe(Layer.provideMerge(SqlitePersistenceMemory));
-const authPairingLinkLayer = AuthPairingLinks.layer.pipe(
+const authPairingLinkLayer = AuthPairingLinks.AuthPairingLinkRepository.layer.pipe(
   Layer.provideMerge(SqlitePersistenceMemory),
 );
 const providerSessionRuntimeLayer = ProviderSessionRuntime.layer.pipe(
@@ -150,11 +150,7 @@ describe("persistence error correlation", () => {
         )
       `;
 
-      const decodeError = yield* Effect.flip(
-        pairingLinks.getByCredential(
-          new AuthPairingLinks.GetAuthPairingLinkByCredentialInput({ credential }),
-        ),
-      );
+      const decodeError = yield* Effect.flip(pairingLinks.getByCredential(credential));
       assert.instanceOf(decodeError, PersistenceErrors.PersistenceDecodeError);
       assert.deepStrictEqual(decodeError.correlation, { pairingLinkId: id });
       assert.equal(
@@ -188,11 +184,7 @@ describe("persistence error correlation", () => {
       assert.notInclude(createError.message, subject);
       assert.notInclude(createError.message, DateTime.formatIso(issuedAt));
 
-      const revokeError = yield* Effect.flip(
-        pairingLinks.revoke(
-          new AuthPairingLinks.RevokeAuthPairingLinkInput({ id, revokedAt: now }),
-        ),
-      );
+      const revokeError = yield* Effect.flip(pairingLinks.revoke(id, now));
       assert.instanceOf(revokeError, PersistenceErrors.PersistenceSqlError);
       assert.deepStrictEqual(revokeError.correlation, { pairingLinkId: id });
       assert.notInclude(revokeError.message, credential);

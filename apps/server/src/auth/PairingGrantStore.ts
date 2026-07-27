@@ -334,9 +334,7 @@ export const make = Effect.gen(function* () {
   )(
     function* () {
       const now = yield* DateTime.now;
-      const rows = yield* pairingLinks.listActive(
-        new AuthPairingLinks.ListActiveAuthPairingLinksInput({ now }),
-      );
+      const rows = yield* pairingLinks.listActive(now);
 
       return rows.map((row) =>
         row.label
@@ -366,12 +364,7 @@ export const make = Effect.gen(function* () {
     function* (id) {
       const revokedAt = yield* DateTime.now;
       const revoked = yield* pairingLinks
-        .revoke(
-          new AuthPairingLinks.RevokeAuthPairingLinkInput({
-            id,
-            revokedAt,
-          }),
-        )
+        .revoke(id, revokedAt)
         .pipe(Effect.mapError((cause) => new PairingLinkRevokeError({ pairingLinkId: id, cause })));
       if (revoked) {
         yield* emitRemoved(id);
@@ -546,7 +539,7 @@ export const make = Effect.gen(function* () {
       }
 
       const matching = yield* pairingLinks
-        .getByCredential(new AuthPairingLinks.GetAuthPairingLinkByCredentialInput({ credential }))
+        .getByCredential(credential)
         .pipe(Effect.mapError((cause) => new BootstrapCredentialLookupError({ cause })));
       if (Option.isNone(matching)) {
         return yield* new UnknownBootstrapCredentialError({});
@@ -587,5 +580,5 @@ export const make = Effect.gen(function* () {
 });
 
 export const layer = Layer.effect(PairingGrantStore, make).pipe(
-  Layer.provideMerge(AuthPairingLinks.layer),
+  Layer.provideMerge(AuthPairingLinks.AuthPairingLinkRepository.layer),
 );
