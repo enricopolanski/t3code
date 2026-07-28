@@ -55,6 +55,15 @@ When asked "what is X" — a directory, a module, a service, an app — answer w
   _adapter_, _ingestion_ name roles, not kinds. A reader who can't tell whether
   one is a function they call or a subscription that is always running has no
   picture of the system. "The decider: a single function that…" costs four words.
+- **Use the repository's name, and put it first.** This is written so developers
+  can read the codebase; a term the reader will never see in a file or a PR
+  review is worth nothing to them. If the repo calls it `orchestration`, that is
+  its name — "the core" is an invented label, and an invented label used as the
+  subject teaches the wrong word. Lead with the real name and let the
+  explanation follow it: "one of the five is `orchestration`, which decides what
+  a command means", never "the core is the directory called `orchestration`".
+  Check what the project actually calls a thing before naming it; if the project
+  has no word for a grouping, don't coin one and present it as the project's.
 - **Don't spend a term twice.** _View_ already means the desktop, web and mobile
   apps; calling projections views as well — even by analogy, even once — costs
   the distinction the chapter is built on. If an analogy needs the word, reach
