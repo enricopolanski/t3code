@@ -468,7 +468,9 @@ export const make = Effect.gen(function* () {
   const cookieName = resolveSessionCookieName({
     mode: serverConfig.mode,
     port: serverConfig.port,
-    devUrl: serverConfig.devUrl,
+    host: serverConfig.host,
+    instanceKey: serverConfig.stateDir,
+    development: serverConfig.devUrl !== undefined,
   });
 
   const emitUpsert = (clientSession: AuthClientSession) =>
