@@ -97,7 +97,7 @@ describe("persistence error correlation", () => {
 
       const revokeOtherError = yield* Effect.flip(
         sessions.revokeAllExcept(
-          new AuthSessions.RevokeOtherAuthSessionsInput({ currentSessionId, revokedAt: now }),
+          AuthSessions.RevokeAuthSessionInput.make({ sessionId: currentSessionId, revokedAt: now }),
         ),
       );
       assert.instanceOf(revokeOtherError, PersistenceErrors.PersistenceSqlError);

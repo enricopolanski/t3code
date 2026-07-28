@@ -116,7 +116,7 @@ export const waitForLoopbackAuthorization = Effect.fn(
   );
 });
 
-class PersistedToken extends Schema.Class<PersistedToken>("PersistedToken")({
+export class PersistedToken extends Schema.Class<PersistedToken>("PersistedToken")({
   accessToken: Schema.String,
   refreshToken: Schema.String,
   expiresAtEpochMs: Schema.Number,
