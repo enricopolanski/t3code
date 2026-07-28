@@ -874,8 +874,8 @@ export const make = Effect.gen(function* () {
     const revokedAt = yield* DateTime.now;
     const revokedSessionIds = yield* authSessions
       .revokeAllExcept(
-        new AuthSessions.RevokeOtherAuthSessionsInput({
-          currentSessionId: sessionId,
+        new AuthSessions.RevokeAuthSessionInput({
+          sessionId,
           revokedAt,
         }),
       )
