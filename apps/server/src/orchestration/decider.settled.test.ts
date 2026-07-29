@@ -8,6 +8,11 @@ import {
   type OrchestrationReadModel,
   type OrchestrationSession,
   type OrchestrationThread,
+  ThreadActivityAppendCommand,
+  ThreadSessionSetCommand,
+  ThreadSettleCommand,
+  ThreadTurnStartCommand,
+  ThreadUnsettleCommand,
 } from "@t3tools/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { expect, it } from "@effect/vitest";
@@ -72,11 +77,11 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
   it.effect("settles active threads and re-emits idempotently for settled ones", () =>
     Effect.gen(function* () {
       const event = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadSettleCommand.make({
           type: "thread.settle",
           commandId: CommandId.make("cmd-settle"),
           threadId: ThreadId.make("thread-1"),
-        },
+        }),
         readModel: makeReadModel(null),
       });
       const events = Array.isArray(event) ? event : [event];
@@ -89,11 +94,11 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
       // Already settled: the engine rejects zero-event commands, so idempotency
       // is by re-emission — preserving the original settledAt.
       const reEmit = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadSettleCommand.make({
           type: "thread.settle",
           commandId: CommandId.make("cmd-settle-again"),
           threadId: ThreadId.make("thread-1"),
-        },
+        }),
         readModel: makeReadModel("settled"),
       });
       const reEmitEvents = Array.isArray(reEmit) ? reEmit : [reEmit];
@@ -112,22 +117,22 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
     Effect.gen(function* () {
       for (const status of ["starting", "running"] as const) {
         const error = yield* decideOrchestrationCommand({
-          command: {
+          command: ThreadSettleCommand.make({
             type: "thread.settle",
             commandId: CommandId.make(`cmd-settle-live-${status}`),
             threadId: ThreadId.make("thread-1"),
-          },
+          }),
           readModel: makeReadModel(null, null, makeSession(status)),
         }).pipe(Effect.flip);
         expect(error._tag).toBe("OrchestrationCommandInvariantError");
       }
       // Stopped/error sessions are settleable — only live work is protected.
       const settled = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadSettleCommand.make({
           type: "thread.settle",
           commandId: CommandId.make("cmd-settle-stopped"),
           threadId: ThreadId.make("thread-1"),
-        },
+        }),
         readModel: makeReadModel(null, null, makeSession("stopped")),
       });
       const settledEvents = Array.isArray(settled) ? settled : [settled];
@@ -150,11 +155,11 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
 
       // Open approval request: settle rejected.
       const openError = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadSettleCommand.make({
           type: "thread.settle",
           commandId: CommandId.make("cmd-settle-pending"),
           threadId: ThreadId.make("thread-1"),
-        },
+        }),
         readModel: makeReadModel(null, null, null, [
           requestActivity("approval.requested", "req-1", NOW),
         ]),
@@ -163,11 +168,11 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
 
       // Same request later resolved: settleable again.
       const settled = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadSettleCommand.make({
           type: "thread.settle",
           commandId: CommandId.make("cmd-settle-resolved"),
           threadId: ThreadId.make("thread-1"),
-        },
+        }),
         readModel: makeReadModel(null, null, null, [
           requestActivity("approval.requested", "req-1", NOW),
           requestActivity("approval.resolved", "req-1", NOW),
@@ -178,11 +183,11 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
 
       // Open user-input request: also rejected.
       const inputError = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadSettleCommand.make({
           type: "thread.settle",
           commandId: CommandId.make("cmd-settle-pending-input"),
           threadId: ThreadId.make("thread-1"),
-        },
+        }),
         readModel: makeReadModel(null, null, null, [
           requestActivity("user-input.requested", "req-2", NOW),
         ]),
@@ -211,11 +216,11 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
       // Stale-failure detail clears the request — mirrors the projection's
       // pending accounting, which is what the client's canSettle sees.
       const settled = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadSettleCommand.make({
           type: "thread.settle",
           commandId: CommandId.make("cmd-settle-stale-failed"),
           threadId: ThreadId.make("thread-1"),
-        },
+        }),
         readModel: makeReadModel(null, null, null, [
           activity("approval.requested", "req-1", {}),
           activity("provider.approval.respond.failed", "req-1", {
@@ -233,11 +238,11 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
       // A non-stale respond failure (transient provider error) keeps the
       // request open: the user can retry, so it is still blocked-on-you.
       const stillOpen = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadSettleCommand.make({
           type: "thread.settle",
           commandId: CommandId.make("cmd-settle-transient-failed"),
           threadId: ThreadId.make("thread-1"),
-        },
+        }),
         readModel: makeReadModel(null, null, null, [
           activity("approval.requested", "req-3", {}),
           activity("provider.approval.respond.failed", "req-3", {
@@ -266,11 +271,11 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
 
       // Within the grace window: genuinely queued, settle rejected.
       const queuedError = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadSettleCommand.make({
           type: "thread.settle",
           commandId: CommandId.make("cmd-settle-queued"),
           threadId: ThreadId.make("thread-1"),
-        },
+        }),
         readModel: makeReadModel(null, null, null, [], [userMessage("1969-12-31T23:59:30.000Z")]),
       }).pipe(Effect.flip);
       expect(queuedError._tag).toBe("OrchestrationCommandInvariantError");
@@ -279,11 +284,11 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
       // a negative age must not read as queued forever — past the grace
       // bound in either direction the thread is settleable.
       const skewed = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadSettleCommand.make({
           type: "thread.settle",
           commandId: CommandId.make("cmd-settle-skewed"),
           threadId: ThreadId.make("thread-1"),
-        },
+        }),
         readModel: makeReadModel(null, null, null, [], [userMessage("1970-01-01T01:00:00.000Z")]),
       });
       const skewedEvents = Array.isArray(skewed) ? skewed : [skewed];
@@ -294,22 +299,22 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
   it.effect("rejects settling and unsettling archived threads", () =>
     Effect.gen(function* () {
       const settleError = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadSettleCommand.make({
           type: "thread.settle",
           commandId: CommandId.make("cmd-settle-archived"),
           threadId: ThreadId.make("thread-1"),
-        },
+        }),
         readModel: makeReadModel(null, NOW),
       }).pipe(Effect.flip);
       expect(settleError._tag).toBe("OrchestrationCommandInvariantError");
 
       const unsettleError = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadUnsettleCommand.make({
           type: "thread.unsettle",
           commandId: CommandId.make("cmd-unsettle-archived"),
           threadId: ThreadId.make("thread-1"),
           reason: "user",
-        },
+        }),
         readModel: makeReadModel("settled", NOW),
       }).pipe(Effect.flip);
       expect(unsettleError._tag).toBe("OrchestrationCommandInvariantError");
@@ -319,12 +324,12 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
   it.effect("maps unsettle reasons to overrides and re-emits idempotently", () =>
     Effect.gen(function* () {
       const userEvent = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadUnsettleCommand.make({
           type: "thread.unsettle",
           commandId: CommandId.make("cmd-unsettle-user"),
           threadId: ThreadId.make("thread-1"),
           reason: "user",
-        },
+        }),
         readModel: makeReadModel("settled"),
       });
       const userEvents = Array.isArray(userEvent) ? userEvent : [userEvent];
@@ -337,12 +342,12 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
       // Re-dispatching against the already-reached state re-emits rather than
       // producing zero events (the engine rejects empty commands).
       const userAgain = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadUnsettleCommand.make({
           type: "thread.unsettle",
           commandId: CommandId.make("cmd-unsettle-user-again"),
           threadId: ThreadId.make("thread-1"),
           reason: "user",
-        },
+        }),
         readModel: makeReadModel("active"),
       });
       const userAgainEvents = Array.isArray(userAgain) ? userAgain : [userAgain];
@@ -354,7 +359,7 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
   it.effect("prepends activity unsets for turn starts and live session updates", () =>
     Effect.gen(function* () {
       const turnResult = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadTurnStartCommand.make({
           type: "thread.turn.start",
           commandId: CommandId.make("cmd-turn-start"),
           threadId: ThreadId.make("thread-1"),
@@ -367,7 +372,7 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
           runtimeMode: "full-access",
           interactionMode: "default",
           createdAt: NOW,
-        },
+        }),
         readModel: makeReadModel("settled"),
       });
       const turnEvents = Array.isArray(turnResult) ? turnResult : [turnResult];
@@ -378,13 +383,13 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
       ]);
 
       const sessionResult = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadSessionSetCommand.make({
           type: "thread.session.set",
           commandId: CommandId.make("cmd-session-set"),
           threadId: ThreadId.make("thread-1"),
           session: makeSession("running"),
           createdAt: NOW,
-        },
+        }),
         // A keep-active pin is also an override: real activity clears it
         // back to neutral so auto-settle can apply again later.
         readModel: makeReadModel("active"),
@@ -400,7 +405,7 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
   it.effect("clears a keep-active pin on real activity", () =>
     Effect.gen(function* () {
       const turnResult = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadTurnStartCommand.make({
           type: "thread.turn.start",
           commandId: CommandId.make("cmd-active-turn-start"),
           threadId: ThreadId.make("thread-1"),
@@ -413,7 +418,7 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
           runtimeMode: "full-access",
           interactionMode: "default",
           createdAt: NOW,
-        },
+        }),
         readModel: makeReadModel("active"),
       });
       const turnEvents = Array.isArray(turnResult) ? turnResult : [turnResult];
@@ -426,7 +431,7 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
       ]);
 
       const activityResult = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadActivityAppendCommand.make({
           type: "thread.activity.append",
           commandId: CommandId.make("cmd-active-approval"),
           threadId: ThreadId.make("thread-1"),
@@ -440,7 +445,7 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
             createdAt: NOW,
           },
           createdAt: NOW,
-        },
+        }),
         readModel: makeReadModel("active"),
       });
       const activityEvents = Array.isArray(activityResult) ? activityResult : [activityResult];
@@ -455,13 +460,13 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
     Effect.gen(function* () {
       for (const status of ["stopped", "error", "ready", "idle"] as const) {
         const result = yield* decideOrchestrationCommand({
-          command: {
+          command: ThreadSessionSetCommand.make({
             type: "thread.session.set",
             commandId: CommandId.make(`cmd-session-${status}`),
             threadId: ThreadId.make("thread-1"),
             session: makeSession(status),
             createdAt: NOW,
-          },
+          }),
           readModel: makeReadModel("settled"),
         });
         const events = Array.isArray(result) ? result : [result];
@@ -473,7 +478,7 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
   it.effect("unsettles for approval and user-input activities but not others", () =>
     Effect.gen(function* () {
       const approvalResult = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadActivityAppendCommand.make({
           type: "thread.activity.append",
           commandId: CommandId.make("cmd-activity-approval"),
           threadId: ThreadId.make("thread-1"),
@@ -487,7 +492,7 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
             createdAt: NOW,
           },
           createdAt: NOW,
-        },
+        }),
         readModel: makeReadModel("settled"),
       });
       const approvalEvents = Array.isArray(approvalResult) ? approvalResult : [approvalResult];
@@ -497,7 +502,7 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
       ]);
 
       const routineResult = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadActivityAppendCommand.make({
           type: "thread.activity.append",
           commandId: CommandId.make("cmd-activity-routine"),
           threadId: ThreadId.make("thread-1"),
@@ -511,7 +516,7 @@ it.layer(NodeServices.layer)("settled thread decider", (it) => {
             createdAt: NOW,
           },
           createdAt: NOW,
-        },
+        }),
         readModel: makeReadModel("settled"),
       });
       const routineEvents = Array.isArray(routineResult) ? routineResult : [routineResult];

@@ -4,6 +4,7 @@ import {
   type ServerProvider,
   type ServerProviderModel,
 } from "@t3tools/contracts";
+import { ServerProviderAuth } from "@t3tools/contracts";
 import type * as EffectAcpSchema from "effect-acp/schema";
 import { causeErrorTag } from "@t3tools/shared/observability";
 import * as Crypto from "effect/Crypto";
@@ -70,7 +71,7 @@ export function buildInitialGrokProviderSnapshot(
           installed: false,
           version: null,
           status: "warning",
-          auth: { status: "unknown" },
+          auth: ServerProviderAuth.make({ status: "unknown" }),
           message: "Grok is disabled in T3 Code settings.",
         },
       });
@@ -85,7 +86,7 @@ export function buildInitialGrokProviderSnapshot(
         installed: true,
         version: null,
         status: "warning",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: "Checking Grok CLI availability...",
       },
     });
@@ -179,7 +180,7 @@ export const checkGrokProviderStatus = Effect.fn("checkGrokProviderStatus")(func
         installed: false,
         version: null,
         status: "warning",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: "Grok is disabled in T3 Code settings.",
       },
     });
@@ -204,7 +205,7 @@ export const checkGrokProviderStatus = Effect.fn("checkGrokProviderStatus")(func
         installed: !isCommandMissingCause(error),
         version: null,
         status: "error",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: isCommandMissingCause(error)
           ? "Grok CLI (`grok`) is not installed or not on PATH."
           : "Failed to execute Grok CLI health check.",
@@ -222,7 +223,7 @@ export const checkGrokProviderStatus = Effect.fn("checkGrokProviderStatus")(func
         installed: true,
         version: null,
         status: "error",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: "Grok CLI is installed but timed out while running `grok --version`.",
       },
     });
@@ -245,7 +246,7 @@ export const checkGrokProviderStatus = Effect.fn("checkGrokProviderStatus")(func
         installed: true,
         version,
         status: "error",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: "Grok CLI is installed but failed to run.",
       },
     });
@@ -268,7 +269,7 @@ export const checkGrokProviderStatus = Effect.fn("checkGrokProviderStatus")(func
         installed: true,
         version,
         status: "error",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: "Grok CLI is installed but ACP startup failed. Check server logs for details.",
       },
     });
@@ -286,7 +287,7 @@ export const checkGrokProviderStatus = Effect.fn("checkGrokProviderStatus")(func
         installed: true,
         version,
         status: "error",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: `Grok CLI is installed but ACP startup timed out after ${GROK_ACP_MODEL_DISCOVERY_TIMEOUT_MS}ms.`,
       },
     });
@@ -306,7 +307,7 @@ export const checkGrokProviderStatus = Effect.fn("checkGrokProviderStatus")(func
       installed: true,
       version,
       status: "ready",
-      auth: { status: "unknown" },
+      auth: ServerProviderAuth.make({ status: "unknown" }),
     },
   });
 });

@@ -1,12 +1,15 @@
 import {
   EventId,
+  type OrchestrationEvent,
+  OrchestrationEventMetadata,
+  OrchestrationThread,
+  OrchestrationThreadDetailSnapshot,
+  OrchestrationThreadActivity,
   ProjectId,
   ProviderInstanceId,
+  ThreadActivityAppendedPayload,
   ThreadId,
   TurnId,
-  type OrchestrationEvent,
-  type OrchestrationThread,
-  type OrchestrationThreadActivity,
 } from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
@@ -23,7 +26,7 @@ function makeActivity(
   itemType: string,
   data: Record<string, unknown>,
 ): OrchestrationThreadActivity {
-  return {
+  return OrchestrationThreadActivity.make({
     id: EventId.make(id),
     tone: "tool",
     kind: "tool.completed",
@@ -38,11 +41,11 @@ function makeActivity(
     },
     turnId: TurnId.make(`turn-${id}`),
     createdAt: "2026-07-27T00:00:00.000Z",
-  };
+  });
 }
 
 function makeThread(activities: ReadonlyArray<OrchestrationThreadActivity>): OrchestrationThread {
-  return {
+  return OrchestrationThread.make({
     id: ThreadId.make("thread-projection"),
     projectId: ProjectId.make("project-projection"),
     title: "Activity projection",
@@ -66,7 +69,7 @@ function makeThread(activities: ReadonlyArray<OrchestrationThreadActivity>): Orc
     activities,
     checkpoints: [],
     session: null,
-  };
+  });
 }
 
 const fixtures = [
@@ -198,11 +201,11 @@ describe("projectActivityPayload", () => {
   it("projects snapshot and event transports without mutating their sources", () => {
     const activity = fixtures[0]!;
     const thread = makeThread([activity]);
-    const snapshot = { snapshotSequence: 7, thread };
+    const snapshot = OrchestrationThreadDetailSnapshot.make({ snapshotSequence: 7, thread });
     const projectedSnapshot = projectThreadDetailSnapshot(snapshot);
 
     expect(projectedSnapshot.thread.activities[0]).not.toBe(activity);
-    expect(snapshot.thread.activities[0]).toBe(activity);
+    expect(snapshot.thread.activities[0]).toEqual(activity);
 
     const event = {
       sequence: 8,
@@ -213,12 +216,12 @@ describe("projectActivityPayload", () => {
       commandId: null,
       causationEventId: null,
       correlationId: null,
-      metadata: {},
+      metadata: OrchestrationEventMetadata.make({}),
       type: "thread.activity-appended",
-      payload: {
+      payload: ThreadActivityAppendedPayload.make({
         threadId: thread.id,
         activity,
-      },
+      }),
     } satisfies Extract<OrchestrationEvent, { type: "thread.activity-appended" }>;
 
     const projectedEvent = projectActivityEvent(event);
@@ -228,6 +231,9 @@ describe("projectActivityPayload", () => {
         ? projectedEvent.payload.activity
         : undefined,
     ).toEqual(projectActivityPayload(activity));
-    expect(event.payload.activity).toBe(activity);
+    // `Schema.Class` constructors rebuild nested instances, so the source event
+    // holds an equal (not identical) activity; what matters is that projecting
+    // the event left it untouched.
+    expect(event.payload.activity).toEqual(activity);
   });
 });

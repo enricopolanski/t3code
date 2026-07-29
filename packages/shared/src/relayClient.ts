@@ -1,7 +1,11 @@
 import * as Clock from "effect/Clock";
-import type {
-  RelayClientInstallProgressEvent,
-  RelayClientInstallProgressStage,
+import {
+  RelayClientAvailableStatus,
+  type RelayClientInstallProgressEvent,
+  RelayClientInstallProgressUpdate,
+  type RelayClientInstallProgressStage,
+  RelayClientMissingStatus,
+  RelayClientUnsupportedStatus,
 } from "@t3tools/contracts";
 import * as Config from "effect/Config";
 import * as Context from "effect/Context";
@@ -25,22 +29,9 @@ export const CLOUDFLARED_PATH_ENV_NAME = "T3CODE_CLOUDFLARED_PATH";
 export type RelayClientExecutableSource = "override" | "managed" | "path";
 
 export type RelayClientStatus =
-  | {
-      readonly status: "available";
-      readonly executablePath: string;
-      readonly source: RelayClientExecutableSource;
-      readonly version: string;
-    }
-  | {
-      readonly status: "missing";
-      readonly version: string;
-    }
-  | {
-      readonly status: "unsupported";
-      readonly platform: NodeJS.Platform;
-      readonly arch: string;
-      readonly version: string;
-    };
+  | RelayClientAvailableStatus
+  | RelayClientMissingStatus
+  | RelayClientUnsupportedStatus;
 
 export type AvailableRelayClient = Extract<RelayClientStatus, { readonly status: "available" }>;
 
@@ -225,39 +216,39 @@ export const makeCloudflaredRelayClient = Effect.fn("cloudflared.make")(function
     const config = yield* loadCloudflaredConfig;
     if (Option.isSome(config.executableOverride)) {
       return (yield* isExecutableFile(config.executableOverride.value))
-        ? {
+        ? RelayClientAvailableStatus.make({
             status: "available",
             executablePath: config.executableOverride.value,
             source: "override",
             version: CLOUDFLARED_VERSION,
-          }
-        : { status: "missing", version: CLOUDFLARED_VERSION };
+          })
+        : RelayClientMissingStatus.make({ status: "missing", version: CLOUDFLARED_VERSION });
     }
     if (yield* isExecutableFile(managedPath)) {
-      return {
+      return RelayClientAvailableStatus.make({
         status: "available",
         executablePath: managedPath,
         source: "managed",
         version: CLOUDFLARED_VERSION,
-      };
+      });
     }
     const pathExecutable = yield* resolvePathExecutable;
     if (pathExecutable) {
-      return {
+      return RelayClientAvailableStatus.make({
         status: "available",
         executablePath: pathExecutable,
         source: "path",
         version: CLOUDFLARED_VERSION,
-      };
+      });
     }
     return releaseAsset
-      ? { status: "missing", version: CLOUDFLARED_VERSION }
-      : {
+      ? RelayClientMissingStatus.make({ status: "missing", version: CLOUDFLARED_VERSION })
+      : RelayClientUnsupportedStatus.make({
           status: "unsupported",
           platform,
           arch,
           version: CLOUDFLARED_VERSION,
-        };
+        });
   });
 
   const runCommand = Effect.fn("cloudflared.runCommand")(function* (
@@ -436,12 +427,12 @@ export const makeCloudflaredRelayClient = Effect.fn("cloudflared.make")(function
           wrapInstallFailure("write_failed", "Could not activate the relay client."),
           Effect.ensuring(fileSystem.remove(stagedPath, { force: true }).pipe(Effect.ignore)),
         );
-      return {
+      return RelayClientAvailableStatus.make({
         status: "available",
         executablePath: managedPath,
         source: "managed",
         version: CLOUDFLARED_VERSION,
-      } satisfies AvailableRelayClient;
+      }) satisfies AvailableRelayClient;
     }).pipe(
       Effect.scoped,
       Effect.ensuring(fileSystem.remove(lockPath, { force: true }).pipe(Effect.ignore)),
@@ -461,10 +452,12 @@ export const makeCloudflaredRelayClient = Effect.fn("cloudflared.make")(function
   const installWithProgress: RelayClientShape["installWithProgress"] = (report) =>
     installSemaphore.withPermit(
       installUnlocked((stage) =>
-        report({
-          type: "progress",
-          stage,
-        }),
+        report(
+          RelayClientInstallProgressUpdate.make({
+            type: "progress",
+            stage,
+          }),
+        ),
       ),
     );
   const install = installWithProgress(() => Effect.void);

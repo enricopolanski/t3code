@@ -1,12 +1,15 @@
-import type {
-  ProviderDriverKind,
-  ModelCapabilities,
-  ServerProvider,
-  ServerProviderAuth,
-  ServerProviderSkill,
-  ServerProviderSlashCommand,
+import {
+  BooleanProviderOptionDescriptor,
+  type ProviderDriverKind,
+  type ModelCapabilities,
+  ProviderOptionChoice,
+  SelectProviderOptionDescriptor,
+  type ServerProvider,
+  type ServerProviderAuth,
+  type ServerProviderSkill,
+  type ServerProviderSlashCommand,
   ServerProviderModel,
-  ServerProviderState,
+  type ServerProviderState,
 } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import * as PlatformError from "effect/PlatformError";
@@ -153,12 +156,14 @@ export function providerModelsFromSettings(
       continue;
     }
     seen.add(normalized);
-    customEntries.push({
-      slug: normalized,
-      name: normalized,
-      isCustom: true,
-      capabilities: customModelCapabilities,
-    });
+    customEntries.push(
+      ServerProviderModel.make({
+        slug: normalized,
+        name: normalized,
+        isCustom: true,
+        capabilities: customModelCapabilities,
+      }),
+    );
   }
 
   return [...resolvedBuiltInModels, ...customEntries];
@@ -175,21 +180,21 @@ export function buildSelectOptionDescriptor(input: {
 }) {
   const options = (input.options ?? []).map((option) =>
     option.isDefault
-      ? { id: option.value, label: option.label, isDefault: true }
-      : { id: option.value, label: option.label },
+      ? ProviderOptionChoice.make({ id: option.value, label: option.label, isDefault: true })
+      : ProviderOptionChoice.make({ id: option.value, label: option.label }),
   );
   const currentValue = options.find((option) => option.isDefault)?.id;
-  return {
+  return SelectProviderOptionDescriptor.make({
     id: input.id,
     label: input.label,
-    type: "select" as const,
+    type: "select",
     options,
     ...(currentValue ? { currentValue } : {}),
     ...(input.description ? { description: input.description } : {}),
     ...(input.promptInjectedValues && input.promptInjectedValues.length > 0
       ? { promptInjectedValues: [...input.promptInjectedValues] }
       : {}),
-  };
+  });
 }
 
 export function buildBooleanOptionDescriptor(input: {
@@ -198,13 +203,13 @@ export function buildBooleanOptionDescriptor(input: {
   readonly currentValue?: boolean;
   readonly description?: string;
 }) {
-  return {
+  return BooleanProviderOptionDescriptor.make({
     id: input.id,
     label: input.label,
-    type: "boolean" as const,
+    type: "boolean",
     ...(input.description ? { description: input.description } : {}),
     ...(typeof input.currentValue === "boolean" ? { currentValue: input.currentValue } : {}),
-  };
+  });
 }
 
 export function buildServerProvider(input: {

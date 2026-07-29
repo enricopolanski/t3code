@@ -95,63 +95,74 @@ export const KeybindingWhen = TrimmedString.check(
   Schema.isMinLength(1),
   Schema.isMaxLength(MAX_KEYBINDING_WHEN_LENGTH),
 );
-export const KeybindingRule = Schema.Struct({
+export class KeybindingRule extends Schema.Class<KeybindingRule>("KeybindingRule")({
   key: KeybindingValue,
   command: KeybindingCommand,
   when: Schema.optional(KeybindingWhen),
-});
-export type KeybindingRule = typeof KeybindingRule.Type;
+}) {}
 
 export const KeybindingsConfig = Schema.Array(KeybindingRule).check(
   Schema.isMaxLength(MAX_KEYBINDINGS_COUNT),
 );
 export type KeybindingsConfig = typeof KeybindingsConfig.Type;
 
-export const KeybindingShortcut = Schema.Struct({
+export class KeybindingShortcut extends Schema.Class<KeybindingShortcut>("KeybindingShortcut")({
   key: KeybindingValue,
   metaKey: Schema.Boolean,
   ctrlKey: Schema.Boolean,
   shiftKey: Schema.Boolean,
   altKey: Schema.Boolean,
   modKey: Schema.Boolean,
-});
-export type KeybindingShortcut = typeof KeybindingShortcut.Type;
+}) {}
 
 const KeybindingWhenNodeRef = Schema.suspend(
   (): Schema.Codec<KeybindingWhenNode> => KeybindingWhenNode,
 );
+export class KeybindingWhenIdentifier extends Schema.Class<KeybindingWhenIdentifier>(
+  "KeybindingWhenIdentifier",
+)({
+  type: Schema.Literal("identifier"),
+  name: Schema.NonEmptyString,
+}) {}
+
+export class KeybindingWhenNot extends Schema.Class<KeybindingWhenNot>("KeybindingWhenNot")({
+  type: Schema.Literal("not"),
+  node: KeybindingWhenNodeRef,
+}) {}
+
+export class KeybindingWhenAnd extends Schema.Class<KeybindingWhenAnd>("KeybindingWhenAnd")({
+  type: Schema.Literal("and"),
+  left: KeybindingWhenNodeRef,
+  right: KeybindingWhenNodeRef,
+}) {}
+
+export class KeybindingWhenOr extends Schema.Class<KeybindingWhenOr>("KeybindingWhenOr")({
+  type: Schema.Literal("or"),
+  left: KeybindingWhenNodeRef,
+  right: KeybindingWhenNodeRef,
+}) {}
+
 export const KeybindingWhenNode = Schema.Union([
-  Schema.Struct({
-    type: Schema.Literal("identifier"),
-    name: Schema.NonEmptyString,
-  }),
-  Schema.Struct({
-    type: Schema.Literal("not"),
-    node: KeybindingWhenNodeRef,
-  }),
-  Schema.Struct({
-    type: Schema.Literal("and"),
-    left: KeybindingWhenNodeRef,
-    right: KeybindingWhenNodeRef,
-  }),
-  Schema.Struct({
-    type: Schema.Literal("or"),
-    left: KeybindingWhenNodeRef,
-    right: KeybindingWhenNodeRef,
-  }),
+  KeybindingWhenIdentifier,
+  KeybindingWhenNot,
+  KeybindingWhenAnd,
+  KeybindingWhenOr,
 ]);
 export type KeybindingWhenNode =
-  | { type: "identifier"; name: string }
-  | { type: "not"; node: KeybindingWhenNode }
-  | { type: "and"; left: KeybindingWhenNode; right: KeybindingWhenNode }
-  | { type: "or"; left: KeybindingWhenNode; right: KeybindingWhenNode };
+  | KeybindingWhenIdentifier
+  | KeybindingWhenNot
+  | KeybindingWhenAnd
+  | KeybindingWhenOr;
 
-export const ResolvedKeybindingRule = Schema.Struct({
-  command: KeybindingCommand,
-  shortcut: KeybindingShortcut,
-  whenAst: Schema.optional(KeybindingWhenNode),
-}).annotate({ parseOptions: { onExcessProperty: "ignore" } });
-export type ResolvedKeybindingRule = typeof ResolvedKeybindingRule.Type;
+export class ResolvedKeybindingRule extends Schema.Class<ResolvedKeybindingRule>(
+  "ResolvedKeybindingRule",
+)(
+  Schema.Struct({
+    command: KeybindingCommand,
+    shortcut: KeybindingShortcut,
+    whenAst: Schema.optional(KeybindingWhenNode),
+  }).annotate({ parseOptions: { onExcessProperty: "ignore" } }),
+) {}
 
 export const ResolvedKeybindingsConfig = Schema.Array(ResolvedKeybindingRule).check(
   Schema.isMaxLength(MAX_KEYBINDINGS_COUNT),

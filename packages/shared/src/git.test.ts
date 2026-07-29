@@ -1,4 +1,8 @@
-import type { VcsStatusRemoteResult, VcsStatusResult } from "@t3tools/contracts";
+import {
+  SourceControlProviderInfo,
+  VcsStatusRemoteResult,
+  VcsStatusResult,
+} from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import {
@@ -125,13 +129,13 @@ describe("applyGitStatusStreamEvent", () => {
   });
 
   it("preserves local-only fields when applying a remote update", () => {
-    const current: VcsStatusResult = {
+    const current = VcsStatusResult.make({
       isRepo: true,
-      sourceControlProvider: {
+      sourceControlProvider: SourceControlProviderInfo.make({
         kind: "github",
         name: "GitHub",
         baseUrl: "https://github.com",
-      },
+      }),
       hasPrimaryRemote: true,
       isDefaultRef: false,
       refName: "feature/demo",
@@ -145,21 +149,23 @@ describe("applyGitStatusStreamEvent", () => {
       aheadCount: 0,
       behindCount: 0,
       pr: null,
-    };
+    });
 
-    const remote: VcsStatusRemoteResult = {
-      hasUpstream: true,
-      aheadCount: 2,
-      behindCount: 1,
-      pr: null,
-    };
-
-    expect(applyGitStatusStreamEvent(current, { _tag: "remoteUpdated", remote })).toEqual({
-      ...current,
+    const remote = VcsStatusRemoteResult.make({
       hasUpstream: true,
       aheadCount: 2,
       behindCount: 1,
       pr: null,
     });
+
+    expect(applyGitStatusStreamEvent(current, { _tag: "remoteUpdated", remote })).toEqual(
+      VcsStatusResult.make({
+        ...current,
+        hasUpstream: true,
+        aheadCount: 2,
+        behindCount: 1,
+        pr: null,
+      }),
+    );
   });
 });

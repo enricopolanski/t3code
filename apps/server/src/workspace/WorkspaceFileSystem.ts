@@ -9,10 +9,10 @@
  */
 import * as NodeFSP from "node:fs/promises";
 
-import type {
-  ProjectReadFileInput,
+import {
+  type ProjectReadFileInput,
   ProjectReadFileResult,
-  ProjectWriteFileInput,
+  type ProjectWriteFileInput,
   ProjectWriteFileResult,
 } from "@t3tools/contracts";
 import * as Context from "effect/Context";
@@ -236,12 +236,12 @@ export const make = Effect.gen(function* () {
             });
           }
 
-          return {
+          return ProjectReadFileResult.make({
             relativePath: target.relativePath,
             contents: new TextDecoder("utf-8").decode(fileBytes),
             byteLength: stat.size,
             truncated: stat.size > PROJECT_READ_FILE_MAX_BYTES,
-          };
+          });
         }),
       (handle) =>
         Effect.tryPromise({
@@ -294,7 +294,7 @@ export const make = Effect.gen(function* () {
       ),
     );
     yield* workspaceEntries.refresh(input.cwd);
-    return { relativePath: target.relativePath };
+    return ProjectWriteFileResult.make({ relativePath: target.relativePath });
   });
 
   return WorkspaceFileSystem.of({ readFile, writeFile });

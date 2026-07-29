@@ -29,9 +29,21 @@ import {
   type GitManagerServiceError,
   OrchestrationDispatchCommandError,
   type OrchestrationEvent,
+  ProjectCreatedEvent,
+  ProjectCreatedPayload,
+  ProjectMetaUpdatedEvent,
+  ProjectMetaUpdatedPayload,
+  OrchestrationShellProjectRemovedEvent,
+  OrchestrationShellProjectUpsertedEvent,
   type OrchestrationShellStreamEvent,
   type OrchestrationShellStreamItem,
+  OrchestrationShellStreamSnapshotItem,
+  OrchestrationShellThreadRemovedEvent,
+  OrchestrationShellThreadUpsertedEvent,
+  OrchestrationStreamSynchronizedItem,
+  OrchestrationThreadStreamEventItem,
   type OrchestrationThreadStreamItem,
+  OrchestrationThreadStreamSnapshotItem,
   OrchestrationGetFullThreadDiffError,
   OrchestrationGetSnapshotError,
   OrchestrationGetTurnDiffError,
@@ -59,6 +71,31 @@ import {
   type TerminalMetadataStreamEvent,
   WS_METHODS,
   WsRpcGroup,
+  AuthAccessSnapshot,
+  AuthAccessStreamClientRemovedEvent,
+  AuthAccessStreamClientUpsertedEvent,
+  AuthAccessStreamPairingLinkRemovedEvent,
+  AuthAccessStreamPairingLinkUpsertedEvent,
+  AuthAccessStreamSnapshotEvent,
+  AuthClientSession,
+  AuthClientSessionRef,
+  AuthPairingLinkRef,
+  RelayClientInstallCompleted,
+  ServerConfigKeybindingsUpdatedPayload,
+  ServerConfigProviderStatusesPayload,
+  ServerConfigSettingsUpdatedPayload,
+  ServerConfigStreamKeybindingsUpdatedEvent,
+  ServerConfigStreamProviderStatusesEvent,
+  ServerConfigStreamSettingsUpdatedEvent,
+  ServerConfigStreamSnapshotEvent,
+  ServerConfig as ServerConfigContract,
+  ServerObservability,
+  ServerUpsertKeybindingResult,
+  ThreadActivityAppendCommand,
+  ThreadCreateCommand,
+  ThreadDeleteCommand,
+  ThreadMetaUpdateCommand,
+  ThreadSessionStopCommand,
 } from "@t3tools/contracts";
 import { clamp } from "effect/Number";
 import { HttpRouter, HttpServerRequest, HttpServerRespondable } from "effect/unstable/http";
@@ -378,36 +415,36 @@ function toAuthAccessStreamEvent(
 ): AuthAccessStreamEvent {
   switch (change.type) {
     case "pairingLinkUpserted":
-      return {
+      return AuthAccessStreamPairingLinkUpsertedEvent.make({
         version: 1,
         revision,
         type: "pairingLinkUpserted",
         payload: change.pairingLink,
-      };
+      });
     case "pairingLinkRemoved":
-      return {
+      return AuthAccessStreamPairingLinkRemovedEvent.make({
         version: 1,
         revision,
         type: "pairingLinkRemoved",
-        payload: { id: change.id },
-      };
+        payload: AuthPairingLinkRef.make({ id: change.id }),
+      });
     case "clientUpserted":
-      return {
+      return AuthAccessStreamClientUpsertedEvent.make({
         version: 1,
         revision,
         type: "clientUpserted",
-        payload: {
+        payload: AuthClientSession.make({
           ...change.clientSession,
           current: change.clientSession.sessionId === currentSessionId,
-        },
-      };
+        }),
+      });
     case "clientRemoved":
-      return {
+      return AuthAccessStreamClientRemovedEvent.make({
         version: 1,
         revision,
         type: "clientRemoved",
-        payload: { sessionId: change.sessionId },
-      };
+        payload: AuthClientSessionRef.make({ sessionId: change.sessionId }),
+      });
   }
 }
 
@@ -563,21 +600,23 @@ const makeWsRpcLayer = (
           activityId: serverEventId,
         }).pipe(
           Effect.flatMap(({ commandId, activityId }) =>
-            orchestrationEngine.dispatch({
-              type: "thread.activity.append",
-              commandId,
-              threadId: input.threadId,
-              activity: {
-                id: activityId,
-                tone: input.tone,
-                kind: input.kind,
-                summary: input.summary,
-                payload: input.payload,
-                turnId: null,
+            orchestrationEngine.dispatch(
+              ThreadActivityAppendCommand.make({
+                type: "thread.activity.append",
+                commandId,
+                threadId: input.threadId,
+                activity: {
+                  id: activityId,
+                  tone: input.tone,
+                  kind: input.kind,
+                  summary: input.summary,
+                  payload: input.payload,
+                  turnId: null,
+                  createdAt: input.createdAt,
+                },
                 createdAt: input.createdAt,
-              },
-              createdAt: input.createdAt,
-            }),
+              }),
+            ),
           ),
         );
 
@@ -598,13 +637,15 @@ const makeWsRpcLayer = (
         switch (event.type) {
           case "project.created":
             return repositoryIdentityResolver.resolve(event.payload.workspaceRoot).pipe(
-              Effect.map((repositoryIdentity) => ({
-                ...event,
-                payload: {
-                  ...event.payload,
-                  repositoryIdentity,
-                },
-              })),
+              Effect.map((repositoryIdentity) =>
+                ProjectCreatedEvent.make({
+                  ...event,
+                  payload: ProjectCreatedPayload.make({
+                    ...event.payload,
+                    repositoryIdentity,
+                  }),
+                }),
+              ),
             );
           case "project.meta-updated":
             return Effect.gen(function* () {
@@ -623,13 +664,13 @@ const makeWsRpcLayer = (
               }
 
               const repositoryIdentity = yield* repositoryIdentityResolver.resolve(workspaceRoot);
-              return {
+              return ProjectMetaUpdatedEvent.make({
                 ...event,
-                payload: {
+                payload: ProjectMetaUpdatedPayload.make({
                   ...event.payload,
                   repositoryIdentity,
-                },
-              } satisfies OrchestrationEvent;
+                }),
+              }) satisfies OrchestrationEvent;
             }).pipe(Effect.orElseSucceed(() => event));
           default:
             return Effect.succeed(event);
@@ -648,20 +689,24 @@ const makeWsRpcLayer = (
             return projectUpsertOrRemove(event.payload.projectId, event.sequence);
           case "project.deleted":
             return Effect.succeed(
-              Option.some({
-                kind: "project-removed" as const,
-                sequence: event.sequence,
-                projectId: event.payload.projectId,
-              }),
+              Option.some(
+                OrchestrationShellProjectRemovedEvent.make({
+                  kind: "project-removed",
+                  sequence: event.sequence,
+                  projectId: event.payload.projectId,
+                }),
+              ),
             );
           case "thread.deleted":
           case "thread.archived":
             return Effect.succeed(
-              Option.some({
-                kind: "thread-removed" as const,
-                sequence: event.sequence,
-                threadId: event.payload.threadId,
-              }),
+              Option.some(
+                OrchestrationShellThreadRemovedEvent.make({
+                  kind: "thread-removed",
+                  sequence: event.sequence,
+                  threadId: event.payload.threadId,
+                }),
+              ),
             );
           case "thread.unarchived":
             return threadUpsertOrRemove(event.payload.threadId, event.sequence);
@@ -709,17 +754,21 @@ const makeWsRpcLayer = (
             Option.flatMap((project) =>
               Option.match(project, {
                 onNone: () =>
-                  Option.some<OrchestrationShellStreamEvent>({
-                    kind: "project-removed" as const,
-                    sequence,
-                    projectId,
-                  }),
+                  Option.some<OrchestrationShellStreamEvent>(
+                    OrchestrationShellProjectRemovedEvent.make({
+                      kind: "project-removed",
+                      sequence,
+                      projectId,
+                    }),
+                  ),
                 onSome: (nextProject) =>
-                  Option.some<OrchestrationShellStreamEvent>({
-                    kind: "project-upserted" as const,
-                    sequence,
-                    project: nextProject,
-                  }),
+                  Option.some<OrchestrationShellStreamEvent>(
+                    OrchestrationShellProjectUpsertedEvent.make({
+                      kind: "project-upserted",
+                      sequence,
+                      project: nextProject,
+                    }),
+                  ),
               }),
             ),
           ),
@@ -748,17 +797,21 @@ const makeWsRpcLayer = (
             Option.flatMap((thread) =>
               Option.match(thread, {
                 onNone: () =>
-                  Option.some<OrchestrationShellStreamEvent>({
-                    kind: "thread-removed" as const,
-                    sequence,
-                    threadId,
-                  }),
+                  Option.some<OrchestrationShellStreamEvent>(
+                    OrchestrationShellThreadRemovedEvent.make({
+                      kind: "thread-removed",
+                      sequence,
+                      threadId,
+                    }),
+                  ),
                 onSome: (nextThread) =>
-                  Option.some<OrchestrationShellStreamEvent>({
-                    kind: "thread-upserted" as const,
-                    sequence,
-                    thread: nextThread,
-                  }),
+                  Option.some<OrchestrationShellStreamEvent>(
+                    OrchestrationShellThreadUpsertedEvent.make({
+                      kind: "thread-upserted",
+                      sequence,
+                      thread: nextThread,
+                    }),
+                  ),
               }),
             ),
           ),
@@ -834,7 +887,7 @@ const makeWsRpcLayer = (
 
             output.push(...(yield* coalesceShellEvents(pendingEvents)));
             pendingEvents = [];
-            output.push({ kind: "synchronized" });
+            output.push(OrchestrationStreamSynchronizedItem.make({ kind: "synchronized" }));
           }
 
           output.push(...(yield* coalesceShellEvents(pendingEvents)));
@@ -865,11 +918,13 @@ const makeWsRpcLayer = (
             createdThread
               ? serverCommandId("bootstrap-thread-delete").pipe(
                   Effect.flatMap((commandId) =>
-                    orchestrationEngine.dispatch({
-                      type: "thread.delete",
-                      commandId,
-                      threadId: command.threadId,
-                    }),
+                    orchestrationEngine.dispatch(
+                      ThreadDeleteCommand.make({
+                        type: "thread.delete",
+                        commandId,
+                        threadId: command.threadId,
+                      }),
+                    ),
                   ),
                   Effect.ignoreCause({ log: true }),
                 )
@@ -992,19 +1047,21 @@ const makeWsRpcLayer = (
 
           const bootstrapProgram = Effect.gen(function* () {
             if (bootstrap?.createThread) {
-              yield* orchestrationEngine.dispatch({
-                type: "thread.create",
-                commandId: yield* serverCommandId("bootstrap-thread-create"),
-                threadId: command.threadId,
-                projectId: bootstrap.createThread.projectId,
-                title: bootstrap.createThread.title,
-                modelSelection: bootstrap.createThread.modelSelection,
-                runtimeMode: bootstrap.createThread.runtimeMode,
-                interactionMode: bootstrap.createThread.interactionMode,
-                branch: bootstrap.createThread.branch,
-                worktreePath: bootstrap.createThread.worktreePath,
-                createdAt: bootstrap.createThread.createdAt,
-              });
+              yield* orchestrationEngine.dispatch(
+                ThreadCreateCommand.make({
+                  type: "thread.create",
+                  commandId: yield* serverCommandId("bootstrap-thread-create"),
+                  threadId: command.threadId,
+                  projectId: bootstrap.createThread.projectId,
+                  title: bootstrap.createThread.title,
+                  modelSelection: bootstrap.createThread.modelSelection,
+                  runtimeMode: bootstrap.createThread.runtimeMode,
+                  interactionMode: bootstrap.createThread.interactionMode,
+                  branch: bootstrap.createThread.branch,
+                  worktreePath: bootstrap.createThread.worktreePath,
+                  createdAt: bootstrap.createThread.createdAt,
+                }),
+              );
               createdThread = true;
             }
 
@@ -1030,13 +1087,15 @@ const makeWsRpcLayer = (
                 path: null,
               });
               targetWorktreePath = worktree.worktree.path;
-              yield* orchestrationEngine.dispatch({
-                type: "thread.meta.update",
-                commandId: yield* serverCommandId("bootstrap-thread-meta-update"),
-                threadId: command.threadId,
-                branch: worktree.worktree.refName,
-                worktreePath: targetWorktreePath,
-              });
+              yield* orchestrationEngine.dispatch(
+                ThreadMetaUpdateCommand.make({
+                  type: "thread.meta.update",
+                  commandId: yield* serverCommandId("bootstrap-thread-meta-update"),
+                  threadId: command.threadId,
+                  branch: worktree.worktree.refName,
+                  worktreePath: targetWorktreePath,
+                }),
+              );
               yield* refreshGitStatus(targetWorktreePath);
             }
 
@@ -1088,7 +1147,7 @@ const makeWsRpcLayer = (
         const environment = yield* serverEnvironment.getDescriptor;
         const auth = yield* serverAuth.getDescriptor();
 
-        return {
+        return ServerConfigContract.make({
           environment,
           auth,
           cwd: config.cwd,
@@ -1099,7 +1158,7 @@ const makeWsRpcLayer = (
           availableEditors: yield* resolveAvailableEditorsForConfig(
             externalLauncher.resolveAvailableEditors(),
           ),
-          observability: {
+          observability: ServerObservability.make({
             logsDirectoryPath: config.logsDir,
             localTracingEnabled: true,
             ...(config.otlpTracesUrl !== undefined ? { otlpTracesUrl: config.otlpTracesUrl } : {}),
@@ -1108,11 +1167,11 @@ const makeWsRpcLayer = (
               ? { otlpMetricsUrl: config.otlpMetricsUrl }
               : {}),
             otlpMetricsEnabled: config.otlpMetricsUrl !== undefined,
-          },
+          }),
           settings,
           shellResumeCompletionMarker: true,
           threadResumeCompletionMarker: true,
-        };
+        });
       });
 
       const refreshGitStatus = (cwd: string) =>
@@ -1145,14 +1204,16 @@ const makeWsRpcLayer = (
               if (normalizedCommand.type === "thread.archive") {
                 if (shouldStopSessionAfterArchive) {
                   yield* Effect.gen(function* () {
-                    const stopCommand = yield* normalizeDispatchCommand({
-                      type: "thread.session.stop",
-                      commandId: CommandId.make(
-                        `session-stop-for-archive:${normalizedCommand.commandId}`,
-                      ),
-                      threadId: normalizedCommand.threadId,
-                      createdAt: yield* nowIso,
-                    });
+                    const stopCommand = yield* normalizeDispatchCommand(
+                      ThreadSessionStopCommand.make({
+                        type: "thread.session.stop",
+                        commandId: CommandId.make(
+                          `session-stop-for-archive:${normalizedCommand.commandId}`,
+                        ),
+                        threadId: normalizedCommand.threadId,
+                        createdAt: yield* nowIso,
+                      }),
+                    );
 
                     yield* dispatchNormalizedCommand(stopCommand);
                   }).pipe(
@@ -1257,9 +1318,7 @@ const makeWsRpcLayer = (
               const liveBuffer = yield* Queue.unbounded<ShellLiveInput>();
               yield* Effect.forkScoped(
                 orchestrationEngine.streamDomainEvents.pipe(
-                  Stream.runForEach((event) =>
-                    Queue.offer(liveBuffer, { kind: "event" as const, event }),
-                  ),
+                  Stream.runForEach((event) => Queue.offer(liveBuffer, { kind: "event", event })),
                 ),
                 { startImmediately: true },
               );
@@ -1285,7 +1344,10 @@ const makeWsRpcLayer = (
                 input.requestCompletionMarker === true
                   ? Stream.concat(
                       Stream.fromEffect(
-                        Queue.offer(liveBuffer, { kind: "synchronized" as const }).pipe(
+                        Queue.offer(
+                          liveBuffer,
+                          OrchestrationStreamSynchronizedItem.make({ kind: "synchronized" }),
+                        ).pipe(
                           Effect.andThen(Queue.takeAll(liveBuffer)),
                           Effect.flatMap(coalesceShellLiveInputs),
                         ),
@@ -1313,7 +1375,9 @@ const makeWsRpcLayer = (
                 if (replayGap < 0 || replayGap > SHELL_RESUME_MAX_GAP) {
                   const snapshot = yield* loadSnapshot;
                   return Stream.concat(
-                    Stream.make({ kind: "snapshot" as const, snapshot }),
+                    Stream.make(
+                      OrchestrationShellStreamSnapshotItem.make({ kind: "snapshot", snapshot }),
+                    ),
                     synchronizedThenLive,
                   );
                 }
@@ -1337,10 +1401,9 @@ const makeWsRpcLayer = (
 
               const snapshot = yield* loadSnapshot;
               return Stream.concat(
-                Stream.make({
-                  kind: "snapshot" as const,
-                  snapshot,
-                }),
+                Stream.make(
+                  OrchestrationShellStreamSnapshotItem.make({ kind: "snapshot", snapshot }),
+                ),
                 synchronizedThenLive,
               );
             }),
@@ -1374,10 +1437,12 @@ const makeWsRpcLayer = (
 
               const liveStream = orchestrationEngine.streamDomainEvents.pipe(
                 Stream.filter(isThisThreadDetailEvent),
-                Stream.map((event) => ({
-                  kind: "event" as const,
-                  event: projectActivityEvent(event),
-                })),
+                Stream.map((event) =>
+                  OrchestrationThreadStreamEventItem.make({
+                    kind: "event",
+                    event: projectActivityEvent(event),
+                  }),
+                ),
               );
 
               // Attach live delivery before reading either replay or snapshot state.
@@ -1411,10 +1476,12 @@ const makeWsRpcLayer = (
                   .readEvents(afterSequence, Number.MAX_SAFE_INTEGER)
                   .pipe(
                     Stream.filter(isThisThreadDetailEvent),
-                    Stream.map((event) => ({
-                      kind: "event" as const,
-                      event: projectActivityEvent(event),
-                    })),
+                    Stream.map((event) =>
+                      OrchestrationThreadStreamEventItem.make({
+                        kind: "event",
+                        event: projectActivityEvent(event),
+                      }),
+                    ),
                     Stream.mapError(
                       (cause) =>
                         new OrchestrationGetSnapshotError({
@@ -1427,7 +1494,10 @@ const makeWsRpcLayer = (
                   input.requestCompletionMarker === true
                     ? Stream.concat(
                         Stream.fromEffect(
-                          Queue.offer(liveBuffer, { kind: "synchronized" as const }),
+                          Queue.offer(
+                            liveBuffer,
+                            OrchestrationStreamSynchronizedItem.make({ kind: "synchronized" }),
+                          ),
                         ).pipe(Stream.drain),
                         bufferedLiveStream,
                       )
@@ -1458,16 +1528,21 @@ const makeWsRpcLayer = (
                 input.requestCompletionMarker === true
                   ? Stream.concat(
                       Stream.fromEffect(
-                        Queue.offer(liveBuffer, { kind: "synchronized" as const }),
+                        Queue.offer(
+                          liveBuffer,
+                          OrchestrationStreamSynchronizedItem.make({ kind: "synchronized" }),
+                        ),
                       ).pipe(Stream.drain),
                       bufferedLiveStream,
                     )
                   : bufferedLiveStream;
               return Stream.concat(
-                Stream.make({
-                  kind: "snapshot" as const,
-                  snapshot: projectThreadDetailSnapshot(snapshot.value),
-                }),
+                Stream.make(
+                  OrchestrationThreadStreamSnapshotItem.make({
+                    kind: "snapshot",
+                    snapshot: projectThreadDetailSnapshot(snapshot.value),
+                  }),
+                ),
                 afterSnapshot,
               );
             }),
@@ -1507,7 +1582,10 @@ const makeWsRpcLayer = (
             WS_METHODS.serverUpsertKeybinding,
             Effect.gen(function* () {
               const keybindingsConfig = yield* keybindings.upsertKeybindingRule(rule);
-              return { keybindings: keybindingsConfig, issues: [] };
+              return ServerUpsertKeybindingResult.make({
+                keybindings: keybindingsConfig,
+                issues: [],
+              });
             }),
             { "rpc.aggregate": "server" },
           ),
@@ -1516,7 +1594,10 @@ const makeWsRpcLayer = (
             WS_METHODS.serverRemoveKeybinding,
             Effect.gen(function* () {
               const keybindingsConfig = yield* keybindings.removeKeybindingRule(rule);
-              return { keybindings: keybindingsConfig, issues: [] };
+              return ServerUpsertKeybindingResult.make({
+                keybindings: keybindingsConfig,
+                issues: [],
+              });
             }),
             { "rpc.aggregate": "server" },
           ),
@@ -1588,10 +1669,13 @@ const makeWsRpcLayer = (
                   .installWithProgress((event) => Queue.offer(queue, event).pipe(Effect.asVoid))
                   .pipe(
                     Effect.flatMap((status) =>
-                      Queue.offer(queue, {
-                        type: "complete",
-                        status,
-                      }),
+                      Queue.offer(
+                        queue,
+                        RelayClientInstallCompleted.make({
+                          type: "complete",
+                          status,
+                        }),
+                      ),
                     ),
                     Effect.catchTag("RelayClientInstallError", (error) =>
                       Queue.fail(
@@ -2005,30 +2089,36 @@ const makeWsRpcLayer = (
             WS_METHODS.subscribeServerConfig,
             Effect.gen(function* () {
               const keybindingsUpdates = keybindings.streamChanges.pipe(
-                Stream.map((event) => ({
-                  version: 1 as const,
-                  type: "keybindingsUpdated" as const,
-                  payload: {
-                    keybindings: event.keybindings,
-                    issues: event.issues,
-                  },
-                })),
+                Stream.map((event) =>
+                  ServerConfigStreamKeybindingsUpdatedEvent.make({
+                    version: 1,
+                    type: "keybindingsUpdated",
+                    payload: ServerConfigKeybindingsUpdatedPayload.make({
+                      keybindings: event.keybindings,
+                      issues: event.issues,
+                    }),
+                  }),
+                ),
               );
               const providerStatuses = providerRegistry.streamChanges.pipe(
-                Stream.map((providers) => ({
-                  version: 1 as const,
-                  type: "providerStatuses" as const,
-                  payload: { providers },
-                })),
+                Stream.map((providers) =>
+                  ServerConfigStreamProviderStatusesEvent.make({
+                    version: 1,
+                    type: "providerStatuses",
+                    payload: ServerConfigProviderStatusesPayload.make({ providers }),
+                  }),
+                ),
                 Stream.debounce(Duration.millis(PROVIDER_STATUS_DEBOUNCE_MS)),
               );
               const settingsUpdates = serverSettings.streamChanges.pipe(
                 Stream.map((settings) => ServerSettings.redactServerSettingsForClient(settings)),
-                Stream.map((settings) => ({
-                  version: 1 as const,
-                  type: "settingsUpdated" as const,
-                  payload: { settings },
-                })),
+                Stream.map((settings) =>
+                  ServerConfigStreamSettingsUpdatedEvent.make({
+                    version: 1,
+                    type: "settingsUpdated",
+                    payload: ServerConfigSettingsUpdatedPayload.make({ settings }),
+                  }),
+                ),
               );
 
               yield* providerRegistry
@@ -2041,11 +2131,13 @@ const makeWsRpcLayer = (
               );
 
               return Stream.concat(
-                Stream.make({
-                  version: 1 as const,
-                  type: "snapshot" as const,
-                  config: yield* loadServerConfig,
-                }),
+                Stream.make(
+                  ServerConfigStreamSnapshotEvent.make({
+                    version: 1,
+                    type: "snapshot",
+                    config: yield* loadServerConfig,
+                  }),
+                ),
                 liveUpdates,
               );
             }),
@@ -2087,12 +2179,14 @@ const makeWsRpcLayer = (
               );
 
               return Stream.concat(
-                Stream.make({
-                  version: 1 as const,
-                  revision: 1,
-                  type: "snapshot" as const,
-                  payload: initialSnapshot,
-                }),
+                Stream.make(
+                  AuthAccessStreamSnapshotEvent.make({
+                    version: 1,
+                    revision: 1,
+                    type: "snapshot",
+                    payload: AuthAccessSnapshot.make(initialSnapshot),
+                  }),
+                ),
                 liveEvents,
               );
             }),

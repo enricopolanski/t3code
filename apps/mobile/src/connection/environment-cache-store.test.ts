@@ -1,4 +1,4 @@
-import { EnvironmentId, type VcsListRefsResult } from "@t3tools/contracts";
+import { EnvironmentId, VcsListRefsResult, VcsRef } from "@t3tools/contracts";
 import { describe, expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
@@ -7,20 +7,20 @@ import { type ClientCacheKind, MobileDatabase } from "../persistence/mobile-data
 import { make } from "./environment-cache-store";
 
 const ENVIRONMENT_ID = EnvironmentId.make("environment-1");
-const REFS: VcsListRefsResult = {
+const REFS = VcsListRefsResult.make({
   refs: [
-    {
+    VcsRef.make({
       name: "main",
       current: true,
       isDefault: true,
       worktreePath: "/repo",
-    },
+    }),
   ],
   isRepo: true,
   hasPrimaryRemote: true,
   nextCursor: null,
   totalCount: 1,
-};
+});
 
 function cacheId(environmentId: EnvironmentId, kind: ClientCacheKind, cacheKey: string) {
   return `${environmentId}:${kind}:${cacheKey}`;

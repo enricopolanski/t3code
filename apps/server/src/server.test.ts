@@ -1,3 +1,4 @@
+import { RelayManagedEndpointRuntimeConfig } from "@t3tools/contracts/relay";
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
 import * as NodeSocket from "@effect/platform-node/NodeSocket";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -8,28 +9,96 @@ import {
   AuthAccessTokenType,
   AuthEnvironmentBootstrapTokenType,
   AuthTokenExchangeGrantType,
+  ClientThreadTurnStartCommand,
   CommandId,
+  DispatchResult,
+  OrchestrationStreamSynchronizedItem,
   DEFAULT_SERVER_SETTINGS,
+  EditorId,
   EnvironmentId,
   EventId,
-  GitCommandError,
-  KeybindingRule,
-  MessageId,
+  ExecutionEnvironmentCapabilities,
+  ExecutionEnvironmentDescriptor,
+  ExecutionEnvironmentPlatform,
   ExternalLauncherCommandNotFoundError,
-  type OrchestrationThreadShell,
-  TerminalNotRunningError,
+  GitActionFinishedEvent,
+  GitActionPhaseStartedEvent,
+  GitCommandError,
+  GitPreparePullRequestThreadResult,
+  GitResolvedPullRequest,
+  GitResolvePullRequestResult,
+  GitRunStackedActionResult,
+  GitRunStackedActionToast,
+  GitRunStackedActionToastRunAction,
+  KeybindingRule,
+  KeybindingShortcut,
+  LaunchEditorInput,
+  MessageId,
+  ORCHESTRATION_WS_METHODS,
   type OrchestrationCommand,
   type OrchestrationEvent,
-  ORCHESTRATION_WS_METHODS,
+  OrchestrationEventMetadata,
+  OrchestrationProject,
+  OrchestrationReadModel,
+  OrchestrationSession,
+  OrchestrationShellSnapshot,
+  OrchestrationThread,
+  OrchestrationThreadDetailSnapshot,
+  OrchestrationThreadShell,
   type PreviewEvent,
+  ProjectCreateCommand,
+  ProjectCreatedEvent,
+  ProjectCreatedPayload,
   ProjectId,
+  ProjectReadFileResult,
   ProviderDriverKind,
   ProviderInstanceId,
+  RelayClientAvailableStatus,
+  RelayClientInstallCompleted,
+  RelayClientInstallProgressUpdate,
+  RelayClientMissingStatus,
+  RepositoryIdentity,
+  RepositoryIdentityLocator,
   ResolvedKeybindingRule,
+  ReviewDiffPreviewResult,
+  ReviewDiffPreviewSource,
+  ServerConfigKeybindingsUpdatedPayload,
+  ServerConfigProviderStatusesPayload,
+  ServerConfigStreamKeybindingsUpdatedEvent,
+  ServerConfigStreamProviderStatusesEvent,
+  ServerLifecycleReadyPayload,
+  ServerLifecycleStreamReadyEvent,
+  ServerLifecycleStreamWelcomeEvent,
+  ServerLifecycleWelcomePayload,
+  ServerProvider,
+  ServerProviderAuth,
+  TerminalNotRunningError,
+  TerminalSessionSnapshot,
+  ThreadArchiveCommand,
+  ThreadDeletedPayload,
   ThreadId,
+  ThreadMessageSentEvent,
+  ThreadMessageSentPayload,
+  ThreadSessionStopCommand,
+  ThreadTurnStartBootstrap,
+  ThreadTurnStartBootstrapCreateThread,
+  ThreadTurnStartBootstrapPrepareWorktree,
+  VcsCreateRefResult,
+  VcsCreateWorktreeResult,
+  VcsDriverCapabilities,
+  VcsFreshness,
+  VcsListRefsResult,
+  VcsListRemotesResult,
+  VcsListWorkspaceFilesResult,
+  VcsPullResult,
+  VcsRef,
+  VcsStatusLocalResult,
+  VcsStatusRemoteResult,
+  VcsStatusResult,
+  VcsSwitchRefResult,
+  VcsWorktree,
   WS_METHODS,
   WsRpcGroup,
-  EditorId,
 } from "@t3tools/contracts";
 import {
   computeDpopAccessTokenHash,
@@ -116,6 +185,7 @@ import * as ProcessDiagnostics from "./diagnostics/ProcessDiagnostics.ts";
 import * as ProcessResourceMonitor from "./diagnostics/ProcessResourceMonitor.ts";
 import * as TraceDiagnostics from "./diagnostics/TraceDiagnostics.ts";
 import * as Data from "effect/Data";
+import * as Schema from "effect/Schema";
 
 const defaultProjectId = ProjectId.make("project-default");
 const defaultThreadId = ThreadId.make("thread-default");
@@ -124,25 +194,30 @@ const defaultModelSelection = {
   instanceId: ProviderInstanceId.make("codex"),
   model: "gpt-5-codex",
 } as const;
-const testEnvironmentDescriptor = {
+const testEnvironmentDescriptor = ExecutionEnvironmentDescriptor.make({
   environmentId: EnvironmentId.make("environment-test"),
   label: "Test environment",
-  platform: {
-    os: "darwin" as const,
-    arch: "arm64" as const,
-  },
+  platform: ExecutionEnvironmentPlatform.make({
+    os: "darwin",
+    arch: "arm64",
+  }),
   serverVersion: "0.0.0-test",
-  capabilities: {
+  capabilities: ExecutionEnvironmentCapabilities.make({
     repositoryIdentity: true,
-  },
-};
+  }),
+});
+/** Wire form of the descriptor, for comparing against decoded HTTP JSON. */
+const testEnvironmentDescriptorJson = Schema.encodeSync(ExecutionEnvironmentDescriptor)(
+  testEnvironmentDescriptor,
+);
+
 const makeDefaultOrchestrationReadModel = () => {
   const now = "2026-01-01T00:00:00.000Z";
-  return {
+  return OrchestrationReadModel.make({
     snapshotSequence: 0,
     updatedAt: now,
     projects: [
-      {
+      OrchestrationProject.make({
         id: defaultProjectId,
         title: "Default Project",
         workspaceRoot: "/tmp/default-project",
@@ -151,10 +226,10 @@ const makeDefaultOrchestrationReadModel = () => {
         createdAt: now,
         updatedAt: now,
         deletedAt: null,
-      },
+      }),
     ],
     threads: [
-      {
+      OrchestrationThread.make({
         id: defaultThreadId,
         projectId: defaultProjectId,
         title: "Default Thread",
@@ -175,16 +250,16 @@ const makeDefaultOrchestrationReadModel = () => {
         proposedPlans: [],
         checkpoints: [],
         deletedAt: null,
-      },
+      }),
     ],
-  };
+  });
 };
 
 const makeDefaultOrchestrationThreadShell = (
   overrides: Partial<OrchestrationThreadShell> = {},
 ): OrchestrationThreadShell => {
   const now = "2026-01-01T00:00:00.000Z";
-  return {
+  return OrchestrationThreadShell.make({
     id: defaultThreadId,
     projectId: defaultProjectId,
     title: "Default Thread",
@@ -205,7 +280,7 @@ const makeDefaultOrchestrationThreadShell = (
     hasPendingUserInput: false,
     hasActionableProposedPlan: false,
     ...overrides,
-  };
+  });
 };
 
 const browserOtlpTracingLayer = Layer.mergeAll(
@@ -393,14 +468,14 @@ const buildAppUnderTest = (options?: {
     };
     const layerConfig = ServerConfig.layer(config);
     const defaultVcsDriver: VcsDriver.VcsDriver["Service"] = {
-      capabilities: {
+      capabilities: VcsDriverCapabilities.make({
         kind: "git",
         supportsWorktrees: true,
         supportsBookmarks: false,
         supportsAtomicSnapshot: false,
         supportsPushDefaultRemote: true,
         ignoreClassifier: "native",
-      },
+      }),
       execute: () =>
         Effect.succeed({
           exitCode: ChildProcessSpawner.ExitCode(0),
@@ -412,24 +487,28 @@ const buildAppUnderTest = (options?: {
       detectRepository: () => Effect.succeed(null),
       isInsideWorkTree: () => Effect.succeed(false),
       listWorkspaceFiles: () =>
-        Effect.succeed({
-          paths: [],
-          truncated: false,
-          freshness: {
-            source: "live-local",
-            observedAt: TEST_EPOCH,
-            expiresAt: Option.none(),
-          },
-        }),
+        Effect.succeed(
+          VcsListWorkspaceFilesResult.make({
+            paths: [],
+            truncated: false,
+            freshness: VcsFreshness.make({
+              source: "live-local",
+              observedAt: TEST_EPOCH,
+              expiresAt: Option.none(),
+            }),
+          }),
+        ),
       listRemotes: () =>
-        Effect.succeed({
-          remotes: [],
-          freshness: {
-            source: "live-local",
-            observedAt: TEST_EPOCH,
-            expiresAt: Option.none(),
-          },
-        }),
+        Effect.succeed(
+          VcsListRemotesResult.make({
+            remotes: [],
+            freshness: VcsFreshness.make({
+              source: "live-local",
+              observedAt: TEST_EPOCH,
+              expiresAt: Option.none(),
+            }),
+          }),
+        ),
       filterIgnoredPaths: (_cwd, relativePaths) => Effect.succeed(relativePaths),
       initRepository: () => Effect.void,
       ...options?.layers?.vcsDriver,
@@ -686,7 +765,7 @@ const buildAppUnderTest = (options?: {
       Layer.provide(
         Layer.mock(OrchestrationEngine.OrchestrationEngineService)({
           readEvents: () => Stream.empty,
-          dispatch: () => Effect.succeed({ sequence: 0 }),
+          dispatch: () => Effect.succeed(DispatchResult.make({ sequence: 0 })),
           streamDomainEvents: Stream.empty,
           latestSequence: Effect.succeed(0),
           ...options?.layers?.orchestrationEngine,
@@ -697,19 +776,23 @@ const buildAppUnderTest = (options?: {
           getCommandReadModel: () => Effect.succeed(makeDefaultOrchestrationReadModel()),
           getSnapshot: () => Effect.succeed(makeDefaultOrchestrationReadModel()),
           getShellSnapshot: () =>
-            Effect.succeed({
-              snapshotSequence: 0,
-              projects: [],
-              threads: [],
-              updatedAt: "1970-01-01T00:00:00.000Z",
-            }),
+            Effect.succeed(
+              OrchestrationShellSnapshot.make({
+                snapshotSequence: 0,
+                projects: [],
+                threads: [],
+                updatedAt: "1970-01-01T00:00:00.000Z",
+              }),
+            ),
           getArchivedShellSnapshot: () =>
-            Effect.succeed({
-              snapshotSequence: 0,
-              projects: [],
-              threads: [],
-              updatedAt: "1970-01-01T00:00:00.000Z",
-            }),
+            Effect.succeed(
+              OrchestrationShellSnapshot.make({
+                snapshotSequence: 0,
+                projects: [],
+                threads: [],
+                updatedAt: "1970-01-01T00:00:00.000Z",
+              }),
+            ),
           getSnapshotSequence: () => Effect.succeed({ snapshotSequence: 0 }),
           getProjectShellById: () => Effect.succeed(Option.none()),
           getThreadShellById: () => Effect.succeed(Option.none()),
@@ -1280,10 +1363,10 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
 
       const url = yield* getHttpServerUrl("/.well-known/t3/environment");
       const response = yield* fetchEffect(url);
-      const body = yield* responseJsonEffect<typeof testEnvironmentDescriptor>(response);
+      const body = yield* responseJsonEffect<typeof testEnvironmentDescriptorJson>(response);
 
       assert.equal(response.status, 200);
-      assert.deepEqual(body, testEnvironmentDescriptor);
+      assert.deepEqual(body, testEnvironmentDescriptorJson);
     }).pipe(Effect.provide(NodeHttpServer.layerTest)),
   );
 
@@ -1297,11 +1380,11 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
           origin: crossOriginClientOrigin,
         },
       });
-      const body = yield* responseJsonEffect<typeof testEnvironmentDescriptor>(response);
+      const body = yield* responseJsonEffect<typeof testEnvironmentDescriptorJson>(response);
 
       assert.equal(response.status, 200);
       assertBrowserApiCorsResponseHeaders(response.headers);
-      assert.deepEqual(body, testEnvironmentDescriptor);
+      assert.deepEqual(body, testEnvironmentDescriptorJson);
     }).pipe(Effect.provide(NodeHttpServer.layerTest)),
   );
 
@@ -1951,23 +2034,34 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
     "reports relay client status and streams installation progress over environment RPC",
     () =>
       Effect.gen(function* () {
-        const installedRelayClient = {
-          status: "available" as const,
+        const installedRelayClient = RelayClientAvailableStatus.make({
+          status: "available",
           executablePath: "/tmp/t3/tools/cloudflared",
-          source: "managed" as const,
+          source: "managed",
           version: RelayClient.CLOUDFLARED_VERSION,
-        };
+        });
         yield* buildAppUnderTest({
           layers: {
             relayClient: {
-              resolve: Effect.succeed({
-                status: "missing",
-                version: RelayClient.CLOUDFLARED_VERSION,
-              }),
+              resolve: Effect.succeed(
+                RelayClientMissingStatus.make({
+                  status: "missing",
+                  version: RelayClient.CLOUDFLARED_VERSION,
+                }),
+              ),
               install: Effect.succeed(installedRelayClient),
               installWithProgress: (report) =>
-                report({ type: "progress", stage: "checking" }).pipe(
-                  Effect.andThen(report({ type: "progress", stage: "downloading" })),
+                report(
+                  RelayClientInstallProgressUpdate.make({ type: "progress", stage: "checking" }),
+                ).pipe(
+                  Effect.andThen(
+                    report(
+                      RelayClientInstallProgressUpdate.make({
+                        type: "progress",
+                        stage: "downloading",
+                      }),
+                    ),
+                  ),
                   Effect.as(installedRelayClient),
                 ),
             },
@@ -1986,9 +2080,9 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
 
         assert.equal(status.status, "missing");
         assert.deepEqual(Array.from(installEvents), [
-          { type: "progress", stage: "checking" },
-          { type: "progress", stage: "downloading" },
-          { type: "complete", status: installedRelayClient },
+          RelayClientInstallProgressUpdate.make({ type: "progress", stage: "checking" }),
+          RelayClientInstallProgressUpdate.make({ type: "progress", stage: "downloading" }),
+          RelayClientInstallCompleted.make({ type: "complete", status: installedRelayClient }),
         ]);
       }).pipe(Effect.provide(NodeHttpServer.layerTest)),
   );
@@ -2348,12 +2442,12 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       assert.equal(linkStateBody.relayUrl, null);
       assert.equal(linkStateBody.relayIssuer, null);
       assert.deepEqual(appliedRuntimeConfigs, [
-        {
+        RelayManagedEndpointRuntimeConfig.make({
           providerKind: "cloudflare_tunnel",
           connectorToken: "connector-token",
           tunnelId: "tunnel-id",
           tunnelName: "tunnel-name",
-        },
+        }),
         null,
       ]);
     }).pipe(Effect.provide(NodeHttpServer.layerTest)),
@@ -4120,21 +4214,21 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
 
   it.effect("routes websocket rpc server.upsertKeybinding", () =>
     Effect.gen(function* () {
-      const rule: KeybindingRule = {
+      const rule = KeybindingRule.make({
         command: "terminal.toggle",
         key: "ctrl+k",
-      };
-      const resolved: ResolvedKeybindingRule = {
+      });
+      const resolved = ResolvedKeybindingRule.make({
         command: "terminal.toggle",
-        shortcut: {
+        shortcut: KeybindingShortcut.make({
           key: "k",
           metaKey: false,
           ctrlKey: true,
           shiftKey: false,
           altKey: false,
           modKey: true,
-        },
-      };
+        }),
+      });
 
       yield* buildAppUnderTest({
         layers: {
@@ -4156,21 +4250,21 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
 
   it.effect("routes websocket rpc server.removeKeybinding", () =>
     Effect.gen(function* () {
-      const rule: KeybindingRule = {
+      const rule = KeybindingRule.make({
         command: "terminal.toggle",
         key: "ctrl+k",
-      };
-      const resolved: ResolvedKeybindingRule = {
+      });
+      const resolved = ResolvedKeybindingRule.make({
         command: "terminal.toggle",
-        shortcut: {
+        shortcut: KeybindingShortcut.make({
           key: "j",
           metaKey: false,
           ctrlKey: false,
           shiftKey: false,
           altKey: false,
           modKey: true,
-        },
-      };
+        }),
+      });
 
       yield* buildAppUnderTest({
         layers: {
@@ -4268,19 +4362,19 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
   it.effect("routes websocket rpc subscribeServerConfig streams snapshot then update", () =>
     Effect.gen(function* () {
       const providers = [
-        {
+        ServerProvider.make({
           instanceId: ProviderInstanceId.make("codex"),
           driver: ProviderDriverKind.make("codex"),
           enabled: true,
           installed: true,
           version: "1.0.0",
-          status: "ready" as const,
-          auth: { status: "authenticated" as const },
+          status: "ready",
+          auth: ServerProviderAuth.make({ status: "authenticated" }),
           checkedAt: "2026-04-11T00:00:00.000Z",
           models: [],
           slashCommands: [],
           skills: [],
-        },
+        }),
       ] as const;
       const changeEvent = {
         keybindings: [],
@@ -4328,30 +4422,33 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         assert.equal(first.config.observability.otlpMetricsEnabled, true);
         assert.deepEqual(first.config.settings, DEFAULT_SERVER_SETTINGS);
       }
-      assert.deepEqual(second, {
-        version: 1,
-        type: "keybindingsUpdated",
-        payload: { keybindings: [], issues: [] },
-      });
+      assert.deepEqual(
+        second,
+        ServerConfigStreamKeybindingsUpdatedEvent.make({
+          version: 1,
+          type: "keybindingsUpdated",
+          payload: ServerConfigKeybindingsUpdatedPayload.make({ keybindings: [], issues: [] }),
+        }),
+      );
     }).pipe(Effect.provide(NodeHttpServer.layerTest)),
   );
 
   it.effect("routes websocket rpc subscribeServerConfig emits provider status updates", () =>
     Effect.gen(function* () {
       const nextProviders = [
-        {
+        ServerProvider.make({
           instanceId: ProviderInstanceId.make("codex"),
           driver: ProviderDriverKind.make("codex"),
           enabled: true,
           installed: true,
           version: "1.0.0",
-          status: "ready" as const,
-          auth: { status: "authenticated" as const },
+          status: "ready",
+          auth: ServerProviderAuth.make({ status: "authenticated" }),
           checkedAt: "2026-04-11T00:00:00.000Z",
           models: [],
           slashCommands: [],
           skills: [],
-        },
+        }),
       ] as const;
 
       yield* buildAppUnderTest({
@@ -4382,11 +4479,14 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       if (first?.type === "snapshot") {
         assert.deepEqual(first.config.providers, []);
       }
-      assert.deepEqual(second, {
-        version: 1,
-        type: "providerStatuses",
-        payload: { providers: nextProviders },
-      });
+      assert.deepEqual(
+        second,
+        ServerConfigStreamProviderStatusesEvent.make({
+          version: 1,
+          type: "providerStatuses",
+          payload: ServerConfigProviderStatusesPayload.make({ providers: nextProviders }),
+        }),
+      );
     }).pipe(Effect.provide(NodeHttpServer.layerTest)),
   );
 
@@ -4395,23 +4495,28 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
     () =>
       Effect.gen(function* () {
         const lifecycleEvents = [
-          {
-            version: 1 as const,
+          ServerLifecycleStreamWelcomeEvent.make({
+            version: 1,
             sequence: 1,
-            type: "welcome" as const,
-            payload: {
+            type: "welcome",
+            payload: ServerLifecycleWelcomePayload.make({
               environment: testEnvironmentDescriptor,
               cwd: "/tmp/project",
               projectName: "project",
-            },
-          },
+            }),
+          }),
         ] as const;
-        const liveEvents = Stream.make({
-          version: 1 as const,
-          sequence: 2,
-          type: "ready" as const,
-          payload: { at: "2026-01-01T00:00:00.000Z", environment: testEnvironmentDescriptor },
-        });
+        const liveEvents = Stream.make(
+          ServerLifecycleStreamReadyEvent.make({
+            version: 1,
+            sequence: 2,
+            type: "ready",
+            payload: ServerLifecycleReadyPayload.make({
+              at: "2026-01-01T00:00:00.000Z",
+              environment: testEnvironmentDescriptor,
+            }),
+          }),
+        );
 
         yield* buildAppUnderTest({
           layers: {
@@ -4496,12 +4601,15 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       );
 
       assert.isTrue(response.listing.entries.some((entry) => entry.path === "src/index.ts"));
-      assert.deepEqual(response.file, {
-        relativePath: "src/index.ts",
-        contents: "export const answer = 42;\n",
-        byteLength: 26,
-        truncated: false,
-      });
+      assert.deepEqual(
+        response.file,
+        ProjectReadFileResult.make({
+          relativePath: "src/index.ts",
+          contents: "export const answer = 42;\n",
+          byteLength: 26,
+          truncated: false,
+        }),
+      );
     }).pipe(Effect.provide(NodeHttpServer.layerTest), TestClock.withLive),
   );
 
@@ -4743,19 +4851,21 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       const wsUrl = yield* getWsServerUrl("/ws");
       const response = yield* Effect.scoped(
         withWsRpcClient(wsUrl, (client) =>
-          client[ORCHESTRATION_WS_METHODS.dispatchCommand]({
-            type: "project.create",
-            commandId: CommandId.make("cmd-project-create-missing-root"),
-            projectId: ProjectId.make("project-create-missing-root"),
-            title: "New Project",
-            workspaceRoot: missingWorkspaceRoot,
-            createWorkspaceRootIfMissing: true,
-            defaultModelSelection: {
-              instanceId: ProviderInstanceId.make("codex"),
-              model: "gpt-5-codex",
-            },
-            createdAt: "2026-01-01T00:00:00.000Z",
-          }),
+          client[ORCHESTRATION_WS_METHODS.dispatchCommand](
+            ProjectCreateCommand.make({
+              type: "project.create",
+              commandId: CommandId.make("cmd-project-create-missing-root"),
+              projectId: ProjectId.make("project-create-missing-root"),
+              title: "New Project",
+              workspaceRoot: missingWorkspaceRoot,
+              createWorkspaceRootIfMissing: true,
+              defaultModelSelection: {
+                instanceId: ProviderInstanceId.make("codex"),
+                model: "gpt-5-codex",
+              },
+              createdAt: "2026-01-01T00:00:00.000Z",
+            }),
+          ),
         ),
       );
       const stat = yield* fs.stat(missingWorkspaceRoot);
@@ -4823,7 +4933,10 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         ),
       );
 
-      assert.deepEqual(openedInput, { cwd: "/tmp/project", editor: "cursor" });
+      assert.deepEqual(
+        openedInput,
+        LaunchEditorInput.make({ cwd: "/tmp/project", editor: "cursor" }),
+      );
     }).pipe(Effect.provide(NodeHttpServer.layerTest)),
   );
 
@@ -4870,180 +4983,206 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
             invalidateRemoteStatus: () => Effect.void,
             invalidateStatus: () => Effect.void,
             localStatus: () =>
-              Effect.succeed({
-                isRepo: true,
-                hasPrimaryRemote: true,
-                isDefaultRef: true,
-                refName: "main",
-                hasWorkingTreeChanges: false,
-                workingTree: { files: [], insertions: 0, deletions: 0 },
-              }),
+              Effect.succeed(
+                VcsStatusLocalResult.make({
+                  isRepo: true,
+                  hasPrimaryRemote: true,
+                  isDefaultRef: true,
+                  refName: "main",
+                  hasWorkingTreeChanges: false,
+                  workingTree: { files: [], insertions: 0, deletions: 0 },
+                }),
+              ),
             remoteStatus: () =>
-              Effect.succeed({
-                hasUpstream: true,
-                aheadCount: 0,
-                behindCount: 0,
-                pr: null,
-              }),
+              Effect.succeed(
+                VcsStatusRemoteResult.make({
+                  hasUpstream: true,
+                  aheadCount: 0,
+                  behindCount: 0,
+                  pr: null,
+                }),
+              ),
             status: () =>
-              Effect.succeed({
-                isRepo: true,
-                hasPrimaryRemote: true,
-                isDefaultRef: true,
-                refName: "main",
-                hasWorkingTreeChanges: false,
-                workingTree: { files: [], insertions: 0, deletions: 0 },
-                hasUpstream: true,
-                aheadCount: 0,
-                behindCount: 0,
-                pr: null,
-              }),
+              Effect.succeed(
+                VcsStatusResult.make({
+                  isRepo: true,
+                  hasPrimaryRemote: true,
+                  isDefaultRef: true,
+                  refName: "main",
+                  hasWorkingTreeChanges: false,
+                  workingTree: { files: [], insertions: 0, deletions: 0 },
+                  hasUpstream: true,
+                  aheadCount: 0,
+                  behindCount: 0,
+                  pr: null,
+                }),
+              ),
             runStackedAction: (input, options) =>
               Effect.gen(function* () {
-                const result = {
-                  action: "commit" as const,
-                  branch: { status: "skipped_not_requested" as const },
+                const result = GitRunStackedActionResult.make({
+                  action: "commit",
+                  branch: { status: "skipped_not_requested" },
                   commit: {
-                    status: "created" as const,
+                    status: "created",
                     commitSha: "abc123",
                     subject: "feat: demo",
                   },
-                  push: { status: "skipped_not_requested" as const },
-                  pr: { status: "skipped_not_requested" as const },
-                  toast: {
+                  push: { status: "skipped_not_requested" },
+                  pr: { status: "skipped_not_requested" },
+                  toast: GitRunStackedActionToast.make({
                     title: "Committed abc123",
                     description: "feat: demo",
                     cta: {
-                      kind: "run_action" as const,
+                      kind: "run_action",
                       label: "Push",
-                      action: {
-                        kind: "push" as const,
-                      },
+                      action: GitRunStackedActionToastRunAction.make({
+                        kind: "push",
+                      }),
                     },
-                  },
-                };
+                  }),
+                });
 
                 yield* (
-                  options?.progressReporter?.publish({
-                    actionId: options.actionId ?? input.actionId,
-                    cwd: input.cwd,
-                    action: input.action,
-                    kind: "phase_started",
-                    phase: "commit",
-                    label: "Committing...",
-                  }) ?? Effect.void
+                  options?.progressReporter?.publish(
+                    GitActionPhaseStartedEvent.make({
+                      actionId: options.actionId ?? input.actionId,
+                      cwd: input.cwd,
+                      action: input.action,
+                      kind: "phase_started",
+                      phase: "commit",
+                      label: "Committing...",
+                    }),
+                  ) ?? Effect.void
                 );
 
                 yield* (
-                  options?.progressReporter?.publish({
-                    actionId: options.actionId ?? input.actionId,
-                    cwd: input.cwd,
-                    action: input.action,
-                    kind: "action_finished",
-                    result,
-                  }) ?? Effect.void
+                  options?.progressReporter?.publish(
+                    GitActionFinishedEvent.make({
+                      actionId: options.actionId ?? input.actionId,
+                      cwd: input.cwd,
+                      action: input.action,
+                      kind: "action_finished",
+                      result,
+                    }),
+                  ) ?? Effect.void
                 );
 
                 return result;
               }),
             resolvePullRequest: () =>
-              Effect.succeed({
-                pullRequest: {
-                  number: 1,
-                  title: "Demo PR",
-                  url: "https://example.com/pr/1",
-                  baseBranch: "main",
-                  headBranch: "feature/demo",
-                  state: "open",
-                },
-              }),
+              Effect.succeed(
+                GitResolvePullRequestResult.make({
+                  pullRequest: GitResolvedPullRequest.make({
+                    number: 1,
+                    title: "Demo PR",
+                    url: "https://example.com/pr/1",
+                    baseBranch: "main",
+                    headBranch: "feature/demo",
+                    state: "open",
+                  }),
+                }),
+              ),
             preparePullRequestThread: () =>
-              Effect.succeed({
-                pullRequest: {
-                  number: 1,
-                  title: "Demo PR",
-                  url: "https://example.com/pr/1",
-                  baseBranch: "main",
-                  headBranch: "feature/demo",
-                  state: "open",
-                },
-                branch: "feature/demo",
-                worktreePath: null,
-              }),
+              Effect.succeed(
+                GitPreparePullRequestThreadResult.make({
+                  pullRequest: GitResolvedPullRequest.make({
+                    number: 1,
+                    title: "Demo PR",
+                    url: "https://example.com/pr/1",
+                    baseBranch: "main",
+                    headBranch: "feature/demo",
+                    state: "open",
+                  }),
+                  branch: "feature/demo",
+                  worktreePath: null,
+                }),
+              ),
           },
           gitVcsDriver: {
             pullCurrentBranch: () =>
-              Effect.succeed({
-                status: "pulled",
-                refName: "main",
-                upstreamRef: "origin/main",
-              }),
+              Effect.succeed(
+                VcsPullResult.make({
+                  status: "pulled",
+                  refName: "main",
+                  upstreamRef: "origin/main",
+                }),
+              ),
             listRefs: () =>
-              Effect.succeed({
-                refs: [
-                  {
-                    name: "main",
-                    current: true,
-                    isDefault: true,
-                    worktreePath: null,
-                  },
-                ],
-                isRepo: true,
-                hasPrimaryRemote: true,
-                nextCursor: null,
-                totalCount: 1,
-              }),
+              Effect.succeed(
+                VcsListRefsResult.make({
+                  refs: [
+                    VcsRef.make({
+                      name: "main",
+                      current: true,
+                      isDefault: true,
+                      worktreePath: null,
+                    }),
+                  ],
+                  isRepo: true,
+                  hasPrimaryRemote: true,
+                  nextCursor: null,
+                  totalCount: 1,
+                }),
+              ),
             createWorktree: () =>
-              Effect.succeed({
-                worktree: { path: "/tmp/wt", refName: "feature/demo" },
-              }),
+              Effect.succeed(
+                VcsCreateWorktreeResult.make({
+                  worktree: VcsWorktree.make({ path: "/tmp/wt", refName: "feature/demo" }),
+                }),
+              ),
             removeWorktree: () => Effect.void,
-            createRef: (input) => Effect.succeed({ refName: input.refName }),
-            switchRef: (input) => Effect.succeed({ refName: input.refName }),
+            createRef: (input) =>
+              Effect.succeed(VcsCreateRefResult.make({ refName: input.refName })),
+            switchRef: (input) =>
+              Effect.succeed(VcsSwitchRefResult.make({ refName: input.refName })),
           },
           vcsStatusBroadcaster: {
             refreshStatus: () =>
-              Effect.succeed({
-                isRepo: true,
-                hasPrimaryRemote: true,
-                isDefaultRef: true,
-                refName: "main",
-                hasWorkingTreeChanges: false,
-                workingTree: { files: [], insertions: 0, deletions: 0 },
-                hasUpstream: true,
-                aheadCount: 0,
-                behindCount: 0,
-                pr: null,
-              }),
+              Effect.succeed(
+                VcsStatusResult.make({
+                  isRepo: true,
+                  hasPrimaryRemote: true,
+                  isDefaultRef: true,
+                  refName: "main",
+                  hasWorkingTreeChanges: false,
+                  workingTree: { files: [], insertions: 0, deletions: 0 },
+                  hasUpstream: true,
+                  aheadCount: 0,
+                  behindCount: 0,
+                  pr: null,
+                }),
+              ),
           },
           reviewService: {
             getDiffPreview: (input) =>
-              Effect.succeed({
-                cwd: input.cwd,
-                generatedAt: DateTime.nowUnsafe(),
-                sources: [
-                  {
-                    id: "working-tree",
-                    kind: "working-tree",
-                    title: "Dirty worktree",
-                    baseRef: "HEAD",
-                    headRef: null,
-                    diff: "dirty-diff",
-                    diffHash: "hash-dirty",
-                    truncated: false,
-                  },
-                  {
-                    id: "branch-range",
-                    kind: "branch-range",
-                    title: "Against main",
-                    baseRef: "main",
-                    headRef: "feature/demo",
-                    diff: "base-diff",
-                    diffHash: "hash-base",
-                    truncated: false,
-                  },
-                ],
-              }),
+              Effect.succeed(
+                ReviewDiffPreviewResult.make({
+                  cwd: input.cwd,
+                  generatedAt: DateTime.nowUnsafe(),
+                  sources: [
+                    ReviewDiffPreviewSource.make({
+                      id: "working-tree",
+                      kind: "working-tree",
+                      title: "Dirty worktree",
+                      baseRef: "HEAD",
+                      headRef: null,
+                      diff: "dirty-diff",
+                      diffHash: "hash-dirty",
+                      truncated: false,
+                    }),
+                    ReviewDiffPreviewSource.make({
+                      id: "branch-range",
+                      kind: "branch-range",
+                      title: "Against main",
+                      baseRef: "main",
+                      headRef: "feature/demo",
+                      diff: "base-diff",
+                      diffHash: "hash-base",
+                      truncated: false,
+                    }),
+                  ],
+                }),
+              ),
           },
         },
       });
@@ -5329,25 +5468,29 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         layers: {
           gitVcsDriver: {
             pullCurrentBranch: () =>
-              Effect.succeed({
-                status: "pulled" as const,
-                refName: "main",
-                upstreamRef: "origin/main",
-              }),
+              Effect.succeed(
+                VcsPullResult.make({
+                  status: "pulled",
+                  refName: "main",
+                  upstreamRef: "origin/main",
+                }),
+              ),
           },
           gitManager: {
             invalidateLocalStatus: () => Effect.void,
             invalidateRemoteStatus: () => Effect.void,
             invalidateStatus: () => Effect.void,
             localStatus: () =>
-              Effect.succeed({
-                isRepo: true,
-                hasPrimaryRemote: true,
-                isDefaultRef: true,
-                refName: "main",
-                hasWorkingTreeChanges: false,
-                workingTree: { files: [], insertions: 0, deletions: 0 },
-              }),
+              Effect.succeed(
+                VcsStatusLocalResult.make({
+                  isRepo: true,
+                  hasPrimaryRemote: true,
+                  isDefaultRef: true,
+                  refName: "main",
+                  hasWorkingTreeChanges: false,
+                  workingTree: { files: [], insertions: 0, deletions: 0 },
+                }),
+              ),
             remoteStatus: () =>
               Effect.sleep(Duration.seconds(2)).pipe(
                 Effect.as({
@@ -5531,11 +5674,11 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
   it.effect("routes websocket rpc orchestration methods", () =>
     Effect.gen(function* () {
       const now = "2026-01-01T00:00:00.000Z";
-      const snapshot = {
+      const snapshot = OrchestrationReadModel.make({
         snapshotSequence: 1,
         updatedAt: now,
         projects: [
-          {
+          OrchestrationProject.make({
             id: ProjectId.make("project-a"),
             title: "Project A",
             workspaceRoot: "/tmp/project-a",
@@ -5544,10 +5687,10 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
             createdAt: now,
             updatedAt: now,
             deletedAt: null,
-          },
+          }),
         ],
         threads: [
-          {
+          OrchestrationThread.make({
             id: ThreadId.make("thread-1"),
             projectId: ProjectId.make("project-a"),
             title: "Thread A",
@@ -5568,9 +5711,9 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
             proposedPlans: [],
             checkpoints: [],
             deletedAt: null,
-          },
+          }),
         ],
-      };
+      });
 
       yield* buildAppUnderTest({
         layers: {
@@ -5578,7 +5721,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
             getSnapshot: () => Effect.succeed(snapshot),
           },
           orchestrationEngine: {
-            dispatch: () => Effect.succeed({ sequence: 7 }),
+            dispatch: () => Effect.succeed(DispatchResult.make({ sequence: 7 })),
             readEvents: () => Stream.empty,
           },
           checkpointDiffQuery: {
@@ -5603,12 +5746,14 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       const wsUrl = yield* getWsServerUrl("/ws");
       const dispatchResult = yield* Effect.scoped(
         withWsRpcClient(wsUrl, (client) =>
-          client[ORCHESTRATION_WS_METHODS.dispatchCommand]({
-            type: "thread.session.stop",
-            commandId: CommandId.make("cmd-1"),
-            threadId: ThreadId.make("thread-1"),
-            createdAt: now,
-          }),
+          client[ORCHESTRATION_WS_METHODS.dispatchCommand](
+            ThreadSessionStopCommand.make({
+              type: "thread.session.stop",
+              commandId: CommandId.make("cmd-1"),
+              threadId: ThreadId.make("thread-1"),
+              createdAt: now,
+            }),
+          ),
         ),
       );
       assert.equal(dispatchResult.sequence, 7);
@@ -5693,7 +5838,10 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         ),
       );
 
-      assert.deepEqual(Option.getOrThrow(firstItem), { kind: "synchronized" });
+      assert.deepEqual(
+        Option.getOrThrow(firstItem),
+        OrchestrationStreamSynchronizedItem.make({ kind: "synchronized" }),
+      );
     }).pipe(Effect.provide(NodeHttpServer.layerTest)),
   );
 
@@ -5704,7 +5852,11 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         layers: {
           projectionSnapshotQuery: {
             getThreadDetailSnapshot: () =>
-              Effect.succeed(Option.some({ snapshotSequence: 1, thread })),
+              Effect.succeed(
+                Option.some(
+                  OrchestrationThreadDetailSnapshot.make({ snapshotSequence: 1, thread }),
+                ),
+              ),
           },
         },
       });
@@ -5720,7 +5872,10 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       );
 
       assert.equal(items[0]?.kind, "snapshot");
-      assert.deepEqual(items[1], { kind: "synchronized" });
+      assert.deepEqual(
+        items[1],
+        OrchestrationStreamSynchronizedItem.make({ kind: "synchronized" }),
+      );
     }).pipe(Effect.provide(NodeHttpServer.layerTest)),
   );
 
@@ -5736,12 +5891,12 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         commandId: null,
         causationEventId: null,
         correlationId: null,
-        metadata: {},
+        metadata: OrchestrationEventMetadata.make({}),
         type: "thread.deleted",
-        payload: {
+        payload: ThreadDeletedPayload.make({
           threadId: defaultThreadId,
           deletedAt: "2026-01-01T00:00:01.000Z",
-        },
+        }),
       } satisfies Extract<OrchestrationEvent, { type: "thread.deleted" }>;
 
       yield* buildAppUnderTest({
@@ -5753,12 +5908,12 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
             getShellSnapshot: () =>
               Effect.gen(function* () {
                 yield* PubSub.publish(liveEvents, deletedEvent);
-                return {
+                return OrchestrationShellSnapshot.make({
                   snapshotSequence: 1,
                   projects: [],
                   threads: [makeDefaultOrchestrationThreadShell()],
                   updatedAt: "2026-01-01T00:00:00.000Z",
-                };
+                });
               }),
           },
         },
@@ -5775,7 +5930,10 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
 
       assert.equal(items[0]?.kind, "snapshot");
       assert.equal(items[1]?.kind, "thread-removed");
-      assert.deepEqual(items[2], { kind: "synchronized" });
+      assert.deepEqual(
+        items[2],
+        OrchestrationStreamSynchronizedItem.make({ kind: "synchronized" }),
+      );
     }).pipe(Effect.provide(NodeHttpServer.layerTest), TestClock.withLive),
   );
 
@@ -5783,7 +5941,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
     Effect.gen(function* () {
       const thread = makeDefaultOrchestrationReadModel().threads[0]!;
       const liveEvents = yield* PubSub.unbounded<OrchestrationEvent>();
-      const messageEvent = {
+      const messageEvent = ThreadMessageSentEvent.make({
         sequence: 2,
         eventId: EventId.make("event-message"),
         aggregateKind: "thread",
@@ -5792,9 +5950,9 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         commandId: null,
         causationEventId: null,
         correlationId: null,
-        metadata: {},
+        metadata: OrchestrationEventMetadata.make({}),
         type: "thread.message-sent",
-        payload: {
+        payload: ThreadMessageSentPayload.make({
           threadId: defaultThreadId,
           messageId: MessageId.make("message-1"),
           role: "user",
@@ -5803,8 +5961,8 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
           streaming: false,
           createdAt: "2026-01-01T00:00:01.000Z",
           updatedAt: "2026-01-01T00:00:01.000Z",
-        },
-      } satisfies Extract<OrchestrationEvent, { type: "thread.message-sent" }>;
+        }),
+      });
 
       yield* buildAppUnderTest({
         layers: {
@@ -5816,7 +5974,9 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
               Effect.gen(function* () {
                 yield* Effect.sleep("25 millis");
                 yield* PubSub.publish(liveEvents, messageEvent);
-                return Option.some({ snapshotSequence: 1, thread });
+                return Option.some(
+                  OrchestrationThreadDetailSnapshot.make({ snapshotSequence: 1, thread }),
+                );
               }),
           },
         },
@@ -5860,7 +6020,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                   commandId: null,
                   causationEventId: null,
                   correlationId: null,
-                  metadata: {},
+                  metadata: OrchestrationEventMetadata.make({}),
                   type: "thread.created",
                   payload: {} as never,
                 } satisfies OrchestrationEvent;
@@ -5868,12 +6028,14 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
           },
           projectionSnapshotQuery: {
             getShellSnapshot: () =>
-              Effect.succeed({
-                snapshotSequence: 100_000,
-                projects: [],
-                threads: [makeDefaultOrchestrationThreadShell({ id: snapshotThreadId })],
-                updatedAt: now,
-              }),
+              Effect.succeed(
+                OrchestrationShellSnapshot.make({
+                  snapshotSequence: 100_000,
+                  projects: [],
+                  threads: [makeDefaultOrchestrationThreadShell({ id: snapshotThreadId })],
+                  updatedAt: now,
+                }),
+              ),
           },
         },
       });
@@ -5915,12 +6077,14 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
           },
           projectionSnapshotQuery: {
             getShellSnapshot: () =>
-              Effect.succeed({
-                snapshotSequence: 5,
-                projects: [],
-                threads: [],
-                updatedAt: "2026-01-01T00:00:00.000Z",
-              }),
+              Effect.succeed(
+                OrchestrationShellSnapshot.make({
+                  snapshotSequence: 5,
+                  projects: [],
+                  threads: [],
+                  updatedAt: "2026-01-01T00:00:00.000Z",
+                }),
+              ),
           },
         },
       });
@@ -5957,7 +6121,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
           commandId: null,
           causationEventId: null,
           correlationId: null,
-          metadata: {},
+          metadata: OrchestrationEventMetadata.make({}),
           type: "thread.message-sent",
           payload: {} as never,
         }) satisfies OrchestrationEvent;
@@ -5971,7 +6135,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         commandId: null,
         causationEventId: null,
         correlationId: null,
-        metadata: {},
+        metadata: OrchestrationEventMetadata.make({}),
         type: "thread.created",
         payload: {} as never,
       };
@@ -6044,7 +6208,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
           commandId: null,
           causationEventId: null,
           correlationId: null,
-          metadata: {},
+          metadata: OrchestrationEventMetadata.make({}),
           type: "thread.message-sent",
           payload: {} as never,
         }) satisfies OrchestrationEvent;
@@ -6058,7 +6222,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         commandId: null,
         causationEventId: null,
         correlationId: null,
-        metadata: {},
+        metadata: OrchestrationEventMetadata.make({}),
         type: "thread.created",
         payload: {} as never,
       };
@@ -6143,7 +6307,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
           commandId: null,
           causationEventId: null,
           correlationId: null,
-          metadata: {},
+          metadata: OrchestrationEventMetadata.make({}),
           type,
           payload: type === "thread.deleted" ? { threadId: goneThreadId, deletedAt: now } : {},
         }) as OrchestrationEvent;
@@ -6199,7 +6363,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         commandId: null,
         causationEventId: null,
         correlationId: null,
-        metadata: {},
+        metadata: OrchestrationEventMetadata.make({}),
         type: "thread.message-sent",
         payload: {} as never,
       };
@@ -6264,7 +6428,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
           commandId: null,
           causationEventId: null,
           correlationId: null,
-          metadata: {},
+          metadata: OrchestrationEventMetadata.make({}),
           type,
           payload:
             type === "project.deleted"
@@ -6306,44 +6470,46 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
 
   it.effect("enriches replayed project events with repository identity metadata", () =>
     Effect.gen(function* () {
-      const repositoryIdentity = {
+      const repositoryIdentity = RepositoryIdentity.make({
         canonicalKey: "github.com/t3tools/t3code",
-        locator: {
-          source: "git-remote" as const,
+        locator: RepositoryIdentityLocator.make({
+          source: "git-remote",
           remoteName: "origin",
           remoteUrl: "git@github.com:T3Tools/t3code.git",
-        },
+        }),
         displayName: "T3Tools/t3code",
         provider: "github",
         owner: "T3Tools",
         name: "t3code",
-      };
+      });
 
       yield* buildAppUnderTest({
         layers: {
           orchestrationEngine: {
             readEvents: (_fromSequenceExclusive) =>
-              Stream.make({
-                sequence: 1,
-                eventId: EventId.make("event-1"),
-                aggregateKind: "project",
-                aggregateId: defaultProjectId,
-                occurredAt: "2026-04-05T00:00:00.000Z",
-                commandId: null,
-                causationEventId: null,
-                correlationId: null,
-                metadata: {},
-                type: "project.created",
-                payload: {
-                  projectId: defaultProjectId,
-                  title: "Default Project",
-                  workspaceRoot: "/tmp/default-project",
-                  defaultModelSelection,
-                  scripts: [],
-                  createdAt: "2026-04-05T00:00:00.000Z",
-                  updatedAt: "2026-04-05T00:00:00.000Z",
-                },
-              } satisfies Extract<OrchestrationEvent, { type: "project.created" }>),
+              Stream.make(
+                ProjectCreatedEvent.make({
+                  sequence: 1,
+                  eventId: EventId.make("event-1"),
+                  aggregateKind: "project",
+                  aggregateId: defaultProjectId,
+                  occurredAt: "2026-04-05T00:00:00.000Z",
+                  commandId: null,
+                  causationEventId: null,
+                  correlationId: null,
+                  metadata: OrchestrationEventMetadata.make({}),
+                  type: "project.created",
+                  payload: ProjectCreatedPayload.make({
+                    projectId: defaultProjectId,
+                    title: "Default Project",
+                    workspaceRoot: "/tmp/default-project",
+                    defaultModelSelection,
+                    scripts: [],
+                    createdAt: "2026-04-05T00:00:00.000Z",
+                    updatedAt: "2026-04-05T00:00:00.000Z",
+                  }),
+                }),
+              ),
           },
           repositoryIdentityResolver: {
             resolve: () => Effect.succeed(repositoryIdentity),
@@ -6391,7 +6557,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
               Effect.sync(() => {
                 dispatchedCommands.push(command);
                 effects.push(`dispatch:${command.type}`);
-                return { sequence: dispatchedCommands.length };
+                return DispatchResult.make({ sequence: dispatchedCommands.length });
               }),
           },
           projectionSnapshotQuery: {
@@ -6401,7 +6567,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                   makeDefaultOrchestrationThreadShell({
                     id: threadId,
                     updatedAt: now,
-                    session: {
+                    session: OrchestrationSession.make({
                       threadId,
                       status: "ready",
                       providerName: "claudeAgent",
@@ -6409,7 +6575,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                       activeTurnId: null,
                       lastError: null,
                       updatedAt: now,
-                    },
+                    }),
                   }),
                 ),
               ),
@@ -6420,11 +6586,13 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       const wsUrl = yield* getWsServerUrl("/ws");
       const dispatchResult = yield* Effect.scoped(
         withWsRpcClient(wsUrl, (client) =>
-          client[ORCHESTRATION_WS_METHODS.dispatchCommand]({
-            type: "thread.archive",
-            commandId: CommandId.make("cmd-thread-archive"),
-            threadId,
-          }),
+          client[ORCHESTRATION_WS_METHODS.dispatchCommand](
+            ThreadArchiveCommand.make({
+              type: "thread.archive",
+              commandId: CommandId.make("cmd-thread-archive"),
+              threadId,
+            }),
+          ),
         ),
       );
 
@@ -6466,7 +6634,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                 if (command.type === "thread.archive") {
                   archived = true;
                 }
-                return { sequence: dispatchedCommands.length };
+                return DispatchResult.make({ sequence: dispatchedCommands.length });
               }),
           },
           projectionSnapshotQuery: {
@@ -6479,7 +6647,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                       makeDefaultOrchestrationThreadShell({
                         id: threadId,
                         updatedAt: now,
-                        session: {
+                        session: OrchestrationSession.make({
                           threadId,
                           status: "ready",
                           providerName: "claudeAgent",
@@ -6487,7 +6655,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                           activeTurnId: null,
                           lastError: null,
                           updatedAt: now,
-                        },
+                        }),
                       }),
                     );
               }),
@@ -6498,11 +6666,13 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       const wsUrl = yield* getWsServerUrl("/ws");
       const dispatchResult = yield* Effect.scoped(
         withWsRpcClient(wsUrl, (client) =>
-          client[ORCHESTRATION_WS_METHODS.dispatchCommand]({
-            type: "thread.archive",
-            commandId: CommandId.make("cmd-thread-archive-precheck"),
-            threadId,
-          }),
+          client[ORCHESTRATION_WS_METHODS.dispatchCommand](
+            ThreadArchiveCommand.make({
+              type: "thread.archive",
+              commandId: CommandId.make("cmd-thread-archive-precheck"),
+              threadId,
+            }),
+          ),
         ),
       );
 
@@ -6539,7 +6709,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
               Effect.sync(() => {
                 dispatchedCommands.push(command);
                 effects.push(`dispatch:${command.type}`);
-                return { sequence: dispatchedCommands.length };
+                return DispatchResult.make({ sequence: dispatchedCommands.length });
               }),
           },
           projectionSnapshotQuery: {
@@ -6554,11 +6724,13 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       const wsUrl = yield* getWsServerUrl("/ws");
       const dispatchResult = yield* Effect.scoped(
         withWsRpcClient(wsUrl, (client) =>
-          client[ORCHESTRATION_WS_METHODS.dispatchCommand]({
-            type: "thread.archive",
-            commandId: CommandId.make("cmd-thread-archive-no-session"),
-            threadId,
-          }),
+          client[ORCHESTRATION_WS_METHODS.dispatchCommand](
+            ThreadArchiveCommand.make({
+              type: "thread.archive",
+              commandId: CommandId.make("cmd-thread-archive-no-session"),
+              threadId,
+            }),
+          ),
         ),
       );
 
@@ -6593,7 +6765,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                 Effect.sync(() => {
                   dispatchedCommands.push(command);
                   effects.push(`dispatch:${command.type}`);
-                  return { sequence: dispatchedCommands.length };
+                  return DispatchResult.make({ sequence: dispatchedCommands.length });
                 }),
             },
             projectionSnapshotQuery: {
@@ -6603,7 +6775,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                     makeDefaultOrchestrationThreadShell({
                       id: threadId,
                       updatedAt: now,
-                      session: {
+                      session: OrchestrationSession.make({
                         threadId,
                         status: "stopped",
                         providerName: "claudeAgent",
@@ -6611,7 +6783,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                         activeTurnId: null,
                         lastError: null,
                         updatedAt: now,
-                      },
+                      }),
                     }),
                   ),
                 ),
@@ -6622,11 +6794,13 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         const wsUrl = yield* getWsServerUrl("/ws");
         const dispatchResult = yield* Effect.scoped(
           withWsRpcClient(wsUrl, (client) =>
-            client[ORCHESTRATION_WS_METHODS.dispatchCommand]({
-              type: "thread.archive",
-              commandId: CommandId.make("cmd-thread-archive-stopped-session"),
-              threadId,
-            }),
+            client[ORCHESTRATION_WS_METHODS.dispatchCommand](
+              ThreadArchiveCommand.make({
+                type: "thread.archive",
+                commandId: CommandId.make("cmd-thread-archive-stopped-session"),
+                threadId,
+              }),
+            ),
           ),
         );
 
@@ -6666,7 +6840,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                   }),
                 );
               }
-              return Effect.succeed({ sequence: dispatchedCommands.length });
+              return Effect.succeed(DispatchResult.make({ sequence: dispatchedCommands.length }));
             },
           },
           projectionSnapshotQuery: {
@@ -6676,7 +6850,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                   makeDefaultOrchestrationThreadShell({
                     id: threadId,
                     updatedAt: now,
-                    session: {
+                    session: OrchestrationSession.make({
                       threadId,
                       status: "ready",
                       providerName: "claudeAgent",
@@ -6684,7 +6858,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                       activeTurnId: null,
                       lastError: null,
                       updatedAt: now,
-                    },
+                    }),
                   }),
                 ),
               ),
@@ -6695,11 +6869,13 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       const wsUrl = yield* getWsServerUrl("/ws");
       const dispatchResult = yield* Effect.scoped(
         withWsRpcClient(wsUrl, (client) =>
-          client[ORCHESTRATION_WS_METHODS.dispatchCommand]({
-            type: "thread.archive",
-            commandId: CommandId.make("cmd-thread-archive-stop-failure"),
-            threadId,
-          }),
+          client[ORCHESTRATION_WS_METHODS.dispatchCommand](
+            ThreadArchiveCommand.make({
+              type: "thread.archive",
+              commandId: CommandId.make("cmd-thread-archive-stop-failure"),
+              threadId,
+            }),
+          ),
         ),
       );
 
@@ -6738,7 +6914,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
               if (command.type === "thread.session.stop") {
                 return Effect.die(new Error("simulated archive stop defect"));
               }
-              return Effect.succeed({ sequence: dispatchedCommands.length });
+              return Effect.succeed(DispatchResult.make({ sequence: dispatchedCommands.length }));
             },
           },
           projectionSnapshotQuery: {
@@ -6748,7 +6924,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                   makeDefaultOrchestrationThreadShell({
                     id: threadId,
                     updatedAt: now,
-                    session: {
+                    session: OrchestrationSession.make({
                       threadId,
                       status: "ready",
                       providerName: "claudeAgent",
@@ -6756,7 +6932,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                       activeTurnId: null,
                       lastError: null,
                       updatedAt: now,
-                    },
+                    }),
                   }),
                 ),
               ),
@@ -6767,11 +6943,13 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       const wsUrl = yield* getWsServerUrl("/ws");
       const dispatchResult = yield* Effect.scoped(
         withWsRpcClient(wsUrl, (client) =>
-          client[ORCHESTRATION_WS_METHODS.dispatchCommand]({
-            type: "thread.archive",
-            commandId: CommandId.make("cmd-thread-archive-stop-defect"),
-            threadId,
-          }),
+          client[ORCHESTRATION_WS_METHODS.dispatchCommand](
+            ThreadArchiveCommand.make({
+              type: "thread.archive",
+              commandId: CommandId.make("cmd-thread-archive-stop-defect"),
+              threadId,
+            }),
+          ),
         ),
       );
 
@@ -6870,7 +7048,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
               dispatch: (command) =>
                 Effect.sync(() => {
                   dispatchedCommands.push(command);
-                  return { sequence: dispatchedCommands.length };
+                  return DispatchResult.make({ sequence: dispatchedCommands.length });
                 }),
               readEvents: () => Stream.empty,
             },
@@ -6884,40 +7062,42 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         const wsUrl = yield* getWsServerUrl("/ws");
         const response = yield* Effect.scoped(
           withWsRpcClient(wsUrl, (client) =>
-            client[ORCHESTRATION_WS_METHODS.dispatchCommand]({
-              type: "thread.turn.start",
-              commandId: CommandId.make("cmd-bootstrap-turn-start"),
-              threadId: ThreadId.make("thread-bootstrap"),
-              message: {
-                messageId: MessageId.make("msg-bootstrap"),
-                role: "user",
-                text: "hello",
-                attachments: [],
-              },
-              modelSelection: defaultModelSelection,
-              runtimeMode: "full-access",
-              interactionMode: "default",
-              bootstrap: {
-                createThread: {
-                  projectId: defaultProjectId,
-                  title: "Bootstrap Thread",
-                  modelSelection: defaultModelSelection,
-                  runtimeMode: "full-access",
-                  interactionMode: "default",
-                  branch: "main",
-                  worktreePath: null,
-                  createdAt,
+            client[ORCHESTRATION_WS_METHODS.dispatchCommand](
+              ClientThreadTurnStartCommand.make({
+                type: "thread.turn.start",
+                commandId: CommandId.make("cmd-bootstrap-turn-start"),
+                threadId: ThreadId.make("thread-bootstrap"),
+                message: {
+                  messageId: MessageId.make("msg-bootstrap"),
+                  role: "user",
+                  text: "hello",
+                  attachments: [],
                 },
-                prepareWorktree: {
-                  projectCwd: "/tmp/project",
-                  baseBranch: "main",
-                  branch: "t3code/bootstrap-refName",
-                  startFromOrigin: true,
-                },
-                runSetupScript: true,
-              },
-              createdAt,
-            }),
+                modelSelection: defaultModelSelection,
+                runtimeMode: "full-access",
+                interactionMode: "default",
+                bootstrap: ThreadTurnStartBootstrap.make({
+                  createThread: ThreadTurnStartBootstrapCreateThread.make({
+                    projectId: defaultProjectId,
+                    title: "Bootstrap Thread",
+                    modelSelection: defaultModelSelection,
+                    runtimeMode: "full-access",
+                    interactionMode: "default",
+                    branch: "main",
+                    worktreePath: null,
+                    createdAt,
+                  }),
+                  prepareWorktree: ThreadTurnStartBootstrapPrepareWorktree.make({
+                    projectCwd: "/tmp/project",
+                    baseBranch: "main",
+                    branch: "t3code/bootstrap-refName",
+                    startFromOrigin: true,
+                  }),
+                  runSetupScript: true,
+                }),
+                createdAt,
+              }),
+            ),
           ),
         );
 
@@ -7014,7 +7194,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
             dispatch: (command) =>
               Effect.sync(() => {
                 dispatchedCommands.push(command);
-                return { sequence: dispatchedCommands.length };
+                return DispatchResult.make({ sequence: dispatchedCommands.length });
               }),
             readEvents: () => Stream.empty,
           },
@@ -7028,39 +7208,41 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       const wsUrl = yield* getWsServerUrl("/ws");
       const response = yield* Effect.scoped(
         withWsRpcClient(wsUrl, (client) =>
-          client[ORCHESTRATION_WS_METHODS.dispatchCommand]({
-            type: "thread.turn.start",
-            commandId: CommandId.make("cmd-bootstrap-turn-start-setup-failure"),
-            threadId: ThreadId.make("thread-bootstrap-setup-failure"),
-            message: {
-              messageId: MessageId.make("msg-bootstrap-setup-failure"),
-              role: "user",
-              text: "hello",
-              attachments: [],
-            },
-            modelSelection: defaultModelSelection,
-            runtimeMode: "full-access",
-            interactionMode: "default",
-            bootstrap: {
-              createThread: {
-                projectId: defaultProjectId,
-                title: "Bootstrap Thread",
-                modelSelection: defaultModelSelection,
-                runtimeMode: "full-access",
-                interactionMode: "default",
-                branch: "main",
-                worktreePath: null,
-                createdAt,
+          client[ORCHESTRATION_WS_METHODS.dispatchCommand](
+            ClientThreadTurnStartCommand.make({
+              type: "thread.turn.start",
+              commandId: CommandId.make("cmd-bootstrap-turn-start-setup-failure"),
+              threadId: ThreadId.make("thread-bootstrap-setup-failure"),
+              message: {
+                messageId: MessageId.make("msg-bootstrap-setup-failure"),
+                role: "user",
+                text: "hello",
+                attachments: [],
               },
-              prepareWorktree: {
-                projectCwd: "/tmp/project",
-                baseBranch: "main",
-                branch: "t3code/bootstrap-refName",
-              },
-              runSetupScript: true,
-            },
-            createdAt,
-          }),
+              modelSelection: defaultModelSelection,
+              runtimeMode: "full-access",
+              interactionMode: "default",
+              bootstrap: ThreadTurnStartBootstrap.make({
+                createThread: ThreadTurnStartBootstrapCreateThread.make({
+                  projectId: defaultProjectId,
+                  title: "Bootstrap Thread",
+                  modelSelection: defaultModelSelection,
+                  runtimeMode: "full-access",
+                  interactionMode: "default",
+                  branch: "main",
+                  worktreePath: null,
+                  createdAt,
+                }),
+                prepareWorktree: ThreadTurnStartBootstrapPrepareWorktree.make({
+                  projectCwd: "/tmp/project",
+                  baseBranch: "main",
+                  branch: "t3code/bootstrap-refName",
+                }),
+                runSetupScript: true,
+              }),
+              createdAt,
+            }),
+          ),
         ),
       );
 
@@ -7134,7 +7316,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
 
               return Effect.sync(() => {
                 dispatchedCommands.push(command);
-                return { sequence: dispatchedCommands.length };
+                return DispatchResult.make({ sequence: dispatchedCommands.length });
               });
             },
             readEvents: () => Stream.empty,
@@ -7149,39 +7331,41 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       const wsUrl = yield* getWsServerUrl("/ws");
       const response = yield* Effect.scoped(
         withWsRpcClient(wsUrl, (client) =>
-          client[ORCHESTRATION_WS_METHODS.dispatchCommand]({
-            type: "thread.turn.start",
-            commandId: CommandId.make("cmd-bootstrap-turn-start-setup-activity-failure"),
-            threadId: ThreadId.make("thread-bootstrap-setup-activity-failure"),
-            message: {
-              messageId: MessageId.make("msg-bootstrap-setup-activity-failure"),
-              role: "user",
-              text: "hello",
-              attachments: [],
-            },
-            modelSelection: defaultModelSelection,
-            runtimeMode: "full-access",
-            interactionMode: "default",
-            bootstrap: {
-              createThread: {
-                projectId: defaultProjectId,
-                title: "Bootstrap Thread",
-                modelSelection: defaultModelSelection,
-                runtimeMode: "full-access",
-                interactionMode: "default",
-                branch: "main",
-                worktreePath: null,
-                createdAt,
+          client[ORCHESTRATION_WS_METHODS.dispatchCommand](
+            ClientThreadTurnStartCommand.make({
+              type: "thread.turn.start",
+              commandId: CommandId.make("cmd-bootstrap-turn-start-setup-activity-failure"),
+              threadId: ThreadId.make("thread-bootstrap-setup-activity-failure"),
+              message: {
+                messageId: MessageId.make("msg-bootstrap-setup-activity-failure"),
+                role: "user",
+                text: "hello",
+                attachments: [],
               },
-              prepareWorktree: {
-                projectCwd: "/tmp/project",
-                baseBranch: "main",
-                branch: "t3code/bootstrap-refName",
-              },
-              runSetupScript: true,
-            },
-            createdAt,
-          }),
+              modelSelection: defaultModelSelection,
+              runtimeMode: "full-access",
+              interactionMode: "default",
+              bootstrap: ThreadTurnStartBootstrap.make({
+                createThread: ThreadTurnStartBootstrapCreateThread.make({
+                  projectId: defaultProjectId,
+                  title: "Bootstrap Thread",
+                  modelSelection: defaultModelSelection,
+                  runtimeMode: "full-access",
+                  interactionMode: "default",
+                  branch: "main",
+                  worktreePath: null,
+                  createdAt,
+                }),
+                prepareWorktree: ThreadTurnStartBootstrapPrepareWorktree.make({
+                  projectCwd: "/tmp/project",
+                  baseBranch: "main",
+                  branch: "t3code/bootstrap-refName",
+                }),
+                runSetupScript: true,
+              }),
+              createdAt,
+            }),
+          ),
         ),
       );
 
@@ -7222,7 +7406,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
             dispatch: (command) =>
               Effect.sync(() => {
                 dispatchedCommands.push(command);
-                return { sequence: dispatchedCommands.length };
+                return DispatchResult.make({ sequence: dispatchedCommands.length });
               }),
             readEvents: () => Stream.empty,
           },
@@ -7233,39 +7417,41 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       const wsUrl = yield* getWsServerUrl("/ws");
       const result = yield* Effect.scoped(
         withWsRpcClient(wsUrl, (client) =>
-          client[ORCHESTRATION_WS_METHODS.dispatchCommand]({
-            type: "thread.turn.start",
-            commandId: CommandId.make("cmd-bootstrap-turn-start-defect"),
-            threadId: ThreadId.make("thread-bootstrap-defect"),
-            message: {
-              messageId: MessageId.make("msg-bootstrap-defect"),
-              role: "user",
-              text: "hello",
-              attachments: [],
-            },
-            modelSelection: defaultModelSelection,
-            runtimeMode: "full-access",
-            interactionMode: "default",
-            bootstrap: {
-              createThread: {
-                projectId: defaultProjectId,
-                title: "Bootstrap Thread",
-                modelSelection: defaultModelSelection,
-                runtimeMode: "full-access",
-                interactionMode: "default",
-                branch: "main",
-                worktreePath: null,
-                createdAt,
+          client[ORCHESTRATION_WS_METHODS.dispatchCommand](
+            ClientThreadTurnStartCommand.make({
+              type: "thread.turn.start",
+              commandId: CommandId.make("cmd-bootstrap-turn-start-defect"),
+              threadId: ThreadId.make("thread-bootstrap-defect"),
+              message: {
+                messageId: MessageId.make("msg-bootstrap-defect"),
+                role: "user",
+                text: "hello",
+                attachments: [],
               },
-              prepareWorktree: {
-                projectCwd: "/tmp/project",
-                baseBranch: "main",
-                branch: "t3code/bootstrap-refName",
-              },
-              runSetupScript: false,
-            },
-            createdAt,
-          }),
+              modelSelection: defaultModelSelection,
+              runtimeMode: "full-access",
+              interactionMode: "default",
+              bootstrap: ThreadTurnStartBootstrap.make({
+                createThread: ThreadTurnStartBootstrapCreateThread.make({
+                  projectId: defaultProjectId,
+                  title: "Bootstrap Thread",
+                  modelSelection: defaultModelSelection,
+                  runtimeMode: "full-access",
+                  interactionMode: "default",
+                  branch: "main",
+                  worktreePath: null,
+                  createdAt,
+                }),
+                prepareWorktree: ThreadTurnStartBootstrapPrepareWorktree.make({
+                  projectCwd: "/tmp/project",
+                  baseBranch: "main",
+                  branch: "t3code/bootstrap-refName",
+                }),
+                runSetupScript: false,
+              }),
+              createdAt,
+            }),
+          ),
         ).pipe(Effect.result),
       );
 
@@ -7281,19 +7467,19 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
 
   it.effect("routes websocket rpc terminal methods", () =>
     Effect.gen(function* () {
-      const snapshot = {
+      const snapshot = TerminalSessionSnapshot.make({
         threadId: "thread-1",
         terminalId: "default",
         cwd: "/tmp/project",
         worktreePath: null,
-        status: "running" as const,
+        status: "running",
         pid: 1234,
         history: "",
         exitCode: null,
         exitSignal: null,
         label: "Primary",
         updatedAt: "2026-01-01T00:00:00.000Z",
-      };
+      });
 
       yield* buildAppUnderTest({
         layers: {

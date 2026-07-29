@@ -1,4 +1,4 @@
-import { MessageId, ThreadId } from "@t3tools/contracts";
+import { ChatImageAttachment, MessageId, ThreadId } from "@t3tools/contracts";
 import { assert, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -22,13 +22,13 @@ layer("ProjectionThreadMessageRepository", (it) => {
       const createdAt = "2026-02-28T19:00:00.000Z";
       const updatedAt = "2026-02-28T19:00:01.000Z";
       const persistedAttachments = [
-        {
-          type: "image" as const,
+        ChatImageAttachment.make({
+          type: "image",
           id: "thread-preserve-attachments-att-1",
           name: "example.png",
           mimeType: "image/png",
           sizeBytes: 5,
-        },
+        }),
       ];
 
       yield* repository.upsert(
@@ -87,13 +87,13 @@ layer("ProjectionThreadMessageRepository", (it) => {
           role: "assistant",
           text: "with attachment",
           attachments: [
-            {
+            ChatImageAttachment.make({
               type: "image",
               id: "thread-clear-attachments-att-1",
               name: "example.png",
               mimeType: "image/png",
               sizeBytes: 5,
-            },
+            }),
           ],
           isStreaming: false,
           createdAt,

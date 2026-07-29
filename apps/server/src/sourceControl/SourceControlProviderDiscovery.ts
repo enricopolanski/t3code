@@ -1,8 +1,8 @@
-import type {
+import {
   SourceControlProviderAuth,
   SourceControlProviderDiscoveryItem,
-  SourceControlProviderInfo,
-  SourceControlProviderKind,
+  type SourceControlProviderInfo,
+  type SourceControlProviderKind,
 } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
@@ -98,12 +98,12 @@ export function providerAuth(input: {
   readonly host?: string | undefined;
   readonly detail?: string | undefined;
 }): SourceControlProviderAuth {
-  return {
+  return SourceControlProviderAuth.make({
     status: input.status,
     account: authAccount(input.account),
     host: authHost(input.host),
     detail: authDetail(input.detail),
-  };
+  });
 }
 
 export function unknownAuth(detail?: string): SourceControlProviderAuth {
@@ -207,17 +207,16 @@ export function probeSourceControlProvider(input: {
 }): Effect.Effect<SourceControlProviderDiscoveryItem> {
   if (input.spec.type === "api") {
     return input.spec.probeAuth.pipe(
-      Effect.map(
-        (auth) =>
-          ({
-            kind: input.spec.kind,
-            label: input.spec.label,
-            status: "available" as const,
-            version: Option.none<string>(),
-            installHint: input.spec.installHint,
-            detail: Option.none<string>(),
-            auth,
-          }) satisfies SourceControlProviderDiscoveryItem,
+      Effect.map((auth) =>
+        SourceControlProviderDiscoveryItem.make({
+          kind: input.spec.kind,
+          label: input.spec.label,
+          status: "available",
+          version: Option.none<string>(),
+          installHint: input.spec.installHint,
+          detail: Option.none<string>(),
+          auth,
+        }),
       ),
     );
   }
@@ -231,10 +230,12 @@ export function probeSourceControlProvider(input: {
   }).pipe(
     Effect.flatMap((item) => {
       if (item.status !== "available") {
-        return Effect.succeed({
-          ...item,
-          auth: unknownAuth("Hosting integration command was not found on the server PATH."),
-        } satisfies SourceControlProviderDiscoveryItem);
+        return Effect.succeed(
+          SourceControlProviderDiscoveryItem.make({
+            ...item,
+            auth: unknownAuth("Hosting integration command was not found on the server PATH."),
+          }),
+        );
       }
 
       return input.process
@@ -249,18 +250,19 @@ export function probeSourceControlProvider(input: {
           appendTruncationMarker: true,
         })
         .pipe(
-          Effect.map(
-            (result) =>
-              ({
-                ...item,
-                auth: spec.parseAuth(result),
-              }) satisfies SourceControlProviderDiscoveryItem,
+          Effect.map((result) =>
+            SourceControlProviderDiscoveryItem.make({
+              ...item,
+              auth: spec.parseAuth(result),
+            }),
           ),
           Effect.catch((cause) =>
-            Effect.succeed({
-              ...item,
-              auth: unknownAuth(Option.getOrUndefined(detailFromCause(cause))),
-            } satisfies SourceControlProviderDiscoveryItem),
+            Effect.succeed(
+              SourceControlProviderDiscoveryItem.make({
+                ...item,
+                auth: unknownAuth(Option.getOrUndefined(detailFromCause(cause))),
+              }),
+            ),
           ),
         );
     }),

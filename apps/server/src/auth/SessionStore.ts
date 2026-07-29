@@ -2,8 +2,8 @@ import {
   AuthSessionId,
   AuthStandardClientScopes,
   AuthEnvironmentScopes,
-  type AuthClientMetadata,
-  type AuthClientSession,
+  AuthClientMetadata,
+  AuthClientSession,
   type AuthEnvironmentScope,
   type ServerAuthSessionMethod,
 } from "@t3tools/contracts";
@@ -427,9 +427,9 @@ const decodeSessionClaims = Schema.decodeUnknownEffect(Schema.fromJsonString(Ses
 const decodeWebSocketClaims = Schema.decodeUnknownEffect(Schema.fromJsonString(WebSocketClaims));
 
 function createDefaultClientMetadata(): AuthClientMetadata {
-  return {
+  return AuthClientMetadata.make({
     deviceType: "unknown",
-  };
+  });
 }
 
 function toClientMetadata(record: {
@@ -440,21 +440,21 @@ function toClientMetadata(record: {
   readonly os: string | null;
   readonly browser: string | null;
 }): AuthClientMetadata {
-  return {
+  return AuthClientMetadata.make({
     ...(record.label ? { label: record.label } : {}),
     ...(record.ipAddress ? { ipAddress: record.ipAddress } : {}),
     ...(record.userAgent ? { userAgent: record.userAgent } : {}),
     deviceType: record.deviceType,
     ...(record.os ? { os: record.os } : {}),
     ...(record.browser ? { browser: record.browser } : {}),
-  };
+  });
 }
 
 function toAuthClientSession(input: Omit<AuthClientSession, "current">): AuthClientSession {
-  return {
+  return AuthClientSession.make({
     ...input,
     current: false,
-  };
+  });
 }
 
 export const make = Effect.gen(function* () {

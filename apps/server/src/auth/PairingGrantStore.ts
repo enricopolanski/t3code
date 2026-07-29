@@ -2,7 +2,7 @@ import {
   AuthAdministrativeScopes,
   AuthStandardClientScopes,
   type AuthEnvironmentScope,
-  type AuthPairingLink,
+  AuthPairingLink,
   type ServerAuthBootstrapMethod,
 } from "@t3tools/contracts";
 import * as Context from "effect/Context";
@@ -338,7 +338,7 @@ export const make = Effect.gen(function* () {
 
       return rows.map((row) =>
         row.label
-          ? ({
+          ? AuthPairingLink.make({
               id: row.id,
               credential: row.credential,
               scopes: row.scopes,
@@ -346,15 +346,15 @@ export const make = Effect.gen(function* () {
               label: row.label,
               createdAt: row.createdAt,
               expiresAt: row.expiresAt,
-            } satisfies AuthPairingLink)
-          : ({
+            })
+          : AuthPairingLink.make({
               id: row.id,
               credential: row.credential,
               scopes: row.scopes,
               subject: row.subject,
               createdAt: row.createdAt,
               expiresAt: row.expiresAt,
-            } satisfies AuthPairingLink),
+            }),
       );
     },
     Effect.mapError((cause) => new ActivePairingLinksLoadError({ cause })),

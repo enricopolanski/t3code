@@ -2,7 +2,36 @@ import {
   EventId,
   type OrchestrationCommand,
   type OrchestrationEvent,
+  OrchestrationEventMetadata,
   type OrchestrationReadModel,
+  ProjectCreatedPayload,
+  ProjectDeleteCommand,
+  ProjectDeletedPayload,
+  ProjectMetaUpdatedPayload,
+  ThreadActivityAppendedPayload,
+  ThreadApprovalResponseRequestedPayload,
+  ThreadArchivedPayload,
+  ThreadCheckpointRevertRequestedPayload,
+  ThreadCreatedPayload,
+  ThreadDeleteCommand,
+  ThreadDeletedPayload,
+  ThreadInteractionModeSetPayload,
+  ThreadMessageSentPayload,
+  ThreadMetaUpdatedPayload,
+  ThreadProposedPlanUpsertedPayload,
+  ThreadRevertedPayload,
+  ThreadRuntimeModeSetPayload,
+  ThreadSessionSetPayload,
+  ThreadSessionStopRequestedPayload,
+  ThreadSettledPayload,
+  ThreadSnoozedPayload,
+  ThreadTurnDiffCompletedPayload,
+  ThreadTurnInterruptRequestedPayload,
+  ThreadTurnStartRequestedPayload,
+  ThreadUnarchivedPayload,
+  ThreadUnsettledPayload,
+  ThreadUnsnoozedPayload,
+  ThreadUserInputResponseRequestedPayload,
 } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Crypto from "effect/Crypto";
@@ -165,7 +194,7 @@ function withEventBase(
           commandId: input.commandId,
           causationEventId: null,
           correlationId: input.commandId,
-          metadata: input.metadata ?? {},
+          metadata: OrchestrationEventMetadata.make(input.metadata ?? {}),
         })),
       ),
     ),
@@ -245,7 +274,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "project.created",
-        payload: {
+        payload: ProjectCreatedPayload.make({
           projectId: command.projectId,
           title: command.title,
           workspaceRoot: command.workspaceRoot,
@@ -253,7 +282,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           scripts: [],
           createdAt: command.createdAt,
           updatedAt: command.createdAt,
-        },
+        }),
       };
     }
 
@@ -280,7 +309,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "project.meta-updated",
-        payload: {
+        payload: ProjectMetaUpdatedPayload.make({
           projectId: command.projectId,
           ...(command.title !== undefined ? { title: command.title } : {}),
           ...(command.workspaceRoot !== undefined ? { workspaceRoot: command.workspaceRoot } : {}),
@@ -289,7 +318,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
             : {}),
           ...(command.scripts !== undefined ? { scripts: command.scripts } : {}),
           updatedAt: occurredAt,
-        },
+        }),
       };
     }
 
@@ -313,17 +342,18 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           readModel,
           commands: [
             ...activeThreads.map(
-              (thread): Extract<OrchestrationCommand, { type: "thread.delete" }> => ({
-                type: "thread.delete",
-                commandId: command.commandId,
-                threadId: thread.id,
-              }),
+              (thread): ThreadDeleteCommand =>
+                ThreadDeleteCommand.make({
+                  type: "thread.delete",
+                  commandId: command.commandId,
+                  threadId: thread.id,
+                }),
             ),
-            {
+            ProjectDeleteCommand.make({
               type: "project.delete",
               commandId: command.commandId,
               projectId: command.projectId,
-            },
+            }),
           ],
         });
       }
@@ -337,10 +367,10 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "project.deleted" as const,
-        payload: {
+        payload: ProjectDeletedPayload.make({
           projectId: command.projectId,
           deletedAt: occurredAt,
-        },
+        }),
       };
     }
 
@@ -363,7 +393,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.created",
-        payload: {
+        payload: ThreadCreatedPayload.make({
           threadId: command.threadId,
           projectId: command.projectId,
           title: command.title,
@@ -374,7 +404,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           worktreePath: command.worktreePath,
           createdAt: command.createdAt,
           updatedAt: command.createdAt,
-        },
+        }),
       };
     }
 
@@ -393,10 +423,10 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.deleted",
-        payload: {
+        payload: ThreadDeletedPayload.make({
           threadId: command.threadId,
           deletedAt: occurredAt,
-        },
+        }),
       };
     }
 
@@ -415,11 +445,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.archived",
-        payload: {
+        payload: ThreadArchivedPayload.make({
           threadId: command.threadId,
           archivedAt: occurredAt,
           updatedAt: occurredAt,
-        },
+        }),
       };
     }
 
@@ -438,10 +468,10 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.unarchived",
-        payload: {
+        payload: ThreadUnarchivedPayload.make({
           threadId: command.threadId,
           updatedAt: occurredAt,
-        },
+        }),
       };
     }
 
@@ -495,14 +525,14 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.settled",
-        payload: {
+        payload: ThreadSettledPayload.make({
           threadId: command.threadId,
           settledAt: alreadySettled ? thread.settledAt : occurredAt,
           // A re-emission is a projected no-op: keep the existing updatedAt
           // so duplicate settles neither rewind nor churn ordering. A fresh
           // settle stamps the command time.
           updatedAt: alreadySettled ? thread.updatedAt : occurredAt,
-        },
+        }),
       };
     }
 
@@ -525,11 +555,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.unsettled",
-        payload: {
+        payload: ThreadUnsettledPayload.make({
           threadId: command.threadId,
           reason: command.reason,
           updatedAt: alreadyPinnedActive ? thread.updatedAt : occurredAt,
-        },
+        }),
       };
     }
 
@@ -594,12 +624,12 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.snoozed",
-        payload: {
+        payload: ThreadSnoozedPayload.make({
           threadId: command.threadId,
           snoozedUntil: command.snoozedUntil,
           snoozedAt: existingSnoozedAt ?? occurredAt,
           updatedAt: existingSnoozedAt !== null ? thread.updatedAt : occurredAt,
-        },
+        }),
       };
     }
 
@@ -622,11 +652,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.unsnoozed",
-        payload: {
+        payload: ThreadUnsnoozedPayload.make({
           threadId: command.threadId,
           reason: command.reason,
           updatedAt: alreadyAwake ? thread.updatedAt : occurredAt,
-        },
+        }),
       };
     }
 
@@ -651,7 +681,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.meta-updated",
-        payload: {
+        payload: ThreadMetaUpdatedPayload.make({
           threadId: command.threadId,
           ...(command.title !== undefined ? { title: command.title } : {}),
           ...(command.modelSelection !== undefined
@@ -660,7 +690,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           ...(branch !== undefined ? { branch } : {}),
           ...(command.worktreePath !== undefined ? { worktreePath: command.worktreePath } : {}),
           updatedAt: occurredAt,
-        },
+        }),
       };
     }
 
@@ -679,11 +709,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.runtime-mode-set",
-        payload: {
+        payload: ThreadRuntimeModeSetPayload.make({
           threadId: command.threadId,
           runtimeMode: command.runtimeMode,
           updatedAt: occurredAt,
-        },
+        }),
       };
     }
 
@@ -702,11 +732,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.interaction-mode-set",
-        payload: {
+        payload: ThreadInteractionModeSetPayload.make({
           threadId: command.threadId,
           interactionMode: command.interactionMode,
           updatedAt: occurredAt,
-        },
+        }),
       };
     }
 
@@ -748,7 +778,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.message-sent",
-        payload: {
+        payload: ThreadMessageSentPayload.make({
           threadId: command.threadId,
           messageId: command.message.messageId,
           role: "user",
@@ -758,7 +788,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           streaming: false,
           createdAt: command.createdAt,
           updatedAt: command.createdAt,
-        },
+        }),
       };
       const turnStartRequestedEvent: Omit<OrchestrationEvent, "sequence"> = {
         ...(yield* withEventBase({
@@ -769,7 +799,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         })),
         causationEventId: userMessageEvent.eventId,
         type: "thread.turn-start-requested",
-        payload: {
+        payload: ThreadTurnStartRequestedPayload.make({
           threadId: command.threadId,
           messageId: command.message.messageId,
           ...(command.modelSelection !== undefined
@@ -780,7 +810,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           interactionMode: targetThread.interactionMode,
           ...(sourceProposedPlan !== undefined ? { sourceProposedPlan } : {}),
           createdAt: command.createdAt,
-        },
+        }),
       };
       // Real activity resets ANY override: it wakes an explicitly settled
       // thread, and it clears a keep-active pin back to neutral so the
@@ -797,11 +827,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
             commandId: command.commandId,
           })),
           type: "thread.unsettled",
-          payload: {
+          payload: ThreadUnsettledPayload.make({
             threadId: command.threadId,
             reason: "activity",
             updatedAt: command.createdAt,
-          },
+          }),
         });
       }
       if (targetThread.snoozedUntil != null) {
@@ -813,11 +843,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
             commandId: command.commandId,
           })),
           type: "thread.unsnoozed",
-          payload: {
+          payload: ThreadUnsnoozedPayload.make({
             threadId: command.threadId,
             reason: "activity",
             updatedAt: command.createdAt,
-          },
+          }),
         });
       }
       return [...lifecycleResetEvents, userMessageEvent, turnStartRequestedEvent];
@@ -837,11 +867,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.turn-interrupt-requested",
-        payload: {
+        payload: ThreadTurnInterruptRequestedPayload.make({
           threadId: command.threadId,
           ...(command.turnId !== undefined ? { turnId: command.turnId } : {}),
           createdAt: command.createdAt,
-        },
+        }),
       };
     }
 
@@ -862,12 +892,12 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           },
         })),
         type: "thread.approval-response-requested",
-        payload: {
+        payload: ThreadApprovalResponseRequestedPayload.make({
           threadId: command.threadId,
           requestId: command.requestId,
           decision: command.decision,
           createdAt: command.createdAt,
-        },
+        }),
       };
     }
 
@@ -888,12 +918,12 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           },
         })),
         type: "thread.user-input-response-requested",
-        payload: {
+        payload: ThreadUserInputResponseRequestedPayload.make({
           threadId: command.threadId,
           requestId: command.requestId,
           answers: command.answers,
           createdAt: command.createdAt,
-        },
+        }),
       };
     }
 
@@ -911,11 +941,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.checkpoint-revert-requested",
-        payload: {
+        payload: ThreadCheckpointRevertRequestedPayload.make({
           threadId: command.threadId,
           turnCount: command.turnCount,
           createdAt: command.createdAt,
-        },
+        }),
       };
     }
 
@@ -933,10 +963,10 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.session-stop-requested",
-        payload: {
+        payload: ThreadSessionStopRequestedPayload.make({
           threadId: command.threadId,
           createdAt: command.createdAt,
-        },
+        }),
       };
     }
 
@@ -955,10 +985,10 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           metadata: {},
         })),
         type: "thread.session-set",
-        payload: {
+        payload: ThreadSessionSetPayload.make({
           threadId: command.threadId,
           session: command.session,
-        },
+        }),
       };
       // Only a session coming alive is activity worth waking a settled thread
       // for — status writes like ready/stopped/error arrive after the fact and
@@ -982,11 +1012,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.unsettled",
-        payload: {
+        payload: ThreadUnsettledPayload.make({
           threadId: command.threadId,
           reason: "activity",
           updatedAt: command.createdAt,
-        },
+        }),
       };
       return [unsettledEvent, sessionSetEvent];
     }
@@ -1005,7 +1035,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.message-sent",
-        payload: {
+        payload: ThreadMessageSentPayload.make({
           threadId: command.threadId,
           messageId: command.messageId,
           role: "assistant",
@@ -1014,7 +1044,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           streaming: true,
           createdAt: command.createdAt,
           updatedAt: command.createdAt,
-        },
+        }),
       };
     }
 
@@ -1032,7 +1062,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.message-sent",
-        payload: {
+        payload: ThreadMessageSentPayload.make({
           threadId: command.threadId,
           messageId: command.messageId,
           role: "assistant",
@@ -1041,7 +1071,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           streaming: false,
           createdAt: command.createdAt,
           updatedAt: command.createdAt,
-        },
+        }),
       };
     }
 
@@ -1059,10 +1089,10 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.proposed-plan-upserted",
-        payload: {
+        payload: ThreadProposedPlanUpsertedPayload.make({
           threadId: command.threadId,
           proposedPlan: command.proposedPlan,
-        },
+        }),
       };
     }
 
@@ -1080,7 +1110,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.turn-diff-completed",
-        payload: {
+        payload: ThreadTurnDiffCompletedPayload.make({
           threadId: command.threadId,
           turnId: command.turnId,
           checkpointTurnCount: command.checkpointTurnCount,
@@ -1089,7 +1119,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           files: command.files,
           assistantMessageId: command.assistantMessageId ?? null,
           completedAt: command.completedAt,
-        },
+        }),
       };
     }
 
@@ -1107,10 +1137,10 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.reverted",
-        payload: {
+        payload: ThreadRevertedPayload.make({
           threadId: command.threadId,
           turnCount: command.turnCount,
-        },
+        }),
       };
     }
 
@@ -1137,10 +1167,10 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           ...(requestId !== undefined ? { metadata: { requestId } } : {}),
         })),
         type: "thread.activity-appended",
-        payload: {
+        payload: ThreadActivityAppendedPayload.make({
           threadId: command.threadId,
           activity: command.activity,
-        },
+        }),
       };
       // An approval or user-input request is blocked-on-you work — it must
       // never stay hidden inside a settled slim row.
@@ -1159,11 +1189,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           commandId: command.commandId,
         })),
         type: "thread.unsettled",
-        payload: {
+        payload: ThreadUnsettledPayload.make({
           threadId: command.threadId,
           reason: "activity",
           updatedAt: command.createdAt,
-        },
+        }),
       };
       return [unsettledEvent, activityAppendedEvent];
     }

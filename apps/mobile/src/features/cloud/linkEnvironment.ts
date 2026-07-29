@@ -10,6 +10,13 @@ import {
   EnvironmentHttpInternalServerError,
   EnvironmentHttpUnauthorizedError,
 } from "@t3tools/contracts";
+import {
+  RelayEnvironmentLinkChallengeRequest,
+  RelayEnvironmentConfigRequest,
+  RelayEnvironmentLinkRequest,
+  RelayLinkProofRequest,
+  RelayManagedEndpoint,
+} from "@t3tools/contracts/relay";
 import { stripPairingTokenFromUrl } from "@t3tools/shared/remote";
 import {
   type RelayEnvironmentConnectResponse as RelayEnvironmentConnectResponseType,
@@ -289,11 +296,11 @@ export function linkEnvironmentToCloudWithPreference(
     const challenge = yield* relayClient
       .createEnvironmentLinkChallenge({
         clerkToken: input.clerkToken,
-        payload: {
+        payload: RelayEnvironmentLinkChallengeRequest.make({
           notificationsEnabled: true,
           liveActivitiesEnabled,
           managedTunnelsEnabled: true,
-        },
+        }),
       })
       .pipe(
         Effect.mapError(
@@ -304,28 +311,28 @@ export function linkEnvironmentToCloudWithPreference(
     const proof = yield* environmentClient.connect
       .linkProof({
         headers: { authorization: `Bearer ${localBearerToken}` },
-        payload: {
+        payload: RelayLinkProofRequest.make({
           challenge: challenge.challenge,
           relayIssuer: relayUrl,
-          endpoint: {
+          endpoint: RelayManagedEndpoint.make({
             httpBaseUrl: input.connection.httpBaseUrl,
             wsBaseUrl: input.connection.wsBaseUrl,
             providerKind: MANAGED_ENDPOINT_PROVIDER_KIND,
-          },
+          }),
           origin: endpointOrigin(input.connection.httpBaseUrl),
-        },
+        }),
       })
       .pipe(Effect.mapError(cloudEnvironmentLinkError("Could not obtain environment link proof.")));
     const link = yield* relayClient
       .linkEnvironment({
         clerkToken: input.clerkToken,
-        payload: {
+        payload: RelayEnvironmentLinkRequest.make({
           deviceId,
           proof,
           notificationsEnabled: true,
           liveActivitiesEnabled,
           managedTunnelsEnabled: true,
-        },
+        }),
       })
       .pipe(
         Effect.mapError(decodedRelayClientError(`${relayUrl}/v1/client/environment-links failed`)),
@@ -339,14 +346,14 @@ export function linkEnvironmentToCloudWithPreference(
     yield* environmentClient.connect
       .relayConfig({
         headers: { authorization: `Bearer ${localBearerToken}` },
-        payload: {
+        payload: RelayEnvironmentConfigRequest.make({
           relayUrl,
           relayIssuer: link.relayIssuer,
           cloudUserId: link.cloudUserId,
           environmentCredential: link.environmentCredential,
           cloudMintPublicKey: link.cloudMintPublicKey,
           endpointRuntime: link.endpointRuntime,
-        },
+        }),
       })
       .pipe(
         Effect.mapError(cloudEnvironmentLinkError("Could not configure environment relay access.")),

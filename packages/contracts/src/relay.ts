@@ -25,20 +25,23 @@ export const RelayAgentAwarenessPhase = Schema.Literals([
 ]);
 export type RelayAgentAwarenessPhase = typeof RelayAgentAwarenessPhase.Type;
 
-export const RelayAgentAwarenessPreferences = Schema.Struct({
+export class RelayAgentAwarenessPreferences extends Schema.Class<RelayAgentAwarenessPreferences>(
+  "RelayAgentAwarenessPreferences",
+)({
   liveActivitiesEnabled: Schema.Boolean,
   notificationsEnabled: Schema.Boolean,
   notifyOnApproval: Schema.Boolean,
   notifyOnInput: Schema.Boolean,
   notifyOnCompletion: Schema.Boolean,
   notifyOnFailure: Schema.Boolean,
-});
-export type RelayAgentAwarenessPreferences = typeof RelayAgentAwarenessPreferences.Type;
+}) {}
 
 export const RelayApnsEnvironment = Schema.Literals(["sandbox", "production"]);
 export type RelayApnsEnvironment = typeof RelayApnsEnvironment.Type;
 
-export const RelayDeviceRegistrationRequest = Schema.Struct({
+export class RelayDeviceRegistrationRequest extends Schema.Class<RelayDeviceRegistrationRequest>(
+  "RelayDeviceRegistrationRequest",
+)({
   deviceId: TrimmedNonEmptyString,
   label: TrimmedNonEmptyString,
   platform: RelayAgentAwarenessPlatform,
@@ -53,10 +56,11 @@ export const RelayDeviceRegistrationRequest = Schema.Struct({
   pushToken: Schema.optional(TrimmedNonEmptyString),
   pushToStartToken: Schema.optional(TrimmedNonEmptyString),
   preferences: RelayAgentAwarenessPreferences,
-});
-export type RelayDeviceRegistrationRequest = typeof RelayDeviceRegistrationRequest.Type;
+}) {}
 
-export const RelayClientDeviceRecord = Schema.Struct({
+export class RelayClientDeviceRecord extends Schema.Class<RelayClientDeviceRecord>(
+  "RelayClientDeviceRecord",
+)({
   deviceId: TrimmedNonEmptyString,
   label: TrimmedNonEmptyString,
   platform: RelayAgentAwarenessPlatform,
@@ -73,26 +77,32 @@ export const RelayClientDeviceRecord = Schema.Struct({
     enabled: Schema.Boolean,
   }),
   updatedAt: TrimmedNonEmptyString,
-});
-export type RelayClientDeviceRecord = typeof RelayClientDeviceRecord.Type;
+}) {}
 
-export const RelayListDevicesResponse = Schema.Struct({
+export class RelayListDevicesResponse extends Schema.Class<RelayListDevicesResponse>(
+  "RelayListDevicesResponse",
+)({
   devices: Schema.Array(RelayClientDeviceRecord),
-});
-export type RelayListDevicesResponse = typeof RelayListDevicesResponse.Type;
+}) {}
 
-export const RelayLiveActivityRegistrationRequest = Schema.Struct({
+export class RelayLiveActivityRegistrationRequest extends Schema.Class<RelayLiveActivityRegistrationRequest>(
+  "RelayLiveActivityRegistrationRequest",
+)({
   deviceId: TrimmedNonEmptyString,
   activityPushToken: TrimmedNonEmptyString,
-});
-export type RelayLiveActivityRegistrationRequest = typeof RelayLiveActivityRegistrationRequest.Type;
+}) {}
 
+// Stays a `Schema.Struct`: HttpApi path params are a plain URL-segment
+// record on both sides, and a `Schema.Class` wrapper makes the client fail
+// to encode them into the request URL.
 export const RelayDeviceUnregistrationParams = Schema.Struct({
   deviceId: TrimmedNonEmptyString,
 });
 export type RelayDeviceUnregistrationParams = typeof RelayDeviceUnregistrationParams.Type;
 
-export const RelayAgentActivityState = Schema.Struct({
+export class RelayAgentActivityState extends Schema.Class<RelayAgentActivityState>(
+  "RelayAgentActivityState",
+)({
   environmentId: EnvironmentId,
   threadId: ThreadId,
   projectTitle: TrimmedNonEmptyString,
@@ -103,10 +113,11 @@ export const RelayAgentActivityState = Schema.Struct({
   modelTitle: TrimmedNonEmptyString,
   updatedAt: TrimmedNonEmptyString,
   deepLink: TrimmedNonEmptyString,
-});
-export type RelayAgentActivityState = typeof RelayAgentActivityState.Type;
+}) {}
 
-export const RelayAgentActivityAggregateRow = Schema.Struct({
+export class RelayAgentActivityAggregateRow extends Schema.Class<RelayAgentActivityAggregateRow>(
+  "RelayAgentActivityAggregateRow",
+)({
   environmentId: EnvironmentId,
   threadId: ThreadId,
   projectTitle: TrimmedNonEmptyString,
@@ -116,17 +127,17 @@ export const RelayAgentActivityAggregateRow = Schema.Struct({
   status: TrimmedNonEmptyString,
   updatedAt: TrimmedNonEmptyString,
   deepLink: TrimmedNonEmptyString,
-});
-export type RelayAgentActivityAggregateRow = typeof RelayAgentActivityAggregateRow.Type;
+}) {}
 
-export const RelayAgentActivityAggregateState = Schema.Struct({
+export class RelayAgentActivityAggregateState extends Schema.Class<RelayAgentActivityAggregateState>(
+  "RelayAgentActivityAggregateState",
+)({
   title: TrimmedNonEmptyString,
   subtitle: TrimmedNonEmptyString,
   activeCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   updatedAt: TrimmedNonEmptyString,
   activities: Schema.Array(RelayAgentActivityAggregateRow),
-});
-export type RelayAgentActivityAggregateState = typeof RelayAgentActivityAggregateState.Type;
+}) {}
 
 export const RelayManagedEndpointProviderKind = Schema.Literals([
   "manual",
@@ -135,47 +146,52 @@ export const RelayManagedEndpointProviderKind = Schema.Literals([
 ]);
 export type RelayManagedEndpointProviderKind = typeof RelayManagedEndpointProviderKind.Type;
 
-export const RelayManagedEndpoint = Schema.Struct({
+export class RelayManagedEndpoint extends Schema.Class<RelayManagedEndpoint>(
+  "RelayManagedEndpoint",
+)({
   httpBaseUrl: TrimmedNonEmptyString,
   wsBaseUrl: TrimmedNonEmptyString,
   providerKind: RelayManagedEndpointProviderKind,
-});
-export type RelayManagedEndpoint = typeof RelayManagedEndpoint.Type;
+}) {}
 
-export const RelayManagedEndpointOrigin = Schema.Struct({
+export class RelayManagedEndpointOrigin extends Schema.Class<RelayManagedEndpointOrigin>(
+  "RelayManagedEndpointOrigin",
+)({
   localHttpHost: TrimmedNonEmptyString,
   localHttpPort: Schema.Int.check(
     Schema.isGreaterThanOrEqualTo(1),
     Schema.isLessThanOrEqualTo(65_535),
   ),
-});
-export type RelayManagedEndpointOrigin = typeof RelayManagedEndpointOrigin.Type;
+}) {}
 
-export const RelayManagedEndpointRuntimeConfig = Schema.Struct({
+export class RelayManagedEndpointRuntimeConfig extends Schema.Class<RelayManagedEndpointRuntimeConfig>(
+  "RelayManagedEndpointRuntimeConfig",
+)({
   providerKind: RelayManagedEndpointProviderKind,
   connectorToken: TrimmedNonEmptyString,
   tunnelId: Schema.optional(TrimmedNonEmptyString),
   tunnelName: Schema.optional(TrimmedNonEmptyString),
-});
-export type RelayManagedEndpointRuntimeConfig = typeof RelayManagedEndpointRuntimeConfig.Type;
+}) {}
 
-export const RelayLinkProofRequest = Schema.Struct({
+export class RelayLinkProofRequest extends Schema.Class<RelayLinkProofRequest>(
+  "RelayLinkProofRequest",
+)({
   challenge: Schema.String,
   relayIssuer: Schema.String,
   endpoint: RelayManagedEndpoint,
   origin: RelayManagedEndpointOrigin,
-});
-export type RelayLinkProofRequest = typeof RelayLinkProofRequest.Type;
+}) {}
 
-export const RelayEnvironmentConfigRequest = Schema.Struct({
+export class RelayEnvironmentConfigRequest extends Schema.Class<RelayEnvironmentConfigRequest>(
+  "RelayEnvironmentConfigRequest",
+)({
   relayUrl: Schema.String,
   relayIssuer: Schema.optional(Schema.String),
   cloudUserId: Schema.String,
   environmentCredential: Schema.String,
   cloudMintPublicKey: Schema.String,
   endpointRuntime: Schema.NullOr(RelayManagedEndpointRuntimeConfig),
-});
-export type RelayEnvironmentConfigRequest = typeof RelayEnvironmentConfigRequest.Type;
+}) {}
 
 const RelaySignedJwtRegisteredClaims = {
   iss: TrimmedNonEmptyString,
@@ -186,25 +202,30 @@ const RelaySignedJwtRegisteredClaims = {
   exp: Schema.Int,
 } as const;
 
-export const RelayAgentActivityPublishProofPayload = Schema.Struct({
-  ...RelaySignedJwtRegisteredClaims,
-  environmentId: EnvironmentId,
-  threadId: ThreadId,
-  state: Schema.NullOr(RelayAgentActivityState),
-});
-export type RelayAgentActivityPublishProofPayload =
-  typeof RelayAgentActivityPublishProofPayload.Type;
+export class RelayAgentActivityPublishProofPayload extends Schema.Class<RelayAgentActivityPublishProofPayload>(
+  "RelayAgentActivityPublishProofPayload",
+)(
+  Schema.Struct({
+    ...RelaySignedJwtRegisteredClaims,
+    environmentId: EnvironmentId,
+    threadId: ThreadId,
+    state: Schema.NullOr(RelayAgentActivityState),
+  }),
+) {}
 export type RelayAgentActivityPublishProof = string;
 
-export const RelayAgentActivityPublishRequest = Schema.Struct({
-  state: Schema.NullOr(RelayAgentActivityState).annotate({
-    description: "Current agent-awareness state, or null to remove the published state.",
-  }),
-  proof: TrimmedNonEmptyString.annotate({
-    description: "Environment-signed JWT covering this published activity state.",
-  }),
-}).annotate({ description: "Publishes a signed agent-awareness update from an environment." });
-export type RelayAgentActivityPublishRequest = typeof RelayAgentActivityPublishRequest.Type;
+export class RelayAgentActivityPublishRequest extends Schema.Class<RelayAgentActivityPublishRequest>(
+  "RelayAgentActivityPublishRequest",
+)(
+  Schema.Struct({
+    state: Schema.NullOr(RelayAgentActivityState).annotate({
+      description: "Current agent-awareness state, or null to remove the published state.",
+    }),
+    proof: TrimmedNonEmptyString.annotate({
+      description: "Environment-signed JWT covering this published activity state.",
+    }),
+  }).annotate({ description: "Publishes a signed agent-awareness update from an environment." }),
+) {}
 
 export const RelayEnvironmentLinkScope = Schema.Literals([
   "agent_activity_notifications",
@@ -212,7 +233,9 @@ export const RelayEnvironmentLinkScope = Schema.Literals([
 ]);
 export type RelayEnvironmentLinkScope = typeof RelayEnvironmentLinkScope.Type;
 
-export const RelayEnvironmentLinkProofPayload = Schema.Struct({
+export class RelayEnvironmentLinkProofPayload extends Schema.Class<RelayEnvironmentLinkProofPayload>(
+  "RelayEnvironmentLinkProofPayload",
+)({
   ...RelaySignedJwtRegisteredClaims,
   challenge: TrimmedNonEmptyString,
   descriptor: ExecutionEnvironmentDescriptor,
@@ -221,48 +244,57 @@ export const RelayEnvironmentLinkProofPayload = Schema.Struct({
   endpoint: RelayManagedEndpoint,
   origin: RelayManagedEndpointOrigin,
   scopes: Schema.Array(RelayEnvironmentLinkScope),
-});
-export type RelayEnvironmentLinkProofPayload = typeof RelayEnvironmentLinkProofPayload.Type;
+}) {}
 
 export const RelayEnvironmentLinkProof = TrimmedNonEmptyString;
 export type RelayEnvironmentLinkProof = typeof RelayEnvironmentLinkProof.Type;
 
-export const RelayEnvironmentLinkChallengeRequest = Schema.Struct({
-  notificationsEnabled: Schema.Boolean.annotate({
-    description: "Whether this link may deliver push notifications.",
-  }),
-  liveActivitiesEnabled: Schema.Boolean.annotate({
-    description: "Whether this link may update Live Activities.",
-  }),
-  managedTunnelsEnabled: Schema.Boolean.annotate({
-    description: "Whether the relay should provision a managed tunnel for this environment.",
-  }),
-}).annotate({ description: "Requested capabilities for a new environment-link challenge." });
-export type RelayEnvironmentLinkChallengeRequest = typeof RelayEnvironmentLinkChallengeRequest.Type;
-
-export const RelayEnvironmentLinkChallengeResponse = Schema.Struct({
-  challenge: TrimmedNonEmptyString,
-  expiresAt: TrimmedNonEmptyString,
-});
-export type RelayEnvironmentLinkChallengeResponse =
-  typeof RelayEnvironmentLinkChallengeResponse.Type;
-
-export const RelayEnvironmentLinkRequest = Schema.Struct({
-  deviceId: Schema.optional(
-    TrimmedNonEmptyString.annotate({
-      description: "Optional client device identifier associated with this link.",
+export class RelayEnvironmentLinkChallengeRequest extends Schema.Class<RelayEnvironmentLinkChallengeRequest>(
+  "RelayEnvironmentLinkChallengeRequest",
+)(
+  Schema.Struct({
+    notificationsEnabled: Schema.Boolean.annotate({
+      description: "Whether this link may deliver push notifications.",
     }),
-  ),
-  proof: RelayEnvironmentLinkProof.annotate({
-    description: "Environment-signed proof bound to a previously issued link challenge.",
-  }),
-  notificationsEnabled: Schema.Boolean,
-  liveActivitiesEnabled: Schema.Boolean,
-  managedTunnelsEnabled: Schema.Boolean,
-}).annotate({ description: "Links an authenticated cloud user to a T3 environment." });
-export type RelayEnvironmentLinkRequest = typeof RelayEnvironmentLinkRequest.Type;
+    liveActivitiesEnabled: Schema.Boolean.annotate({
+      description: "Whether this link may update Live Activities.",
+    }),
+    managedTunnelsEnabled: Schema.Boolean.annotate({
+      description: "Whether the relay should provision a managed tunnel for this environment.",
+    }),
+  }).annotate({ description: "Requested capabilities for a new environment-link challenge." }),
+) {}
 
-export const RelayEnvironmentLinkResponse = Schema.Struct({
+export class RelayEnvironmentLinkChallengeResponse extends Schema.Class<RelayEnvironmentLinkChallengeResponse>(
+  "RelayEnvironmentLinkChallengeResponse",
+)(
+  Schema.Struct({
+    challenge: TrimmedNonEmptyString,
+    expiresAt: TrimmedNonEmptyString,
+  }),
+) {}
+
+export class RelayEnvironmentLinkRequest extends Schema.Class<RelayEnvironmentLinkRequest>(
+  "RelayEnvironmentLinkRequest",
+)(
+  Schema.Struct({
+    deviceId: Schema.optional(
+      TrimmedNonEmptyString.annotate({
+        description: "Optional client device identifier associated with this link.",
+      }),
+    ),
+    proof: RelayEnvironmentLinkProof.annotate({
+      description: "Environment-signed proof bound to a previously issued link challenge.",
+    }),
+    notificationsEnabled: Schema.Boolean,
+    liveActivitiesEnabled: Schema.Boolean,
+    managedTunnelsEnabled: Schema.Boolean,
+  }).annotate({ description: "Links an authenticated cloud user to a T3 environment." }),
+) {}
+
+export class RelayEnvironmentLinkResponse extends Schema.Class<RelayEnvironmentLinkResponse>(
+  "RelayEnvironmentLinkResponse",
+)({
   ok: Schema.Boolean,
   cloudUserId: TrimmedNonEmptyString,
   environmentId: EnvironmentId,
@@ -271,8 +303,7 @@ export const RelayEnvironmentLinkResponse = Schema.Struct({
   relayIssuer: TrimmedNonEmptyString,
   environmentCredential: TrimmedNonEmptyString,
   cloudMintPublicKey: TrimmedNonEmptyString,
-});
-export type RelayEnvironmentLinkResponse = typeof RelayEnvironmentLinkResponse.Type;
+}) {}
 
 export const RelayEnvironmentLinkProofInvalidReason = Schema.Literals([
   "invalid_signature_or_scope",
@@ -600,37 +631,44 @@ export class RelayDpopClientAuth extends HttpApiMiddleware.Service<
   security: { relayDpop: RelayDpopAuthorization },
 }) {}
 
-export const RelayClientEnvironmentRecord = Schema.Struct({
+export class RelayClientEnvironmentRecord extends Schema.Class<RelayClientEnvironmentRecord>(
+  "RelayClientEnvironmentRecord",
+)({
   environmentId: EnvironmentId,
   label: TrimmedNonEmptyString,
   endpoint: RelayManagedEndpoint,
   linkedAt: TrimmedNonEmptyString,
-});
-export type RelayClientEnvironmentRecord = typeof RelayClientEnvironmentRecord.Type;
+}) {}
 
-export const RelayListEnvironmentsResponse = Schema.Struct({
+export class RelayListEnvironmentsResponse extends Schema.Class<RelayListEnvironmentsResponse>(
+  "RelayListEnvironmentsResponse",
+)({
   environments: Schema.Array(RelayClientEnvironmentRecord),
-});
-export type RelayListEnvironmentsResponse = typeof RelayListEnvironmentsResponse.Type;
+}) {}
 
-export const RelayEnvironmentConnectRequest = Schema.Struct({
-  deviceId: Schema.optional(
-    TrimmedNonEmptyString.annotate({
-      description: "Optional client device identifier requesting the connection.",
-    }),
-  ),
-  clientKeyThumbprint: Schema.optional(
-    TrimmedNonEmptyString.annotate({
-      description: "Deprecated alias for clientProofKeyThumbprint.",
-    }),
-  ),
-  clientProofKeyThumbprint: Schema.optional(
-    TrimmedNonEmptyString.annotate({
-      description: "JWK thumbprint that the minted environment credential must be bound to.",
-    }),
-  ),
-}).annotate({ description: "Requests a short-lived credential for connecting to an environment." });
-export type RelayEnvironmentConnectRequest = typeof RelayEnvironmentConnectRequest.Type;
+export class RelayEnvironmentConnectRequest extends Schema.Class<RelayEnvironmentConnectRequest>(
+  "RelayEnvironmentConnectRequest",
+)(
+  Schema.Struct({
+    deviceId: Schema.optional(
+      TrimmedNonEmptyString.annotate({
+        description: "Optional client device identifier requesting the connection.",
+      }),
+    ),
+    clientKeyThumbprint: Schema.optional(
+      TrimmedNonEmptyString.annotate({
+        description: "Deprecated alias for clientProofKeyThumbprint.",
+      }),
+    ),
+    clientProofKeyThumbprint: Schema.optional(
+      TrimmedNonEmptyString.annotate({
+        description: "JWK thumbprint that the minted environment credential must be bound to.",
+      }),
+    ),
+  }).annotate({
+    description: "Requests a short-lived credential for connecting to an environment.",
+  }),
+) {}
 
 export const RelayEnvironmentConnectScope = "environment:connect" as const;
 export const RelayEnvironmentStatusScope = "environment:status" as const;
@@ -651,6 +689,9 @@ export type RelayPublicClientId = typeof RelayPublicClientId.Type;
 export const RelayMobileClientId = "t3-mobile" as const;
 export const RelayWebClientId = "t3-web" as const;
 
+// Stays a `Schema.Struct`: `HttpApiSchema.asFormUrlEncoded()` annotates the
+// struct itself, and a `Schema.Class` wrapper hides that from the HttpApi
+// layer, which then rejects the request with a 415.
 export const RelayDpopAccessTokenRequest = Schema.Struct({
   grant_type: Schema.Literal(RelayDpopTokenExchangeGrantType),
   subject_token: TrimmedNonEmptyString.annotate({
@@ -670,14 +711,15 @@ export const RelayDpopAccessTokenRequest = Schema.Struct({
   .pipe(HttpApiSchema.asFormUrlEncoded());
 export type RelayDpopAccessTokenRequest = typeof RelayDpopAccessTokenRequest.Type;
 
-export const RelayDpopAccessTokenResponse = Schema.Struct({
+export class RelayDpopAccessTokenResponse extends Schema.Class<RelayDpopAccessTokenResponse>(
+  "RelayDpopAccessTokenResponse",
+)({
   access_token: TrimmedNonEmptyString,
   issued_token_type: Schema.Literal(RelayAccessTokenType),
   token_type: Schema.Literal("DPoP"),
   expires_in: Schema.Int.check(Schema.isGreaterThan(0)),
   scope: TrimmedNonEmptyString,
-});
-export type RelayDpopAccessTokenResponse = typeof RelayDpopAccessTokenResponse.Type;
+}) {}
 
 export const RelayBearerRequestHeaders = Schema.Struct({
   authorization: TrimmedNonEmptyString,
@@ -692,40 +734,54 @@ export const RelayDpopRequestHeaders = Schema.Struct({
   dpop: TrimmedNonEmptyString,
 });
 
-export const RelayAuthorizationServerMetadata = Schema.Struct({
-  issuer: TrimmedNonEmptyString,
-  token_endpoint: TrimmedNonEmptyString,
-  grant_types_supported: Schema.Array(Schema.Literal(RelayDpopTokenExchangeGrantType)),
-  token_endpoint_auth_methods_supported: Schema.Array(Schema.Literal("none")),
-  dpop_signing_alg_values_supported: Schema.Array(Schema.Literal("ES256")),
-  scopes_supported: Schema.Array(RelayDpopAccessTokenScope),
-});
+export class RelayAuthorizationServerMetadata extends Schema.Class<RelayAuthorizationServerMetadata>(
+  "RelayAuthorizationServerMetadata",
+)(
+  Schema.Struct({
+    issuer: TrimmedNonEmptyString,
+    token_endpoint: TrimmedNonEmptyString,
+    grant_types_supported: Schema.Array(Schema.Literal(RelayDpopTokenExchangeGrantType)),
+    token_endpoint_auth_methods_supported: Schema.Array(Schema.Literal("none")),
+    dpop_signing_alg_values_supported: Schema.Array(Schema.Literal("ES256")),
+    scopes_supported: Schema.Array(RelayDpopAccessTokenScope),
+  }),
+) {}
 
-export const RelayProtectedResourceMetadata = Schema.Struct({
-  resource: TrimmedNonEmptyString,
-  authorization_servers: Schema.Array(TrimmedNonEmptyString),
-  scopes_supported: Schema.Array(RelayDpopAccessTokenScope),
-  dpop_bound_access_tokens_required: Schema.Boolean,
-  dpop_signing_alg_values_supported: Schema.Array(Schema.Literal("ES256")),
-});
+export class RelayProtectedResourceMetadata extends Schema.Class<RelayProtectedResourceMetadata>(
+  "RelayProtectedResourceMetadata",
+)(
+  Schema.Struct({
+    resource: TrimmedNonEmptyString,
+    authorization_servers: Schema.Array(TrimmedNonEmptyString),
+    scopes_supported: Schema.Array(RelayDpopAccessTokenScope),
+    dpop_bound_access_tokens_required: Schema.Boolean,
+    dpop_signing_alg_values_supported: Schema.Array(Schema.Literal("ES256")),
+  }),
+) {}
 
+// Stays a `Schema.Struct`: HttpApi path params are a plain URL-segment
+// record on both sides, and a `Schema.Class` wrapper makes the client fail
+// to encode them into the request URL.
 export const RelayEnvironmentUnlinkParams = Schema.Struct({
   environmentId: EnvironmentId,
 });
 export type RelayEnvironmentUnlinkParams = typeof RelayEnvironmentUnlinkParams.Type;
 
-export const RelayEnvironmentConnectResponse = Schema.Struct({
+export class RelayEnvironmentConnectResponse extends Schema.Class<RelayEnvironmentConnectResponse>(
+  "RelayEnvironmentConnectResponse",
+)({
   environmentId: EnvironmentId,
   endpoint: RelayManagedEndpoint,
   credential: TrimmedNonEmptyString,
   expiresAt: TrimmedNonEmptyString,
-});
-export type RelayEnvironmentConnectResponse = typeof RelayEnvironmentConnectResponse.Type;
+}) {}
 
 export const RelayEnvironmentStatusValue = Schema.Literals(["online", "offline"]);
 export type RelayEnvironmentStatusValue = typeof RelayEnvironmentStatusValue.Type;
 
-export const RelayEnvironmentStatusResponse = Schema.Struct({
+export class RelayEnvironmentStatusResponse extends Schema.Class<RelayEnvironmentStatusResponse>(
+  "RelayEnvironmentStatusResponse",
+)({
   environmentId: EnvironmentId,
   endpoint: RelayManagedEndpoint,
   status: RelayEnvironmentStatusValue,
@@ -733,10 +789,11 @@ export const RelayEnvironmentStatusResponse = Schema.Struct({
   descriptor: Schema.optional(ExecutionEnvironmentDescriptor),
   error: Schema.optional(TrimmedNonEmptyString),
   traceId: Schema.optional(TrimmedNonEmptyString),
-});
-export type RelayEnvironmentStatusResponse = typeof RelayEnvironmentStatusResponse.Type;
+}) {}
 
-export const RelayCloudMintCredentialProofPayload = Schema.Struct({
+export class RelayCloudMintCredentialProofPayload extends Schema.Class<RelayCloudMintCredentialProofPayload>(
+  "RelayCloudMintCredentialProofPayload",
+)({
   ...RelaySignedJwtRegisteredClaims,
   environmentId: EnvironmentId,
   clientProofKeyThumbprint: TrimmedNonEmptyString,
@@ -746,70 +803,79 @@ export const RelayCloudMintCredentialProofPayload = Schema.Struct({
   deviceId: Schema.optional(TrimmedNonEmptyString),
   nonce: TrimmedNonEmptyString,
   scope: Schema.Array(Schema.Literal("environment:connect")),
-});
-export type RelayCloudMintCredentialProofPayload = typeof RelayCloudMintCredentialProofPayload.Type;
+}) {}
 
 export const RelayCloudMintCredentialProof = TrimmedNonEmptyString;
 export type RelayCloudMintCredentialProof = typeof RelayCloudMintCredentialProof.Type;
 
-export const RelayCloudMintCredentialRequest = Schema.Struct({
+export class RelayCloudMintCredentialRequest extends Schema.Class<RelayCloudMintCredentialRequest>(
+  "RelayCloudMintCredentialRequest",
+)({
   proof: RelayCloudMintCredentialProof,
-});
-export type RelayCloudMintCredentialRequest = typeof RelayCloudMintCredentialRequest.Type;
+}) {}
 
-export const RelayCloudEnvironmentHealthProofPayload = Schema.Struct({
-  ...RelaySignedJwtRegisteredClaims,
-  environmentId: EnvironmentId,
-  nonce: TrimmedNonEmptyString,
-  scope: Schema.Array(Schema.Literal("environment:status")),
-});
-export type RelayCloudEnvironmentHealthProofPayload =
-  typeof RelayCloudEnvironmentHealthProofPayload.Type;
+export class RelayCloudEnvironmentHealthProofPayload extends Schema.Class<RelayCloudEnvironmentHealthProofPayload>(
+  "RelayCloudEnvironmentHealthProofPayload",
+)(
+  Schema.Struct({
+    ...RelaySignedJwtRegisteredClaims,
+    environmentId: EnvironmentId,
+    nonce: TrimmedNonEmptyString,
+    scope: Schema.Array(Schema.Literal("environment:status")),
+  }),
+) {}
 
 export const RelayCloudEnvironmentHealthProof = TrimmedNonEmptyString;
 export type RelayCloudEnvironmentHealthProof = typeof RelayCloudEnvironmentHealthProof.Type;
 
-export const RelayCloudEnvironmentHealthRequest = Schema.Struct({
+export class RelayCloudEnvironmentHealthRequest extends Schema.Class<RelayCloudEnvironmentHealthRequest>(
+  "RelayCloudEnvironmentHealthRequest",
+)({
   proof: RelayCloudEnvironmentHealthProof,
-});
-export type RelayCloudEnvironmentHealthRequest = typeof RelayCloudEnvironmentHealthRequest.Type;
+}) {}
 
-export const RelayEnvironmentHealthResponseProofPayload = Schema.Struct({
-  ...RelaySignedJwtRegisteredClaims,
-  environmentId: EnvironmentId,
-  requestNonce: TrimmedNonEmptyString,
-  status: Schema.Literal("online"),
-  descriptor: ExecutionEnvironmentDescriptor,
-  checkedAt: TrimmedNonEmptyString,
-});
-export type RelayEnvironmentHealthResponseProofPayload =
-  typeof RelayEnvironmentHealthResponseProofPayload.Type;
+export class RelayEnvironmentHealthResponseProofPayload extends Schema.Class<RelayEnvironmentHealthResponseProofPayload>(
+  "RelayEnvironmentHealthResponseProofPayload",
+)(
+  Schema.Struct({
+    ...RelaySignedJwtRegisteredClaims,
+    environmentId: EnvironmentId,
+    requestNonce: TrimmedNonEmptyString,
+    status: Schema.Literal("online"),
+    descriptor: ExecutionEnvironmentDescriptor,
+    checkedAt: TrimmedNonEmptyString,
+  }),
+) {}
 
-export const RelayEnvironmentHealthResponse = Schema.Struct({
+export class RelayEnvironmentHealthResponse extends Schema.Class<RelayEnvironmentHealthResponse>(
+  "RelayEnvironmentHealthResponse",
+)({
   environmentId: EnvironmentId,
   status: Schema.Literal("online"),
   descriptor: ExecutionEnvironmentDescriptor,
   checkedAt: TrimmedNonEmptyString,
   proof: TrimmedNonEmptyString,
-});
-export type RelayEnvironmentHealthResponse = typeof RelayEnvironmentHealthResponse.Type;
+}) {}
 
-export const RelayEnvironmentMintResponseProofPayload = Schema.Struct({
-  ...RelaySignedJwtRegisteredClaims,
-  environmentId: EnvironmentId,
-  clientProofKeyThumbprint: TrimmedNonEmptyString,
-  requestNonce: TrimmedNonEmptyString,
-  credential: TrimmedNonEmptyString,
-});
-export type RelayEnvironmentMintResponseProofPayload =
-  typeof RelayEnvironmentMintResponseProofPayload.Type;
+export class RelayEnvironmentMintResponseProofPayload extends Schema.Class<RelayEnvironmentMintResponseProofPayload>(
+  "RelayEnvironmentMintResponseProofPayload",
+)(
+  Schema.Struct({
+    ...RelaySignedJwtRegisteredClaims,
+    environmentId: EnvironmentId,
+    clientProofKeyThumbprint: TrimmedNonEmptyString,
+    requestNonce: TrimmedNonEmptyString,
+    credential: TrimmedNonEmptyString,
+  }),
+) {}
 
-export const RelayEnvironmentMintResponse = Schema.Struct({
+export class RelayEnvironmentMintResponse extends Schema.Class<RelayEnvironmentMintResponse>(
+  "RelayEnvironmentMintResponse",
+)({
   credential: TrimmedNonEmptyString,
   expiresAt: TrimmedNonEmptyString,
   proof: TrimmedNonEmptyString,
-});
-export type RelayEnvironmentMintResponse = typeof RelayEnvironmentMintResponse.Type;
+}) {}
 
 export const RelayDeliveryKind = Schema.Literals([
   "live_activity_start",
@@ -819,7 +885,7 @@ export const RelayDeliveryKind = Schema.Literals([
 ]);
 export type RelayDeliveryKind = typeof RelayDeliveryKind.Type;
 
-export const RelayDeliveryResult = Schema.Struct({
+export class RelayDeliveryResult extends Schema.Class<RelayDeliveryResult>("RelayDeliveryResult")({
   deviceId: TrimmedNonEmptyString,
   kind: RelayDeliveryKind,
   ok: Schema.Boolean,
@@ -827,25 +893,23 @@ export const RelayDeliveryResult = Schema.Struct({
   apnsStatus: Schema.NullOr(Schema.Number),
   apnsReason: Schema.NullOr(Schema.String),
   apnsId: Schema.NullOr(Schema.String),
-});
-export type RelayDeliveryResult = typeof RelayDeliveryResult.Type;
+}) {}
 
-export const RelayOkResponse = Schema.Struct({
+export class RelayOkResponse extends Schema.Class<RelayOkResponse>("RelayOkResponse")({
   ok: Schema.Boolean,
-});
-export type RelayOkResponse = typeof RelayOkResponse.Type;
+}) {}
 
-export const RelayPublishResponse = Schema.Struct({
+export class RelayPublishResponse extends Schema.Class<RelayPublishResponse>(
+  "RelayPublishResponse",
+)({
   ok: Schema.Boolean,
   deliveries: Schema.Array(RelayDeliveryResult),
-});
-export type RelayPublishResponse = typeof RelayPublishResponse.Type;
+}) {}
 
-export const RelayHealthResponse = Schema.Struct({
+export class RelayHealthResponse extends Schema.Class<RelayHealthResponse>("RelayHealthResponse")({
   ok: Schema.Boolean,
   service: Schema.Literal("relay"),
-});
-export type RelayHealthResponse = typeof RelayHealthResponse.Type;
+}) {}
 
 export const RelayHealthGroup = HttpApiGroup.make("health")
   .add(
@@ -889,10 +953,11 @@ export const RelayRegisterLiveActivityEndpoint = HttpApiEndpoint.post(
   },
 ).annotate(OpenApi.Summary, "Register a Live Activity push token");
 
-export const RelayAgentActivitySnapshotResponse = Schema.Struct({
+export class RelayAgentActivitySnapshotResponse extends Schema.Class<RelayAgentActivitySnapshotResponse>(
+  "RelayAgentActivitySnapshotResponse",
+)({
   aggregate: Schema.NullOr(RelayAgentActivityAggregateState),
-});
-export type RelayAgentActivitySnapshotResponse = typeof RelayAgentActivitySnapshotResponse.Type;
+}) {}
 
 // Lets the app decide whether arming a Live Activity is worthwhile before
 // creating one (no empty lock-screen card when nothing is running) and seed

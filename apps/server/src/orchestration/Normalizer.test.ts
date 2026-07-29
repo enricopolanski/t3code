@@ -6,6 +6,10 @@ import {
   ProjectId,
   ProviderInstanceId,
   ThreadId,
+  ClientThreadTurnStartCommand,
+  ThreadTurnStartBootstrap,
+  ThreadTurnStartBootstrapCreateThread,
+  ProjectCreateCommand,
 } from "@t3tools/contracts";
 
 import { canonicalizeClientCommandTimestamps } from "./Normalizer.ts";
@@ -15,14 +19,14 @@ const serverReceivedAt = "2026-07-18T00:00:00.000Z";
 
 describe("canonicalizeClientCommandTimestamps", () => {
   it("replaces a client command timestamp with the server receipt timestamp", () => {
-    const command: ClientOrchestrationCommand = {
+    const command: ClientOrchestrationCommand = ProjectCreateCommand.make({
       type: "project.create",
       commandId: CommandId.make("command-1"),
       projectId: ProjectId.make("project-1"),
       title: "Clock-safe project",
       workspaceRoot: "/tmp/clock-safe-project",
       createdAt: clientCreatedAt,
-    };
+    });
 
     expect(canonicalizeClientCommandTimestamps(command, serverReceivedAt)).toEqual({
       ...command,
@@ -31,7 +35,7 @@ describe("canonicalizeClientCommandTimestamps", () => {
   });
 
   it("replaces both timestamps when the first turn bootstraps a thread", () => {
-    const command: ClientOrchestrationCommand = {
+    const command: ClientOrchestrationCommand = ClientThreadTurnStartCommand.make({
       type: "thread.turn.start",
       commandId: CommandId.make("command-2"),
       threadId: ThreadId.make("thread-1"),
@@ -43,8 +47,8 @@ describe("canonicalizeClientCommandTimestamps", () => {
       },
       runtimeMode: "full-access",
       interactionMode: "default",
-      bootstrap: {
-        createThread: {
+      bootstrap: ThreadTurnStartBootstrap.make({
+        createThread: ThreadTurnStartBootstrapCreateThread.make({
           projectId: ProjectId.make("project-1"),
           title: "Clock-safe thread",
           modelSelection: {
@@ -56,10 +60,10 @@ describe("canonicalizeClientCommandTimestamps", () => {
           branch: null,
           worktreePath: null,
           createdAt: clientCreatedAt,
-        },
-      },
+        }),
+      }),
       createdAt: clientCreatedAt,
-    };
+    });
 
     const result = canonicalizeClientCommandTimestamps(command, serverReceivedAt);
 

@@ -4,7 +4,10 @@ import {
   type ModelSelection,
   type ProviderDriverKind,
   type ServerProvider,
+  ObservabilitySettings,
+  ProviderOptionSelection,
   ServerSettings,
+  SourceControlWritingStyleSettings,
   type ServerSettingsPatch,
 } from "@t3tools/contracts";
 import * as Option from "effect/Option";
@@ -112,7 +115,15 @@ function mergeModelSelectionOptionsById(input: {
   for (const selection of input.patch) {
     merged.set(selection.id, selection.value);
   }
-  return [...merged.entries()].map(([id, value]) => ({ id, value }));
+  return [...merged.entries()].map(([id, value]) => ProviderOptionSelection.make({ id, value }));
+}
+
+/**
+ * `deepMerge` flattens the `ProviderOptionSelection` instances inside a model
+ * selection, so rebuild them before handing the result to `ServerSettings`.
+ */
+function rebuildModelSelection(selection: ModelSelection): ModelSelection {
+  return createModelSelection(selection.instanceId, selection.model, selection.options);
 }
 
 export function applyServerSettingsPatch(
@@ -121,9 +132,18 @@ export function applyServerSettingsPatch(
 ): ServerSettings {
   const selectionPatch = patch.textGenerationModelSelection;
   const { automaticGitFetchInterval, ...patchForMerge } = patch;
-  const next = deepMerge(current, patchForMerge);
-  const nextWithReplacements = {
+  // Spread first: `deepMerge` needs a plain object, and a `Schema.Class`
+  // instance does not satisfy its `Record<string, unknown>` constraint.
+  const next = deepMerge({ ...current }, patchForMerge);
+  const nextWithReplacements = ServerSettings.make({
     ...next,
+    // `deepMerge` returns plain objects, so nested `Schema.Class` fields have
+    // to be reconstructed or the settings fail to encode.
+    observability: ObservabilitySettings.make({ ...next.observability }),
+    textGenerationModelSelection: rebuildModelSelection(next.textGenerationModelSelection),
+    sourceControlWritingStyle: SourceControlWritingStyleSettings.make({
+      ...next.sourceControlWritingStyle,
+    }),
     ...(patch.providerInstances !== undefined
       ? { providerInstances: patch.providerInstances }
       : {}),
@@ -131,7 +151,7 @@ export function applyServerSettingsPatch(
       ? { sourceControlWriterModelSelection: patch.sourceControlWriterModelSelection }
       : {}),
     ...(automaticGitFetchInterval !== undefined ? { automaticGitFetchInterval } : {}),
-  };
+  });
   if (!selectionPatch) {
     return nextWithReplacements;
   }
@@ -145,8 +165,8 @@ export function applyServerSettingsPatch(
         patch: selectionPatch.options,
       });
 
-  return {
+  return ServerSettings.make({
     ...nextWithReplacements,
     textGenerationModelSelection: createModelSelection(instanceId, model, options),
-  };
+  });
 }

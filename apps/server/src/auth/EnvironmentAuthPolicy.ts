@@ -1,4 +1,4 @@
-import type { ServerAuthDescriptor } from "@t3tools/contracts";
+import { ServerAuthDescriptor } from "@t3tools/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -33,7 +33,7 @@ export const make = Effect.gen(function* () {
         ? ["desktop-bootstrap", "one-time-token"]
         : ["one-time-token"];
 
-  const descriptor: ServerAuthDescriptor = {
+  const descriptor = ServerAuthDescriptor.make({
     policy,
     bootstrapMethods,
     sessionMethods: ["browser-session-cookie", "bearer-access-token", "dpop-access-token"],
@@ -44,7 +44,7 @@ export const make = Effect.gen(function* () {
       instanceKey: config.stateDir,
       development: config.devUrl !== undefined,
     }),
-  };
+  });
 
   return EnvironmentAuthPolicy.of({
     getDescriptor: () =>

@@ -12,7 +12,12 @@
  *
  * @module provider/Drivers/OpenCodeDriver
  */
-import { OpenCodeSettings, ProviderDriverKind, type ServerProvider } from "@t3tools/contracts";
+import {
+  OpenCodeSettings,
+  ProviderDriverKind,
+  ServerProvider,
+  ServerProviderContinuation,
+} from "@t3tools/contracts";
 import * as Duration from "effect/Duration";
 import * as Crypto from "effect/Crypto";
 import * as Effect from "effect/Effect";
@@ -95,14 +100,15 @@ const withInstanceIdentity =
     readonly accentColor: string | undefined;
     readonly continuationGroupKey: string;
   }) =>
-  (snapshot: ServerProviderDraft): ServerProvider => ({
-    ...snapshot,
-    instanceId: input.instanceId,
-    driver: DRIVER_KIND,
-    ...(input.displayName ? { displayName: input.displayName } : {}),
-    ...(input.accentColor ? { accentColor: input.accentColor } : {}),
-    continuation: { groupKey: input.continuationGroupKey },
-  });
+  (snapshot: ServerProviderDraft): ServerProvider =>
+    ServerProvider.make({
+      ...snapshot,
+      instanceId: input.instanceId,
+      driver: DRIVER_KIND,
+      ...(input.displayName ? { displayName: input.displayName } : {}),
+      ...(input.accentColor ? { accentColor: input.accentColor } : {}),
+      continuation: ServerProviderContinuation.make({ groupKey: input.continuationGroupKey }),
+    });
 
 export const OpenCodeDriver: ProviderDriver<OpenCodeSettings, OpenCodeDriverEnv> = {
   driverKind: DRIVER_KIND,

@@ -5,6 +5,7 @@ import {
   MessageId,
   ProjectId,
   ProviderInstanceId,
+  ProviderOptionSelection,
   ThreadId,
 } from "@t3tools/contracts";
 import { AtomRegistry } from "effect/unstable/reactivity";
@@ -88,7 +89,7 @@ describe("thread outbox", () => {
       modelSelection: {
         instanceId: ProviderInstanceId.make("codex"),
         model: "gpt-5.4",
-        options: [{ id: "reasoningEffort", value: "xhigh" }],
+        options: [ProviderOptionSelection.make({ id: "reasoningEffort", value: "xhigh" })],
       },
       runtimeMode: "approval-required",
       interactionMode: "plan",
@@ -114,14 +115,14 @@ describe("thread outbox", () => {
     const base = {
       instanceId: ProviderInstanceId.make("codex"),
       model: "gpt-5.4",
-      options: [{ id: "reasoningEffort", value: "medium" }],
+      options: [ProviderOptionSelection.make({ id: "reasoningEffort", value: "medium" })],
     } as const;
 
     expect(modelSelectionsEqual(base, base)).toBe(true);
     expect(
       modelSelectionsEqual(base, {
         ...base,
-        options: [{ id: "reasoningEffort", value: "xhigh" }],
+        options: [ProviderOptionSelection.make({ id: "reasoningEffort", value: "xhigh" })],
       }),
     ).toBe(false);
   });

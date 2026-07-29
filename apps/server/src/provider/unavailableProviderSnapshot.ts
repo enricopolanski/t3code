@@ -15,6 +15,7 @@ import {
   type ProviderInstanceId,
   type ServerProvider,
 } from "@t3tools/contracts";
+import { ServerProviderAuth } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 
@@ -59,7 +60,7 @@ export function buildUnavailableProviderSnapshot(
         installed: false,
         version: null,
         status: "error",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: input.reason,
       },
     });

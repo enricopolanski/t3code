@@ -8,7 +8,8 @@ import type {
 import {
   RelayApi,
   type RelayAgentActivityPublishProofPayload,
-  type RelayAgentActivityState,
+  RelayAgentActivityPublishRequest,
+  RelayAgentActivityState,
 } from "@t3tools/contracts/relay";
 import { projectThreadAwareness } from "@t3tools/shared/agentAwareness";
 import { makeDrainableWorker } from "@t3tools/shared/DrainableWorker";
@@ -128,7 +129,9 @@ export function sanitizeRelayAgentActivityState(
     ?.trim()
     .slice(0, RELAY_AGENT_ACTIVITY_DETAIL_MAX_LENGTH)
     .trim();
-  return detail ? { ...rest, detail } : rest;
+  return detail
+    ? RelayAgentActivityState.make({ ...rest, detail })
+    : RelayAgentActivityState.make(rest);
 }
 
 function relayEnvironmentClient(token: string) {
@@ -181,7 +184,8 @@ export function signRelayAgentActivityPublishProof(input: {
   return signRelayJwt({
     privateKey: input.privateKey,
     typ: RELAY_ACTIVITY_PUBLISH_TYP,
-    payload: input.payload,
+    // `Schema.Class` instances carry a prototype; jose only wants the fields.
+    payload: { ...input.payload },
   });
 }
 
@@ -389,10 +393,10 @@ export const make = Effect.gen(function* () {
             environmentId,
             threadId,
           },
-          payload: {
+          payload: RelayAgentActivityPublishRequest.make({
             state: input.state,
             proof,
-          },
+          }),
         });
 
         yield* Effect.logInfo("agent activity publish completed", {

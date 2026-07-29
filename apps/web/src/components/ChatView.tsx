@@ -3,23 +3,27 @@ import {
   DEFAULT_MODEL,
   defaultInstanceIdForDriver,
   type EnvironmentId,
+  type KeybindingCommand,
   type MessageId,
   type ModelSelection,
-  type ProjectScript,
-  type ProjectId,
-  type ProviderApprovalDecision,
-  ProviderInstanceId,
-  type ServerProvider,
-  type ResolvedKeybindingsConfig,
-  type ScopedThreadRef,
-  type ThreadId,
-  type TurnId,
-  type KeybindingCommand,
   OrchestrationThreadActivity,
-  ProviderInteractionMode,
+  type ProjectId,
+  type ProjectScript,
+  type ProviderApprovalDecision,
   ProviderDriverKind,
+  ProviderInstanceId,
+  ProviderInteractionMode,
+  type ResolvedKeybindingsConfig,
   RuntimeMode,
+  type ScopedThreadRef,
+  type ServerProvider,
   TerminalOpenInput,
+  type ThreadId,
+  ThreadTurnStartBootstrap,
+  ThreadTurnStartBootstrapCreateThread,
+  ThreadTurnStartBootstrapPrepareWorktree,
+  type TurnId,
+  UploadChatImageAttachment,
 } from "@t3tools/contracts";
 import {
   connectionStatusTitle,
@@ -4624,13 +4628,15 @@ function ChatViewContent(props: ChatViewProps) {
       text: messageTextForSend || IMAGE_ONLY_BOOTSTRAP_PROMPT,
     });
     const turnAttachmentsPromise = Promise.all(
-      composerImagesSnapshot.map(async (image) => ({
-        type: "image" as const,
-        name: image.name,
-        mimeType: image.mimeType,
-        sizeBytes: image.sizeBytes,
-        dataUrl: await readFileAsDataUrl(image.file),
-      })),
+      composerImagesSnapshot.map(async (image) =>
+        UploadChatImageAttachment.make({
+          type: "image",
+          name: image.name,
+          mimeType: image.mimeType,
+          sizeBytes: image.sizeBytes,
+          dataUrl: await readFileAsDataUrl(image.file),
+        }),
+      ),
     );
     const optimisticAttachments = composerImagesSnapshot.map((image) => ({
       type: "image" as const,
@@ -4751,10 +4757,10 @@ function ChatViewContent(props: ChatViewProps) {
     if (failure === null && turnAttachmentsResult._tag === "Success") {
       const bootstrap =
         isLocalDraftThread || baseBranchForWorktree
-          ? {
+          ? ThreadTurnStartBootstrap.make({
               ...(isLocalDraftThread
                 ? {
-                    createThread: {
+                    createThread: ThreadTurnStartBootstrapCreateThread.make({
                       projectId: activeProject.id,
                       title,
                       modelSelection: threadCreateModelSelection,
@@ -4763,21 +4769,21 @@ function ChatViewContent(props: ChatViewProps) {
                       branch: activeThreadBranch,
                       worktreePath: activeThread.worktreePath,
                       createdAt: activeThread.createdAt,
-                    },
+                    }),
                   }
                 : {}),
               ...(baseBranchForWorktree
                 ? {
-                    prepareWorktree: {
+                    prepareWorktree: ThreadTurnStartBootstrapPrepareWorktree.make({
                       projectCwd: activeProject.workspaceRoot,
                       baseBranch: baseBranchForWorktree,
                       branch: buildTemporaryWorktreeBranchName(randomHex),
                       ...(startFromOrigin ? { startFromOrigin: true } : {}),
-                    },
+                    }),
                     runSetupScript: true,
                   }
                 : {}),
-            }
+            })
           : undefined;
       beginLocalDispatch({ preparingWorktree: false });
       const startResult = await startThreadTurn({

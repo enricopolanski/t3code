@@ -8,7 +8,7 @@ import {
   type DesktopUpdateChannel,
   PROVIDER_DISPLAY_NAMES,
   ProviderDriverKind,
-  type ProviderInstanceConfig,
+  ProviderInstanceConfig,
   type ProviderInstanceId,
   type ScopedThreadRef,
   type SidebarProjectGroupingMode,
@@ -1334,11 +1334,11 @@ export function ProviderSettingsPanel() {
     const defaultLegacyConfig = defaultLegacyProviders[providerSettings.provider]!;
     const effectiveInstance: ProviderInstanceConfig =
       explicitInstance ??
-      ({
+      ProviderInstanceConfig.make({
         driver,
         enabled: legacyConfig.enabled,
         config: legacyConfig,
-      } satisfies ProviderInstanceConfig);
+      });
     const isDirty =
       explicitInstance !== undefined || !Equal.equals(legacyConfig, defaultLegacyConfig);
     rows.push({

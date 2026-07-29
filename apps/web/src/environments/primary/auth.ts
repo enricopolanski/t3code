@@ -7,7 +7,14 @@ import type {
   AuthSessionId,
   AuthSessionState,
 } from "@t3tools/contracts";
-import { EnvironmentHttpCommonError, PRIMARY_LOCAL_ENVIRONMENT_ID } from "@t3tools/contracts";
+import {
+  AuthBrowserSessionRequest,
+  AuthCreatePairingCredentialInput,
+  AuthRevokeClientSessionInput,
+  AuthRevokePairingLinkInput,
+  EnvironmentHttpCommonError,
+  PRIMARY_LOCAL_ENVIRONMENT_ID,
+} from "@t3tools/contracts";
 import type { EnvironmentHttpCommonError as EnvironmentHttpCommonErrorType } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -233,7 +240,9 @@ async function exchangeBootstrapCredential(credential: string): Promise<AuthBrow
     try {
       return await runPrimaryHttp(
         PrimaryEnvironmentHttpClient.pipe(
-          Effect.flatMap((client) => client.auth.browserSession({ payload: { credential } })),
+          Effect.flatMap((client) =>
+            client.auth.browserSession({ payload: AuthBrowserSessionRequest.make({ credential }) }),
+          ),
         ),
       );
     } catch (error) {
@@ -369,10 +378,10 @@ export async function createServerPairingCredential(input?: {
         Effect.flatMap((client) =>
           client.auth.pairingCredential({
             headers: {},
-            payload: {
+            payload: AuthCreatePairingCredentialInput.make({
               ...(trimmedLabel ? { label: trimmedLabel } : {}),
               ...(input?.scopes ? { scopes: input.scopes } : {}),
-            },
+            }),
           }),
         ),
       ),
@@ -429,7 +438,12 @@ export async function revokeServerPairingLink(id: string): Promise<void> {
   try {
     await runPrimaryHttp(
       PrimaryEnvironmentHttpClient.pipe(
-        Effect.flatMap((client) => client.auth.revokePairingLink({ headers: {}, payload: { id } })),
+        Effect.flatMap((client) =>
+          client.auth.revokePairingLink({
+            headers: {},
+            payload: AuthRevokePairingLinkInput.make({ id }),
+          }),
+        ),
       ),
     );
   } catch (error) {
@@ -478,7 +492,10 @@ export async function revokeServerClientSession(sessionId: AuthSessionId): Promi
     await runPrimaryHttp(
       PrimaryEnvironmentHttpClient.pipe(
         Effect.flatMap((client) =>
-          client.auth.revokeClient({ headers: {}, payload: { sessionId } }),
+          client.auth.revokeClient({
+            headers: {},
+            payload: AuthRevokeClientSessionInput.make({ sessionId }),
+          }),
         ),
       ),
     );

@@ -12,7 +12,7 @@ import {
   type VcsCreateWorktreeInput,
   type VcsCreateWorktreeResult,
   type VcsListRefsInput,
-  type VcsListRefsResult,
+  VcsListRefsResult,
   type GitManagerServiceError,
   type GitPreparePullRequestThreadInput,
   type GitPreparePullRequestThreadResult,
@@ -23,9 +23,9 @@ import {
   type GitRunStackedActionInput,
   type GitRunStackedActionResult,
   type VcsStatusInput,
-  type VcsStatusLocalResult,
+  VcsStatusLocalResult,
   type VcsStatusRemoteResult,
-  type VcsStatusResult,
+  VcsStatusResult,
 } from "@t3tools/contracts";
 
 import * as GitManager from "./GitManager.ts";
@@ -95,7 +95,7 @@ export class GitWorkflowService extends Context.Service<
 >()("t3/git/GitWorkflowService") {}
 
 function nonRepositoryLocalStatus(): VcsStatusLocalResult {
-  return {
+  return VcsStatusLocalResult.make({
     isRepo: false,
     hasPrimaryRemote: false,
     isDefaultRef: false,
@@ -106,28 +106,28 @@ function nonRepositoryLocalStatus(): VcsStatusLocalResult {
       insertions: 0,
       deletions: 0,
     },
-  };
+  });
 }
 
 function nonRepositoryStatus(): VcsStatusResult {
-  return {
+  return VcsStatusResult.make({
     ...nonRepositoryLocalStatus(),
     hasUpstream: false,
     aheadCount: 0,
     behindCount: 0,
     aheadOfDefaultCount: 0,
     pr: null,
-  };
+  });
 }
 
 function nonRepositoryListRefs(): VcsListRefsResult {
-  return {
+  return VcsListRefsResult.make({
     refs: [],
     isRepo: false,
     hasPrimaryRemote: false,
     nextCursor: null,
     totalCount: 0,
-  };
+  });
 }
 
 export const make = Effect.gen(function* () {

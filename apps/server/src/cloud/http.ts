@@ -18,12 +18,12 @@ import {
   RelayCloudMintCredentialProofPayload,
   RelayCloudMintCredentialRequest,
   RelayEnvironmentHealthResponseProofPayload,
-  type RelayEnvironmentHealthResponse as RelayEnvironmentHealthResponseShape,
+  RelayEnvironmentHealthResponse as RelayEnvironmentHealthResponseShape,
   RelayEnvironmentConfigRequest,
   RelayEnvironmentLinkChallengeResponse,
   RelayEnvironmentLinkResponse,
   RelayEnvironmentMintResponseProofPayload,
-  type RelayEnvironmentMintResponse as RelayEnvironmentMintResponseShape,
+  RelayEnvironmentMintResponse as RelayEnvironmentMintResponseShape,
   RelayEnvironmentLinkProof,
   RelayEnvironmentLinkProofPayload,
   RelayLinkProofRequest,
@@ -484,7 +484,7 @@ const applyCloudRelayConfig = Effect.fn("environment.cloud.applyRelayConfig")(fu
   } else {
     yield* dependencies.secrets.remove(CLOUD_ENDPOINT_RUNTIME_CONFIG);
   }
-  return { ok, endpointRuntimeStatus } satisfies EnvironmentCloudRelayConfigResult;
+  return EnvironmentCloudRelayConfigResult.make({ ok, endpointRuntimeStatus });
 });
 
 const cloudRelayConfigHandler = Effect.fn("environment.cloud.relayConfig")(
@@ -707,7 +707,7 @@ const readCloudLinkState = Effect.fn("environment.cloud.readLinkState")(function
       ],
       { concurrency: 5 },
     );
-  return {
+  return EnvironmentCloudLinkStateResult.make({
     linked: Option.isSome(cloudUserId),
     cloudUserId: Option.isSome(cloudUserId) ? bytesToString(cloudUserId.value) : null,
     relayUrl: Option.isSome(relayUrl) ? bytesToString(relayUrl.value) : null,
@@ -718,7 +718,7 @@ const readCloudLinkState = Effect.fn("environment.cloud.readLinkState")(function
     publishAgentActivity: Option.isSome(publishAgentActivity)
       ? bytesToString(publishAgentActivity.value) === "true"
       : false,
-  } satisfies EnvironmentCloudLinkStateResult;
+  });
 });
 
 const cloudLinkStateHandler = Effect.fn("environment.cloud.linkState")(
@@ -749,7 +749,7 @@ const cloudUnlinkHandler = Effect.fn("environment.cloud.unlink")(
       { concurrency: 7 },
     );
     yield* setCliDesiredCloudLink(false);
-    return { ok: true, endpointRuntimeStatus } satisfies EnvironmentCloudRelayConfigResult;
+    return EnvironmentCloudRelayConfigResult.make({ ok: true, endpointRuntimeStatus });
   },
   Effect.catchIf(
     ServerSecretStore.isSecretStoreError,
@@ -844,7 +844,7 @@ const cloudEnvironmentHealthHandler = Effect.fn("environment.cloud.health")(
     const keyPair = yield* getOrCreateEnvironmentKeyPairFromSecretStore(dependencies.secrets);
     const descriptor = yield* dependencies.environment.getDescriptor;
     const responseExpiresAt = DateTime.add(now, { minutes: 5 });
-    const responsePayload = {
+    const responsePayload = RelayEnvironmentHealthResponseProofPayload.make({
       iss: `t3-env:${environmentId}`,
       aud: normalizeRelayIssuer(relayIssuer),
       sub: environmentId,
@@ -856,11 +856,12 @@ const cloudEnvironmentHealthHandler = Effect.fn("environment.cloud.health")(
       status: "online",
       descriptor,
       checkedAt: DateTime.formatIso(now),
-    } satisfies RelayEnvironmentHealthResponseProofPayload;
+    });
     const responseProof = yield* signRelayJwt({
       privateKey: keyPair.privateKey,
       typ: RELAY_HEALTH_RESPONSE_TYP,
-      payload: responsePayload,
+      // `Schema.Class` instances carry a prototype; jose only wants the fields.
+      payload: { ...responsePayload },
     }).pipe(
       Effect.mapError(
         (cause) =>
@@ -869,13 +870,13 @@ const cloudEnvironmentHealthHandler = Effect.fn("environment.cloud.health")(
           }),
       ),
     );
-    const response = {
+    const response = RelayEnvironmentHealthResponseShape.make({
       environmentId,
       status: "online",
       descriptor,
       checkedAt: responsePayload.checkedAt,
       proof: responseProof,
-    } satisfies RelayEnvironmentHealthResponseShape;
+    });
 
     yield* appendCloudCredentialResponseHeaders;
     return response;
@@ -968,7 +969,7 @@ const cloudMintCredentialHandler = Effect.fn("environment.cloud.mintCredential")
       label: "T3 Connect connect",
       proofKeyThumbprint: proof.clientProofKeyThumbprint,
     });
-    const responsePayload = {
+    const responsePayload = RelayEnvironmentMintResponseProofPayload.make({
       iss: `t3-env:${environmentId}`,
       aud: normalizeRelayIssuer(relayIssuer),
       sub: environmentId,
@@ -979,11 +980,12 @@ const cloudMintCredentialHandler = Effect.fn("environment.cloud.mintCredential")
       clientProofKeyThumbprint: proof.clientProofKeyThumbprint,
       requestNonce: proof.nonce,
       credential: issued.credential,
-    } satisfies RelayEnvironmentMintResponseProofPayload;
+    });
     const responseProof = yield* signRelayJwt({
       privateKey: keyPair.privateKey,
       typ: RELAY_MINT_RESPONSE_TYP,
-      payload: responsePayload,
+      // `Schema.Class` instances carry a prototype; jose only wants the fields.
+      payload: { ...responsePayload },
     }).pipe(
       Effect.mapError(
         (cause) =>
@@ -992,11 +994,11 @@ const cloudMintCredentialHandler = Effect.fn("environment.cloud.mintCredential")
           }),
       ),
     );
-    const response = {
+    const response = RelayEnvironmentMintResponseShape.make({
       credential: issued.credential,
       expiresAt: DateTime.formatIso(issued.expiresAt),
       proof: responseProof,
-    } satisfies RelayEnvironmentMintResponseShape;
+    });
 
     yield* appendCloudCredentialResponseHeaders;
     return response;

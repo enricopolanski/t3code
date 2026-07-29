@@ -7,6 +7,7 @@ import * as Schema from "effect/Schema";
 import {
   NonNegativeInt,
   TrimmedNonEmptyString,
+  SourceControlRepositoryCloneUrls,
   type SourceControlRepositoryVisibility,
   type VcsError,
 } from "@t3tools/contracts";
@@ -290,11 +291,11 @@ function normalizeRepositoryCloneUrls(
   raw: Schema.Schema.Type<typeof RawAzureDevOpsRepositorySchema>,
 ): AzureDevOpsRepositoryCloneUrls {
   const projectName = raw.project?.name.trim();
-  return {
+  return SourceControlRepositoryCloneUrls.make({
     nameWithOwner: projectName ? `${projectName}/${raw.name}` : raw.name,
     url: raw.remoteUrl,
     sshUrl: raw.sshUrl,
-  };
+  });
 }
 
 function parseRepositorySpecifier(repository: string): {

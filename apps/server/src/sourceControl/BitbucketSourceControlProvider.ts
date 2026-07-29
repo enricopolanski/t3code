@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
-import { SourceControlProviderError, type ChangeRequest } from "@t3tools/contracts";
+import { SourceControlProviderError, ChangeRequest } from "@t3tools/contracts";
 
 import * as BitbucketApi from "./BitbucketApi.ts";
 import type { NormalizedBitbucketPullRequestRecord } from "./bitbucketPullRequests.ts";
@@ -9,7 +9,7 @@ import * as SourceControlProvider from "./SourceControlProvider.ts";
 import type { SourceControlApiDiscoverySpec } from "./SourceControlProviderDiscovery.ts";
 
 function toChangeRequest(summary: NormalizedBitbucketPullRequestRecord): ChangeRequest {
-  return {
+  return ChangeRequest.make({
     provider: "bitbucket",
     number: summary.number,
     title: summary.title,
@@ -27,7 +27,7 @@ function toChangeRequest(summary: NormalizedBitbucketPullRequestRecord): ChangeR
     ...(summary.headRepositoryOwnerLogin !== undefined
       ? { headRepositoryOwnerLogin: summary.headRepositoryOwnerLogin }
       : {}),
-  };
+  });
 }
 
 export const make = Effect.gen(function* () {

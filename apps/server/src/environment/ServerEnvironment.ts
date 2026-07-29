@@ -1,4 +1,9 @@
-import { EnvironmentId, type ExecutionEnvironmentDescriptor } from "@t3tools/contracts";
+import {
+  EnvironmentId,
+  ExecutionEnvironmentCapabilities,
+  ExecutionEnvironmentDescriptor,
+  ExecutionEnvironmentPlatform,
+} from "@t3tools/contracts";
 import { HostProcessArchitecture, HostProcessPlatform } from "@t3tools/shared/hostProcess";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
@@ -129,22 +134,22 @@ export const make = Effect.gen(function* () {
     desktopManaged: serverConfig.mode === "desktop",
   });
 
-  const descriptor: ExecutionEnvironmentDescriptor = {
+  const descriptor = ExecutionEnvironmentDescriptor.make({
     environmentId,
     label,
-    platform: {
+    platform: ExecutionEnvironmentPlatform.make({
       os: platformOs(hostPlatform),
       arch: platformArch(hostArchitecture),
-    },
+    }),
     serverVersion: packageJson.version,
-    capabilities: {
+    capabilities: ExecutionEnvironmentCapabilities.make({
       repositoryIdentity: true,
       connectionProbe: true,
       threadSettlement: true,
       threadSnooze: true,
       ...(serverSelfUpdate === null ? {} : { serverSelfUpdate }),
-    },
-  };
+    }),
+  });
 
   return ServerEnvironment.of({
     getEnvironmentId: Effect.succeed(environmentId),

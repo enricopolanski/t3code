@@ -1,3 +1,4 @@
+import { DesktopSshEnvironmentTarget } from "@t3tools/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, describe, it } from "@effect/vitest";
 import { ConnectionCatalogDocument } from "@t3tools/client-runtime/platform";
@@ -194,12 +195,12 @@ describe("DesktopConnectionCatalogStore", () => {
           connectionId: "ssh:ssh-environment",
           environmentId: EnvironmentId.make("ssh-environment"),
           label: "SSH",
-          target: {
+          target: DesktopSshEnvironmentTarget.make({
             alias: "devbox",
             hostname: "devbox.example.com",
             username: "julius",
             port: 22,
-          },
+          }),
         });
         assert.deepInclude(catalog.profiles[1], {
           _tag: "BearerConnectionProfile",

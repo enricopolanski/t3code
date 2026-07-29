@@ -1,3 +1,9 @@
+import {
+  VcsDriverCapabilities,
+  VcsFreshness,
+  VcsListRemotesResult,
+  VcsListWorkspaceFilesResult,
+} from "@t3tools/contracts";
 import { assert, it } from "@effect/vitest";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -13,14 +19,14 @@ const TEST_EPOCH = DateTime.makeUnsafe("1970-01-01T00:00:00.000Z");
 
 function makeDriver(calls: string[]): VcsDriver.VcsDriver["Service"] {
   return {
-    capabilities: {
+    capabilities: VcsDriverCapabilities.make({
       kind: "git",
       supportsWorktrees: true,
       supportsBookmarks: false,
       supportsAtomicSnapshot: false,
       supportsPushDefaultRemote: true,
       ignoreClassifier: "native",
-    },
+    }),
     execute: () =>
       Effect.succeed({
         exitCode: ChildProcessSpawner.ExitCode(0),
@@ -32,24 +38,28 @@ function makeDriver(calls: string[]): VcsDriver.VcsDriver["Service"] {
     detectRepository: () => Effect.succeed(null),
     isInsideWorkTree: () => Effect.succeed(false),
     listWorkspaceFiles: () =>
-      Effect.succeed({
-        paths: [],
-        truncated: false,
-        freshness: {
-          source: "live-local",
-          observedAt: TEST_EPOCH,
-          expiresAt: Option.none(),
-        },
-      }),
+      Effect.succeed(
+        VcsListWorkspaceFilesResult.make({
+          paths: [],
+          truncated: false,
+          freshness: VcsFreshness.make({
+            source: "live-local",
+            observedAt: TEST_EPOCH,
+            expiresAt: Option.none(),
+          }),
+        }),
+      ),
     listRemotes: () =>
-      Effect.succeed({
-        remotes: [],
-        freshness: {
-          source: "live-local",
-          observedAt: TEST_EPOCH,
-          expiresAt: Option.none(),
-        },
-      }),
+      Effect.succeed(
+        VcsListRemotesResult.make({
+          remotes: [],
+          freshness: VcsFreshness.make({
+            source: "live-local",
+            observedAt: TEST_EPOCH,
+            expiresAt: Option.none(),
+          }),
+        }),
+      ),
     filterIgnoredPaths: (_cwd, relativePaths) => Effect.succeed(relativePaths),
     initRepository: (input) =>
       Effect.sync(() => {

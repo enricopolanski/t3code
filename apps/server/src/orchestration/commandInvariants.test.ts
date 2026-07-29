@@ -8,6 +8,8 @@ import {
   type OrchestrationCommand,
   type OrchestrationReadModel,
   ProviderInstanceId,
+  ThreadCreateCommand,
+  ThreadTurnStartCommand,
 } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 
@@ -106,7 +108,7 @@ const readModel: OrchestrationReadModel = {
   ],
 };
 
-const messageSendCommand: OrchestrationCommand = {
+const messageSendCommand: OrchestrationCommand = ThreadTurnStartCommand.make({
   type: "thread.turn.start",
   commandId: CommandId.make("cmd-1"),
   threadId: ThreadId.make("thread-1"),
@@ -119,7 +121,7 @@ const messageSendCommand: OrchestrationCommand = {
   interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
   runtimeMode: "approval-required",
   createdAt: now,
-};
+});
 
 describe("commandInvariants", () => {
   it("finds threads by id and project", () => {
@@ -155,7 +157,7 @@ describe("commandInvariants", () => {
     await Effect.runPromise(
       requireThreadAbsent({
         readModel,
-        command: {
+        command: ThreadCreateCommand.make({
           type: "thread.create",
           commandId: CommandId.make("cmd-2"),
           threadId: ThreadId.make("thread-3"),
@@ -170,7 +172,7 @@ describe("commandInvariants", () => {
           branch: null,
           worktreePath: null,
           createdAt: now,
-        },
+        }),
         threadId: ThreadId.make("thread-3"),
       }),
     );
@@ -179,7 +181,7 @@ describe("commandInvariants", () => {
       Effect.runPromise(
         requireThreadAbsent({
           readModel,
-          command: {
+          command: ThreadCreateCommand.make({
             type: "thread.create",
             commandId: CommandId.make("cmd-3"),
             threadId: ThreadId.make("thread-1"),
@@ -194,7 +196,7 @@ describe("commandInvariants", () => {
             branch: null,
             worktreePath: null,
             createdAt: now,
-          },
+          }),
           threadId: ThreadId.make("thread-1"),
         }),
       ),

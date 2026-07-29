@@ -1,11 +1,15 @@
 import {
-  type KeybindingRule,
-  type KeybindingShortcut,
+  KeybindingRule,
+  KeybindingShortcut,
+  KeybindingWhenAnd,
+  KeybindingWhenIdentifier,
   type KeybindingWhenNode,
+  KeybindingWhenNot,
+  KeybindingWhenOr,
   MAX_KEYBINDINGS_COUNT,
   MAX_WHEN_EXPRESSION_DEPTH,
   MODEL_PICKER_JUMP_KEYBINDING_COMMANDS,
-  type ResolvedKeybindingRule,
+  ResolvedKeybindingRule,
   type ResolvedKeybindingsConfig,
   THREAD_JUMP_KEYBINDING_COMMANDS,
 } from "@t3tools/contracts";
@@ -19,39 +23,51 @@ type WhenToken =
   | { type: "rparen" };
 
 export const DEFAULT_KEYBINDINGS: ReadonlyArray<KeybindingRule> = [
-  { key: "mod+b", command: "sidebar.toggle" },
-  { key: "mod+j", command: "terminal.toggle" },
-  { key: "mod+alt+b", command: "rightPanel.toggle" },
-  { key: "mod+d", command: "terminal.split", when: "terminalFocus" },
-  { key: "mod+shift+d", command: "terminal.splitVertical", when: "terminalFocus" },
-  { key: "mod+n", command: "terminal.new", when: "terminalFocus" },
-  { key: "mod+w", command: "terminal.close", when: "terminalFocus" },
-  { key: "mod+d", command: "diff.toggle", when: "!terminalFocus" },
-  { key: "mod+shift+j", command: "preview.toggle" },
-  { key: "mod+r", command: "preview.refresh", when: "previewFocus" },
-  { key: "mod+l", command: "preview.focusUrl", when: "previewFocus" },
-  { key: "mod+=", command: "preview.zoomIn", when: "previewFocus" },
-  { key: "mod++", command: "preview.zoomIn", when: "previewFocus" },
-  { key: "mod+-", command: "preview.zoomOut", when: "previewFocus" },
-  { key: "mod+0", command: "preview.resetZoom", when: "previewFocus" },
-  { key: "mod+k", command: "commandPalette.toggle", when: "!terminalFocus" },
-  { key: "mod+s", command: "composer.stash", when: "!terminalFocus" },
-  { key: "mod+n", command: "chat.new", when: "!terminalFocus" },
-  { key: "mod+shift+o", command: "chat.new", when: "!terminalFocus" },
-  { key: "mod+shift+n", command: "chat.newLocal", when: "!terminalFocus" },
-  { key: "mod+shift+m", command: "modelPicker.toggle", when: "!terminalFocus" },
-  { key: "mod+o", command: "editor.openFavorite" },
-  { key: "mod+shift+[", command: "thread.previous" },
-  { key: "mod+shift+]", command: "thread.next" },
-  ...THREAD_JUMP_KEYBINDING_COMMANDS.map((command, index) => ({
-    key: `mod+${index + 1}`,
-    command,
-  })),
-  ...MODEL_PICKER_JUMP_KEYBINDING_COMMANDS.map((command, index) => ({
-    key: `mod+${index + 1}`,
-    command,
-    when: "modelPickerOpen",
-  })),
+  KeybindingRule.make({ key: "mod+b", command: "sidebar.toggle" }),
+  KeybindingRule.make({ key: "mod+j", command: "terminal.toggle" }),
+  KeybindingRule.make({ key: "mod+alt+b", command: "rightPanel.toggle" }),
+  KeybindingRule.make({ key: "mod+d", command: "terminal.split", when: "terminalFocus" }),
+  KeybindingRule.make({
+    key: "mod+shift+d",
+    command: "terminal.splitVertical",
+    when: "terminalFocus",
+  }),
+  KeybindingRule.make({ key: "mod+n", command: "terminal.new", when: "terminalFocus" }),
+  KeybindingRule.make({ key: "mod+w", command: "terminal.close", when: "terminalFocus" }),
+  KeybindingRule.make({ key: "mod+d", command: "diff.toggle", when: "!terminalFocus" }),
+  KeybindingRule.make({ key: "mod+shift+j", command: "preview.toggle" }),
+  KeybindingRule.make({ key: "mod+r", command: "preview.refresh", when: "previewFocus" }),
+  KeybindingRule.make({ key: "mod+l", command: "preview.focusUrl", when: "previewFocus" }),
+  KeybindingRule.make({ key: "mod+=", command: "preview.zoomIn", when: "previewFocus" }),
+  KeybindingRule.make({ key: "mod++", command: "preview.zoomIn", when: "previewFocus" }),
+  KeybindingRule.make({ key: "mod+-", command: "preview.zoomOut", when: "previewFocus" }),
+  KeybindingRule.make({ key: "mod+0", command: "preview.resetZoom", when: "previewFocus" }),
+  KeybindingRule.make({ key: "mod+k", command: "commandPalette.toggle", when: "!terminalFocus" }),
+  KeybindingRule.make({ key: "mod+s", command: "composer.stash", when: "!terminalFocus" }),
+  KeybindingRule.make({ key: "mod+n", command: "chat.new", when: "!terminalFocus" }),
+  KeybindingRule.make({ key: "mod+shift+o", command: "chat.new", when: "!terminalFocus" }),
+  KeybindingRule.make({ key: "mod+shift+n", command: "chat.newLocal", when: "!terminalFocus" }),
+  KeybindingRule.make({
+    key: "mod+shift+m",
+    command: "modelPicker.toggle",
+    when: "!terminalFocus",
+  }),
+  KeybindingRule.make({ key: "mod+o", command: "editor.openFavorite" }),
+  KeybindingRule.make({ key: "mod+shift+[", command: "thread.previous" }),
+  KeybindingRule.make({ key: "mod+shift+]", command: "thread.next" }),
+  ...THREAD_JUMP_KEYBINDING_COMMANDS.map((command, index) =>
+    KeybindingRule.make({
+      key: `mod+${index + 1}`,
+      command,
+    }),
+  ),
+  ...MODEL_PICKER_JUMP_KEYBINDING_COMMANDS.map((command, index) =>
+    KeybindingRule.make({
+      key: `mod+${index + 1}`,
+      command,
+      when: "modelPickerOpen",
+    }),
+  ),
 ];
 
 function normalizeKeyToken(token: string): string {
@@ -114,14 +130,14 @@ export function parseKeybindingShortcut(value: string): KeybindingShortcut | nul
   }
 
   if (key === null) return null;
-  return {
+  return KeybindingShortcut.make({
     key,
     metaKey,
     ctrlKey,
     shiftKey,
     altKey,
     modKey,
-  };
+  });
 }
 
 function tokenizeWhenExpression(expression: string): WhenToken[] | null {
@@ -187,7 +203,7 @@ export function parseKeybindingWhenExpression(expression: string): KeybindingWhe
 
     if (token.type === "identifier") {
       index += 1;
-      return { type: "identifier", name: token.value };
+      return KeybindingWhenIdentifier.make({ type: "identifier", name: token.value });
     }
 
     if (token.type === "lparen") {
@@ -218,7 +234,7 @@ export function parseKeybindingWhenExpression(expression: string): KeybindingWhe
     if (!node) return null;
 
     while (notCount > 0) {
-      node = { type: "not", node };
+      node = KeybindingWhenNot.make({ type: "not", node });
       notCount -= 1;
     }
 
@@ -233,7 +249,7 @@ export function parseKeybindingWhenExpression(expression: string): KeybindingWhe
       index += 1;
       const right = parseUnary(depth);
       if (!right) return null;
-      left = { type: "and", left, right };
+      left = KeybindingWhenAnd.make({ type: "and", left, right });
     }
 
     return left;
@@ -247,7 +263,7 @@ export function parseKeybindingWhenExpression(expression: string): KeybindingWhe
       index += 1;
       const right = parseAnd(depth);
       if (!right) return null;
-      left = { type: "or", left, right };
+      left = KeybindingWhenOr.make({ type: "or", left, right });
     }
 
     return left;
@@ -265,17 +281,17 @@ export function compileResolvedKeybindingRule(rule: KeybindingRule): ResolvedKey
   if (rule.when !== undefined) {
     const whenAst = parseKeybindingWhenExpression(rule.when);
     if (!whenAst) return null;
-    return {
+    return ResolvedKeybindingRule.make({
       command: rule.command,
       shortcut,
       whenAst,
-    };
+    });
   }
 
-  return {
+  return ResolvedKeybindingRule.make({
     command: rule.command,
     shortcut,
-  };
+  });
 }
 
 export function compileResolvedKeybindingsConfig(

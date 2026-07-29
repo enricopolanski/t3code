@@ -1,4 +1,7 @@
 import {
+  AuthClientSessionRevokeResult,
+  AuthOtherClientSessionsRevokeResult,
+  AuthPairingLinkRevokeResult,
   AuthAccessReadScope,
   AuthAccessWriteScope,
   AuthStandardClientScopes,
@@ -376,7 +379,7 @@ export const authHttpApiLayer = HttpApiBuilder.group(
             yield* annotateEnvironmentRequest(args.endpoint.name);
             yield* requireEnvironmentScope(AuthAccessWriteScope);
             const revoked = yield* serverAuth.revokePairingLink(args.payload.id);
-            return { revoked };
+            return AuthPairingLinkRevokeResult.make({ revoked });
           },
           Effect.catchIf(EnvironmentAuth.isServerAuthInternalError, (error) =>
             failEnvironmentInternal("pairing_link_revoke_failed", error),
@@ -406,7 +409,7 @@ export const authHttpApiLayer = HttpApiBuilder.group(
               session.sessionId,
               args.payload.sessionId,
             );
-            return { revoked };
+            return AuthClientSessionRevokeResult.make({ revoked });
           },
           Effect.catchTag("ServerAuthForbiddenOperationError", () =>
             failEnvironmentOperationForbidden("current_session_revoke_not_allowed"),
@@ -423,7 +426,7 @@ export const authHttpApiLayer = HttpApiBuilder.group(
             yield* annotateEnvironmentRequest(args.endpoint.name);
             const session = yield* requireEnvironmentScope(AuthAccessWriteScope);
             const revokedCount = yield* serverAuth.revokeOtherClientSessions(session.sessionId);
-            return { revokedCount };
+            return AuthOtherClientSessionsRevokeResult.make({ revokedCount });
           },
           Effect.catchIf(EnvironmentAuth.isServerAuthInternalError, (error) =>
             failEnvironmentInternal("client_session_revoke_failed", error),

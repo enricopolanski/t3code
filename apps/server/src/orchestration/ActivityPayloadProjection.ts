@@ -1,5 +1,6 @@
-import type {
-  OrchestrationEvent,
+import {
+  type OrchestrationEvent,
+  OrchestrationThread,
   OrchestrationThreadActivity,
   OrchestrationThreadDetailSnapshot,
 } from "@t3tools/contracts";
@@ -192,25 +193,25 @@ export function projectActivityPayload(
     projectedData.rawOutput = rawOutput;
   }
 
-  return {
+  return OrchestrationThreadActivity.make({
     ...activity,
     payload: {
       ...payload,
       data: projectedData,
     },
-  };
+  });
 }
 
 export function projectThreadDetailSnapshot(
   snapshot: OrchestrationThreadDetailSnapshot,
 ): OrchestrationThreadDetailSnapshot {
-  return {
+  return OrchestrationThreadDetailSnapshot.make({
     ...snapshot,
-    thread: {
+    thread: OrchestrationThread.make({
       ...snapshot.thread,
       activities: snapshot.thread.activities.map(projectActivityPayload),
-    },
-  };
+    }),
+  });
 }
 
 export function projectActivityEvent(event: OrchestrationEvent): OrchestrationEvent {

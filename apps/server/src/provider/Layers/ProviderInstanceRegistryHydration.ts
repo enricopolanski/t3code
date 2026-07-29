@@ -43,7 +43,7 @@
  */
 import {
   defaultInstanceIdForDriver,
-  type ProviderInstanceConfig,
+  ProviderInstanceConfig,
   type ProviderInstanceConfigMap,
   ServerSettings,
 } from "@t3tools/contracts";
@@ -94,10 +94,10 @@ export const deriveProviderInstanceConfigMap = (
       continue;
     }
 
-    merged[instanceId] = {
+    merged[instanceId] = ProviderInstanceConfig.make({
       driver: driver.driverKind,
       config: legacyConfig,
-    };
+    });
   }
 
   return merged as ProviderInstanceConfigMap;

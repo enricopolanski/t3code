@@ -2,12 +2,15 @@ import {
   DEFAULT_MODEL,
   DEFAULT_MODEL_BY_PROVIDER,
   MODEL_SLUG_ALIASES_BY_PROVIDER,
-  type ModelCapabilities,
-  type ModelSelection,
+  BooleanProviderOptionDescriptor,
+  ModelCapabilities,
+  ModelSelection,
   ProviderDriverKind,
   ProviderInstanceId,
+  ProviderOptionChoice,
   type ProviderOptionDescriptor,
-  type ProviderOptionSelection,
+  ProviderOptionSelection,
+  SelectProviderOptionDescriptor,
 } from "@t3tools/contracts";
 
 const DEFAULT_PROVIDER_DRIVER_KIND = ProviderDriverKind.make("codex");
@@ -20,9 +23,9 @@ export interface SelectableModelOption {
 export function createModelCapabilities(input: {
   optionDescriptors: ReadonlyArray<ProviderOptionDescriptor>;
 }): ModelCapabilities {
-  return {
+  return ModelCapabilities.make({
     optionDescriptors: input.optionDescriptors.map(cloneDescriptor),
-  };
+  });
 }
 
 function getRawSelectionValueById(
@@ -102,18 +105,18 @@ function resolveDescriptorChoiceValue(
 
 function cloneDescriptor(descriptor: ProviderOptionDescriptor): ProviderOptionDescriptor {
   return descriptor.type === "select"
-    ? {
+    ? SelectProviderOptionDescriptor.make({
         ...descriptor,
-        options: [...descriptor.options],
+        options: descriptor.options.map((option) => ProviderOptionChoice.make({ ...option })),
         ...(descriptor.promptInjectedValues
           ? { promptInjectedValues: [...descriptor.promptInjectedValues] }
           : {}),
-      }
-    : { ...descriptor };
+      })
+    : BooleanProviderOptionDescriptor.make({ ...descriptor });
 }
 
 function cloneSelection(selection: ProviderOptionSelection): ProviderOptionSelection {
-  return { ...selection };
+  return ProviderOptionSelection.make({ ...selection });
 }
 
 function withDescriptorCurrentValue(
@@ -122,10 +125,10 @@ function withDescriptorCurrentValue(
 ): ProviderOptionDescriptor {
   if (descriptor.type === "boolean") {
     if (typeof rawCurrentValue === "boolean") {
-      return {
+      return BooleanProviderOptionDescriptor.make({
         ...descriptor,
         currentValue: rawCurrentValue,
-      };
+      });
     }
     return descriptor;
   }
@@ -135,12 +138,12 @@ function withDescriptorCurrentValue(
       : resolveDescriptorChoiceValue(descriptor, descriptor.currentValue);
   if (!currentValue) {
     const { currentValue: _unusedCurrentValue, ...rest } = descriptor;
-    return rest;
+    return SelectProviderOptionDescriptor.make(rest);
   }
-  return {
+  return SelectProviderOptionDescriptor.make({
     ...descriptor,
     currentValue,
-  };
+  });
 }
 
 export function getProviderOptionDescriptors(input: {
@@ -205,7 +208,7 @@ export function buildProviderOptionSelectionsFromDescriptors(
   for (const descriptor of descriptors) {
     const value = getProviderOptionCurrentValue(descriptor);
     if (typeof value === "string" || typeof value === "boolean") {
-      nextSelections.push({ id: descriptor.id, value });
+      nextSelections.push(ProviderOptionSelection.make({ id: descriptor.id, value }));
     }
   }
 
@@ -324,11 +327,9 @@ export function createModelSelection(
   options?: ReadonlyArray<ProviderOptionSelection> | null,
 ): ModelSelection {
   const selections = options ? cloneSelections(options) : [];
-  const base: ModelSelection = {
-    instanceId,
-    model,
-  };
-  return selections.length > 0 ? { ...base, options: selections } : base;
+  return selections.length > 0
+    ? ModelSelection.make({ instanceId, model, options: selections })
+    : ModelSelection.make({ instanceId, model });
 }
 
 /**

@@ -87,11 +87,11 @@ export const ResolvedKeybindingFromConfig = KeybindingRule.pipe(
           }
 
           const when = resolved.whenAst ? encodeWhenAst(resolved.whenAst) : undefined;
-          return {
+          return KeybindingRule.make({
             key,
             command: resolved.command,
             when,
-          };
+          });
         }),
     }),
   ),
@@ -126,21 +126,25 @@ function hasSameShortcutContext(left: KeybindingRule, right: KeybindingRule): bo
 
 function keybindingRuleFromUpsertInput(input: ServerUpsertKeybindingInput): KeybindingRule {
   return input.when === undefined
-    ? { key: input.key, command: input.command }
-    : { key: input.key, command: input.command, when: input.when };
+    ? KeybindingRule.make({ key: input.key, command: input.command })
+    : KeybindingRule.make({ key: input.key, command: input.command, when: input.when });
 }
 
 function replaceTargetFromUpsertInput(input: ServerUpsertKeybindingInput): KeybindingRule | null {
   if (!input.replace) return null;
   return input.replace.when === undefined
-    ? { key: input.replace.key, command: input.replace.command }
-    : { key: input.replace.key, command: input.replace.command, when: input.replace.when };
+    ? KeybindingRule.make({ key: input.replace.key, command: input.replace.command })
+    : KeybindingRule.make({
+        key: input.replace.key,
+        command: input.replace.command,
+        when: input.replace.when,
+      });
 }
 
 function keybindingRuleFromRemoveInput(input: ServerRemoveKeybindingInput): KeybindingRule {
   return input.when === undefined
-    ? { key: input.key, command: input.command }
-    : { key: input.key, command: input.command, when: input.when };
+    ? KeybindingRule.make({ key: input.key, command: input.command })
+    : KeybindingRule.make({ key: input.key, command: input.command, when: input.when });
 }
 
 function encodeShortcut(shortcut: KeybindingShortcut): string | null {

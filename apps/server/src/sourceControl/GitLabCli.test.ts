@@ -1,3 +1,4 @@
+import { SourceControlRepositoryCloneUrls } from "@t3tools/contracts";
 import { assert, it, afterEach, expect, vi } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -176,11 +177,14 @@ layer("GitLabCli.layer", (it) => {
         });
       });
 
-      assert.deepStrictEqual(result, {
-        nameWithOwner: "octocat/t3code",
-        url: "https://gitlab.com/octocat/t3code",
-        sshUrl: "git@gitlab.com:octocat/t3code.git",
-      });
+      assert.deepStrictEqual(
+        result,
+        SourceControlRepositoryCloneUrls.make({
+          nameWithOwner: "octocat/t3code",
+          url: "https://gitlab.com/octocat/t3code",
+          sshUrl: "git@gitlab.com:octocat/t3code.git",
+        }),
+      );
     }),
   );
 
@@ -253,11 +257,14 @@ layer("GitLabCli.layer", (it) => {
         visibility: "public",
       });
 
-      assert.deepStrictEqual(result, {
-        nameWithOwner: "octocat/t3code",
-        url: "https://gitlab.com/octocat/t3code",
-        sshUrl: "git@gitlab.com:octocat/t3code.git",
-      });
+      assert.deepStrictEqual(
+        result,
+        SourceControlRepositoryCloneUrls.make({
+          nameWithOwner: "octocat/t3code",
+          url: "https://gitlab.com/octocat/t3code",
+          sshUrl: "git@gitlab.com:octocat/t3code.git",
+        }),
+      );
       expect(mockedRun).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({

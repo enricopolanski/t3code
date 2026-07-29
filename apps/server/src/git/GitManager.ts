@@ -13,9 +13,19 @@ import * as Order from "effect/Order";
 import * as Path from "effect/Path";
 import * as Ref from "effect/Ref";
 import {
-  GitActionProgressEvent,
+  GitActionFailedEvent,
+  GitActionFinishedEvent,
+  GitActionHookFinishedEvent,
+  GitActionHookOutputEvent,
+  GitActionHookStartedEvent,
+  GitActionPhaseStartedEvent,
+  type GitActionProgressEvent,
+  GitActionStartedEvent,
   GitActionProgressPhase,
   GitCommandError,
+  GitRunStackedActionToast,
+  GitRunStackedActionToastRunAction,
+  VcsStatusChangeRequest,
   GitPreparePullRequestThreadInput,
   GitPreparePullRequestThreadResult,
   GitPullRequestRefInput,
@@ -115,6 +125,35 @@ const PR_LOOKUP_CACHE_CAPACITY = 2_048;
 type StripProgressContext<T> = T extends any ? Omit<T, "actionId" | "cwd" | "action"> : never;
 type GitActionProgressPayload = StripProgressContext<GitActionProgressEvent>;
 type GitActionProgressEmitter = (event: GitActionProgressPayload) => Effect.Effect<void, never>;
+
+/**
+ * The progress payloads are assembled field-by-field, so rebuild the concrete
+ * event class before publishing — the RPC stream encodes these.
+ */
+function makeGitActionProgressEvent(
+  fields: GitActionProgressPayload & {
+    readonly actionId: string;
+    readonly cwd: string;
+    readonly action: GitStackedAction;
+  },
+): GitActionProgressEvent {
+  switch (fields.kind) {
+    case "action_started":
+      return GitActionStartedEvent.make(fields);
+    case "phase_started":
+      return GitActionPhaseStartedEvent.make(fields);
+    case "hook_started":
+      return GitActionHookStartedEvent.make(fields);
+    case "hook_output":
+      return GitActionHookOutputEvent.make(fields);
+    case "hook_finished":
+      return GitActionHookFinishedEvent.make(fields);
+    case "action_finished":
+      return GitActionFinishedEvent.make(fields);
+    case "action_failed":
+      return GitActionFailedEvent.make(fields);
+  }
+}
 
 function isNotGitRepositoryError(error: GitCommandError): boolean {
   return error.message.toLowerCase().includes("not a git repository");
@@ -510,22 +549,15 @@ function appendUnique(values: string[], next: string | null | undefined): void {
   values.push(trimmed);
 }
 
-function toStatusPr(pr: PullRequestInfo): {
-  number: number;
-  title: string;
-  url: string;
-  baseRef: string;
-  headRef: string;
-  state: "open" | "closed" | "merged";
-} {
-  return {
+function toStatusPr(pr: PullRequestInfo): VcsStatusChangeRequest {
+  return VcsStatusChangeRequest.make({
     number: pr.number,
     title: pr.title,
     url: pr.url,
     baseRef: pr.baseRefName,
     headRef: pr.headRefName,
     state: pr.state,
-  };
+  });
 }
 
 function normalizePullRequestReference(reference: string): string {
@@ -655,12 +687,14 @@ export const make = Effect.gen(function* () {
         const reporter = options?.progressReporter;
         const emit = (event: GitActionProgressPayload) =>
           reporter
-            ? reporter.publish({
-                actionId,
-                cwd: input.cwd,
-                action: input.action,
-                ...event,
-              } as GitActionProgressEvent)
+            ? reporter.publish(
+                makeGitActionProgressEvent({
+                  actionId,
+                  cwd: input.cwd,
+                  action: input.action,
+                  ...event,
+                }),
+              )
             : Effect.void;
 
         return {
@@ -1299,7 +1333,7 @@ export const make = Effect.gen(function* () {
         ? {
             kind: "run_action" as const,
             label: "Push",
-            action: { kind: "push" as const },
+            action: GitRunStackedActionToastRunAction.make({ kind: "push" }),
           }
         : (result.action === "push" ||
               result.action === "create_pr" ||
@@ -1320,16 +1354,16 @@ export const make = Effect.gen(function* () {
             ? {
                 kind: "run_action" as const,
                 label: `Create ${terms.shortLabel}`,
-                action: { kind: "create_pr" as const },
+                action: GitRunStackedActionToastRunAction.make({ kind: "create_pr" }),
               }
             : {
                 kind: "none" as const,
               };
 
-    return {
+    return GitRunStackedActionToast.make({
       ...summary,
       cta,
-    };
+    });
   });
 
   const resolveBaseBranch = Effect.fn("resolveBaseBranch")(function* (
@@ -1445,12 +1479,14 @@ export const make = Effect.gen(function* () {
   ) {
     const emit = (event: GitActionProgressPayload) =>
       progressReporter && actionId
-        ? progressReporter.publish({
-            actionId,
-            cwd,
-            action,
-            ...event,
-          } as GitActionProgressEvent)
+        ? progressReporter.publish(
+            makeGitActionProgressEvent({
+              actionId,
+              cwd,
+              action,
+              ...event,
+            }),
+          )
         : Effect.void;
 
     let suggestion: CommitAndBranchSuggestion | null | undefined = preResolvedSuggestion;

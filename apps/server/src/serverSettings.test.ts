@@ -1,7 +1,11 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import {
   DEFAULT_SERVER_SETTINGS,
+  ObservabilitySettings,
   ProviderDriverKind,
+  ProviderInstanceConfig,
+  ProviderInstanceEnvironmentVariable,
+  ProviderOptionSelection,
   ProviderInstanceId,
   ServerSettings,
   ServerSettingsPatch,
@@ -94,9 +98,9 @@ it.layer(NodeServices.layer)("server settings", (it) => {
     Effect.gen(function* () {
       assert.deepEqual(
         yield* decodeSettingsPatch({ providers: { codex: { binaryPath: "/tmp/codex" } } }),
-        {
+        ServerSettingsPatch.make({
           providers: { codex: { binaryPath: "/tmp/codex" } },
-        },
+        }),
       );
 
       assert.deepEqual(
@@ -105,11 +109,11 @@ it.layer(NodeServices.layer)("server settings", (it) => {
             options: [{ id: "fastMode", value: false }],
           },
         }),
-        {
+        ServerSettingsPatch.make({
           textGenerationModelSelection: {
-            options: [{ id: "fastMode", value: false }],
+            options: [ProviderOptionSelection.make({ id: "fastMode", value: false })],
           },
-        },
+        }),
       );
     }),
   );
@@ -129,7 +133,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
         assert.deepEqual(decoded.textGenerationModelSelection, {
           instanceId: ProviderInstanceId.make("codex"),
           model: "gpt-5.4-mini",
-          options: [{ id: "reasoningEffort", value: "low" }],
+          options: [ProviderOptionSelection.make({ id: "reasoningEffort", value: "low" })],
         });
       }),
   );
@@ -247,11 +251,11 @@ it.layer(NodeServices.layer)("server settings", (it) => {
 
       const next = yield* serverSettings.updateSettings({
         providerInstances: {
-          [ProviderInstanceId.make("claude_openrouter")]: {
+          [ProviderInstanceId.make("claude_openrouter")]: ProviderInstanceConfig.make({
             driver: ProviderDriverKind.make("claudeAgent"),
             enabled: true,
             config: { customModels: ["openai/gpt-5.5"] },
-          },
+          }),
         },
         textGenerationModelSelection: {
           instanceId: ProviderInstanceId.make("claude_openrouter"),
@@ -280,11 +284,11 @@ it.layer(NodeServices.layer)("server settings", (it) => {
             },
           },
           providerInstances: {
-            [instanceId]: {
+            [instanceId]: ProviderInstanceConfig.make({
               driver: ProviderDriverKind.make("claudeAgent"),
               enabled: true,
               config: { customModels: ["openai/gpt-5.5"] },
-            },
+            }),
           },
           textGenerationModelSelection: {
             instanceId,
@@ -306,11 +310,11 @@ it.layer(NodeServices.layer)("server settings", (it) => {
 
       const next = yield* serverSettings.updateSettings({
         providerInstances: {
-          [instanceId]: {
+          [instanceId]: ProviderInstanceConfig.make({
             driver: ProviderDriverKind.make("openrouter"),
             enabled: true,
             config: { customModels: ["openai/gpt-5.5"] },
-          },
+          }),
         },
         textGenerationModelSelection: {
           instanceId,
@@ -340,22 +344,22 @@ it.layer(NodeServices.layer)("server settings", (it) => {
 
         yield* serverSettings.updateSettings({
           providerInstances: {
-            [instanceId]: {
+            [instanceId]: ProviderInstanceConfig.make({
               driver: ProviderDriverKind.make("codex"),
               enabled: true,
               config: {},
-            },
+            }),
           },
           sourceControlWriterModelSelection,
         });
 
         const next = yield* serverSettings.updateSettings({
           providerInstances: {
-            [instanceId]: {
+            [instanceId]: ProviderInstanceConfig.make({
               driver: ProviderDriverKind.make("codex"),
               enabled: false,
               config: {},
-            },
+            }),
           },
         });
 
@@ -378,11 +382,11 @@ it.layer(NodeServices.layer)("server settings", (it) => {
 
         const restored = yield* serverSettings.updateSettings({
           providerInstances: {
-            [instanceId]: {
+            [instanceId]: ProviderInstanceConfig.make({
               driver: ProviderDriverKind.make("codex"),
               enabled: true,
               config: {},
-            },
+            }),
           },
         });
         assert.deepEqual(
@@ -432,33 +436,36 @@ it.layer(NodeServices.layer)("server settings", (it) => {
 
       yield* serverSettings.updateSettings({
         providerInstances: {
-          [codexId]: {
+          [codexId]: ProviderInstanceConfig.make({
             driver: ProviderDriverKind.make("codex"),
             displayName: "Codex Work",
             accentColor: "#7c3aed",
             enabled: true,
             config: { homePath: "~/.codex" },
-          },
+          }),
         },
       });
 
       const next = yield* serverSettings.updateSettings({
         providerInstances: {
-          [codexId]: {
+          [codexId]: ProviderInstanceConfig.make({
             driver: ProviderDriverKind.make("codex"),
             displayName: "Codex Work",
             enabled: true,
             config: { homePath: "~/.codex" },
-          },
+          }),
         },
       });
 
-      assert.deepEqual(next.providerInstances[codexId], {
-        driver: ProviderDriverKind.make("codex"),
-        displayName: "Codex Work",
-        enabled: true,
-        config: { homePath: "~/.codex" },
-      });
+      assert.deepEqual(
+        next.providerInstances[codexId],
+        ProviderInstanceConfig.make({
+          driver: ProviderDriverKind.make("codex"),
+          displayName: "Codex Work",
+          enabled: true,
+          config: { homePath: "~/.codex" },
+        }),
+      );
     }).pipe(Effect.provide(makeServerSettingsLayer())),
   );
 
@@ -521,10 +528,13 @@ it.layer(NodeServices.layer)("server settings", (it) => {
       });
 
       assert.equal(next.addProjectBaseDirectory, "~/Development");
-      assert.deepEqual(next.observability, {
-        otlpTracesUrl: "http://localhost:4318/v1/traces",
-        otlpMetricsUrl: "http://localhost:4318/v1/metrics",
-      });
+      assert.deepEqual(
+        next.observability,
+        ObservabilitySettings.make({
+          otlpTracesUrl: "http://localhost:4318/v1/traces",
+          otlpMetricsUrl: "http://localhost:4318/v1/metrics",
+        }),
+      );
     }).pipe(Effect.provide(makeServerSettingsLayer())),
   );
 
@@ -604,25 +614,37 @@ it.layer(NodeServices.layer)("server settings", (it) => {
 
       const next = yield* serverSettings.updateSettings({
         providerInstances: {
-          [instanceId]: {
+          [instanceId]: ProviderInstanceConfig.make({
             driver: ProviderDriverKind.make("codex"),
             environment: [
-              { name: "OPENROUTER_API_KEY", value: "sk-or-secret", sensitive: true },
-              { name: "ANTHROPIC_BASE_URL", value: "https://openrouter.ai/api", sensitive: false },
+              ProviderInstanceEnvironmentVariable.make({
+                name: "OPENROUTER_API_KEY",
+                value: "sk-or-secret",
+                sensitive: true,
+              }),
+              ProviderInstanceEnvironmentVariable.make({
+                name: "ANTHROPIC_BASE_URL",
+                value: "https://openrouter.ai/api",
+                sensitive: false,
+              }),
             ],
             config: {},
-          },
+          }),
         },
       });
 
       assert.deepEqual(next.providerInstances[instanceId]?.environment, [
-        {
+        ProviderInstanceEnvironmentVariable.make({
           name: "OPENROUTER_API_KEY",
           value: "sk-or-secret",
           sensitive: true,
           valueRedacted: true,
-        },
-        { name: "ANTHROPIC_BASE_URL", value: "https://openrouter.ai/api", sensitive: false },
+        }),
+        ProviderInstanceEnvironmentVariable.make({
+          name: "ANTHROPIC_BASE_URL",
+          value: "https://openrouter.ai/api",
+          sensitive: false,
+        }),
       ]);
 
       const raw = yield* fileSystem.readFileString(serverConfig.settingsPath);
@@ -640,15 +662,24 @@ it.layer(NodeServices.layer)("server settings", (it) => {
 
       const roundTripped = yield* serverSettings.updateSettings({
         providerInstances: {
-          [instanceId]: {
+          [instanceId]: ProviderInstanceConfig.make({
             driver: ProviderDriverKind.make("codex"),
             displayName: "Codex Personal",
             environment: [
-              { name: "OPENROUTER_API_KEY", value: "", sensitive: true, valueRedacted: true },
-              { name: "ANTHROPIC_BASE_URL", value: "https://openrouter.ai/api", sensitive: false },
+              ProviderInstanceEnvironmentVariable.make({
+                name: "OPENROUTER_API_KEY",
+                value: "",
+                sensitive: true,
+                valueRedacted: true,
+              }),
+              ProviderInstanceEnvironmentVariable.make({
+                name: "ANTHROPIC_BASE_URL",
+                value: "https://openrouter.ai/api",
+                sensitive: false,
+              }),
             ],
             config: {},
-          },
+          }),
         },
       });
 

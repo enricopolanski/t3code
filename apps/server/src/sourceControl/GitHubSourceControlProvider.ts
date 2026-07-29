@@ -2,11 +2,7 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Result from "effect/Result";
-import {
-  SourceControlProviderError,
-  type ChangeRequest,
-  type ChangeRequestState,
-} from "@t3tools/contracts";
+import { SourceControlProviderError, ChangeRequest, ChangeRequestState } from "@t3tools/contracts";
 
 import * as GitHubCli from "./GitHubCli.ts";
 import { findAuthenticatedGitHubAccount, parseGitHubAuthStatus } from "./gitHubAuthStatus.ts";
@@ -21,7 +17,7 @@ import {
 } from "./SourceControlProviderDiscovery.ts";
 
 function toChangeRequest(summary: GitHubCli.GitHubPullRequestSummary): ChangeRequest {
-  return {
+  return ChangeRequest.make({
     provider: "github",
     number: summary.number,
     title: summary.title,
@@ -39,7 +35,7 @@ function toChangeRequest(summary: GitHubCli.GitHubPullRequestSummary): ChangeReq
     ...(summary.headRepositoryOwnerLogin !== undefined
       ? { headRepositoryOwnerLogin: summary.headRepositoryOwnerLogin }
       : {}),
-  };
+  });
 }
 
 function parseGitHubAuth(input: SourceControlAuthProbeInput) {

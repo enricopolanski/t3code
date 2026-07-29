@@ -1,4 +1,4 @@
-import type { SourceControlProviderInfo, SourceControlProviderKind } from "@t3tools/contracts";
+import { SourceControlProviderInfo, type SourceControlProviderKind } from "@t3tools/contracts";
 
 export interface ChangeRequestPresentation {
   readonly icon: "github" | "gitlab" | "azure-devops" | "bitbucket" | "change-request";
@@ -193,40 +193,40 @@ export function detectSourceControlProviderFromRemoteUrl(
   const hostname = parseHostName(host);
 
   if (isGitHubHost(hostname)) {
-    return {
+    return SourceControlProviderInfo.make({
       kind: "github",
       name: hostname === "github.com" ? "GitHub" : "GitHub Self-Hosted",
       baseUrl: toBaseUrl(host),
-    };
+    });
   }
 
   if (isGitLabHost(hostname)) {
-    return {
+    return SourceControlProviderInfo.make({
       kind: "gitlab",
       name: hostname === "gitlab.com" ? "GitLab" : "GitLab Self-Hosted",
       baseUrl: toBaseUrl(host),
-    };
+    });
   }
 
   if (isAzureDevOpsHost(hostname)) {
-    return {
+    return SourceControlProviderInfo.make({
       kind: "azure-devops",
       name: "Azure DevOps",
       baseUrl: toBaseUrl(host),
-    };
+    });
   }
 
   if (isBitbucketHost(hostname)) {
-    return {
+    return SourceControlProviderInfo.make({
       kind: "bitbucket",
       name: hostname === "bitbucket.org" ? "Bitbucket" : "Bitbucket Self-Hosted",
       baseUrl: toBaseUrl(host),
-    };
+    });
   }
 
-  return {
+  return SourceControlProviderInfo.make({
     kind: "unknown",
     name: host,
     baseUrl: toBaseUrl(host),
-  };
+  });
 }

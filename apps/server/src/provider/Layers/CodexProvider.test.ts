@@ -1,3 +1,4 @@
+import { ProviderOptionChoice, SelectProviderOptionDescriptor } from "@t3tools/contracts";
 import { assert, it } from "@effect/vitest";
 
 import { applyPreferredCodexDefaultModel, mapCodexModelCapabilities } from "./CodexProvider.ts";
@@ -34,33 +35,35 @@ it("maps current Codex model capability fields", () => {
   });
 
   assert.deepStrictEqual(capabilities.optionDescriptors, [
-    {
+    SelectProviderOptionDescriptor.make({
       id: "reasoningEffort",
       label: "Reasoning",
       type: "select",
-      options: [{ id: "super-high", label: "super-high", isDefault: true }],
+      options: [
+        ProviderOptionChoice.make({ id: "super-high", label: "super-high", isDefault: true }),
+      ],
       currentValue: "super-high",
-    },
-    {
+    }),
+    SelectProviderOptionDescriptor.make({
       id: "serviceTier",
       label: "Service Tier",
       type: "select",
       options: [
-        { id: "default", label: "Standard" },
-        {
+        ProviderOptionChoice.make({ id: "default", label: "Standard" }),
+        ProviderOptionChoice.make({
           id: "priority",
           label: "Fast",
           description: "Lower latency responses.",
-        },
-        {
+        }),
+        ProviderOptionChoice.make({
           id: "flex",
           label: "Flex",
           description: "Lower-cost asynchronous routing.",
           isDefault: true,
-        },
+        }),
       ],
       currentValue: "flex",
-    },
+    }),
   ]);
 });
 
@@ -86,20 +89,20 @@ it("uses standard routing when the catalog has no default service tier", () => {
   });
 
   assert.deepStrictEqual(capabilities.optionDescriptors, [
-    {
+    SelectProviderOptionDescriptor.make({
       id: "serviceTier",
       label: "Service Tier",
       type: "select",
       options: [
-        { id: "default", label: "Standard", isDefault: true },
-        {
+        ProviderOptionChoice.make({ id: "default", label: "Standard", isDefault: true }),
+        ProviderOptionChoice.make({
           id: "priority",
           label: "Fast",
           description: "1.5x speed, increased usage",
-        },
+        }),
       ],
       currentValue: "default",
-    },
+    }),
   ]);
 });
 

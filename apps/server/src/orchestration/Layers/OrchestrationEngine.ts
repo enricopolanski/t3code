@@ -4,7 +4,7 @@ import type {
   ProjectId,
   ThreadId,
 } from "@t3tools/contracts";
-import { OrchestrationCommand } from "@t3tools/contracts";
+import { DispatchResult, OrchestrationCommand } from "@t3tools/contracts";
 import * as Cause from "effect/Cause";
 import * as Clock from "effect/Clock";
 import * as Crypto from "effect/Crypto";
@@ -55,7 +55,7 @@ const isOrchestrationCommandInvariantError = Schema.is(OrchestrationCommandInvar
 
 interface CommandEnvelope {
   command: OrchestrationCommand;
-  result: Deferred.Deferred<{ sequence: number }, OrchestrationDispatchError>;
+  result: Deferred.Deferred<DispatchResult, OrchestrationDispatchError>;
   startedAtMs: number;
 }
 
@@ -143,9 +143,9 @@ const makeOrchestrationEngine = Effect.gen(function* () {
         );
         if (Option.isSome(existingReceipt)) {
           if (existingReceipt.value.status === "accepted") {
-            return {
+            return DispatchResult.make({
               sequence: existingReceipt.value.resultSequence,
-            };
+            });
           }
           return yield* new OrchestrationCommandPreviouslyRejectedError({
             commandId: envelope.command.commandId,
@@ -233,7 +233,7 @@ const makeOrchestrationEngine = Effect.gen(function* () {
             );
           }
         }
-        return { sequence: committedCommand.lastSequence };
+        return DispatchResult.make({ sequence: committedCommand.lastSequence });
       }).pipe(Effect.withSpan(`orchestration.command.${envelope.command.type}`)),
     ).pipe(
       Effect.flatMap((exit) =>
@@ -318,7 +318,7 @@ const makeOrchestrationEngine = Effect.gen(function* () {
 
   const dispatch: OrchestrationEngineShape["dispatch"] = (command) =>
     Effect.gen(function* () {
-      const result = yield* Deferred.make<{ sequence: number }, OrchestrationDispatchError>();
+      const result = yield* Deferred.make<DispatchResult, OrchestrationDispatchError>();
       yield* Queue.offer(commandQueue, {
         command,
         result,

@@ -62,6 +62,11 @@ export const EnvironmentIdentificationMode = Schema.Literals(["artwork", "pill",
 export type EnvironmentIdentificationMode = typeof EnvironmentIdentificationMode.Type;
 export const DEFAULT_ENVIRONMENT_IDENTIFICATION_MODE: EnvironmentIdentificationMode = "artwork";
 
+/**
+ * Stays a `Schema.Struct`: `UnifiedSettings` is the spread intersection of
+ * these fields with {@link ServerSettings}, and client settings are merged
+ * field-by-field with {@link ClientSettingsPatch} rather than constructed.
+ */
 export const ClientSettingsSchema = Schema.Struct({
   autoOpenPlanSidebar: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   confirmThreadArchive: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
@@ -401,11 +406,12 @@ export const OpenCodeSettings = makeProviderSettingsSchema(
 );
 export type OpenCodeSettings = typeof OpenCodeSettings.Type;
 
-export const ObservabilitySettings = Schema.Struct({
+export class ObservabilitySettings extends Schema.Class<ObservabilitySettings>(
+  "ObservabilitySettings",
+)({
   otlpTracesUrl: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
   otlpMetricsUrl: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
-});
-export type ObservabilitySettings = typeof ObservabilitySettings.Type;
+}) {}
 
 export const SourceControlWritingStyleMode = Schema.Literals([
   "repo_conventions",
@@ -414,7 +420,9 @@ export const SourceControlWritingStyleMode = Schema.Literals([
 ]);
 export type SourceControlWritingStyleMode = typeof SourceControlWritingStyleMode.Type;
 
-export const SourceControlWritingStyleSettings = Schema.Struct({
+export class SourceControlWritingStyleSettings extends Schema.Class<SourceControlWritingStyleSettings>(
+  "SourceControlWritingStyleSettings",
+)({
   mode: SourceControlWritingStyleMode.pipe(
     Schema.withDecodingDefault(Effect.succeed("repo_conventions" as const)),
   ),
@@ -422,12 +430,11 @@ export const SourceControlWritingStyleSettings = Schema.Struct({
   followChangeRequestTemplates: Schema.Boolean.pipe(
     Schema.withDecodingDefault(Effect.succeed(true)),
   ),
-});
-export type SourceControlWritingStyleSettings = typeof SourceControlWritingStyleSettings.Type;
+}) {}
 
 export const DEFAULT_AUTOMATIC_GIT_FETCH_INTERVAL = Duration.seconds(30);
 
-export const ServerSettings = Schema.Struct({
+export class ServerSettings extends Schema.Class<ServerSettings>("ServerSettings")({
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   enableProviderUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   automaticGitFetchInterval: Schema.DurationFromMillis.pipe(
@@ -479,8 +486,7 @@ export const ServerSettings = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed({})),
   ),
   observability: ObservabilitySettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
-});
-export type ServerSettings = typeof ServerSettings.Type;
+}) {}
 
 export const DEFAULT_SERVER_SETTINGS: ServerSettings = Schema.decodeSync(ServerSettings)({});
 
@@ -528,6 +534,11 @@ export const DEFAULT_UNIFIED_SETTINGS: UnifiedSettings = {
 
 // ── Server Settings Patch (replace with a Schema.deepPartial if available) ──────────────────────────────────────────
 
+// The patch shapes below stay `Schema.Struct`s: they are all-optional deltas
+// that `applyServerSettingsPatch` feeds through `deepMerge`, which rejects
+// class instances (no implicit index signature) and would flatten any nested
+// instance back into a plain object anyway.
+
 const ModelSelectionPatch = Schema.Struct({
   instanceId: Schema.optionalKey(ProviderInstanceId),
   model: Schema.optionalKey(TrimmedNonEmptyString),
@@ -572,7 +583,7 @@ const OpenCodeSettingsPatch = Schema.Struct({
   customModels: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 
-export const ServerSettingsPatch = Schema.Struct({
+export class ServerSettingsPatch extends Schema.Class<ServerSettingsPatch>("ServerSettingsPatch")({
   // Server settings
   enableAssistantStreaming: Schema.optionalKey(Schema.Boolean),
   enableProviderUpdateChecks: Schema.optionalKey(Schema.Boolean),
@@ -609,10 +620,9 @@ export const ServerSettingsPatch = Schema.Struct({
   // patches risk leaving driver-specific config in a half-merged state.
   // The web UI sends a fully-formed map every time it edits this field.
   providerInstances: Schema.optionalKey(Schema.Record(ProviderInstanceId, ProviderInstanceConfig)),
-});
-export type ServerSettingsPatch = typeof ServerSettingsPatch.Type;
+}) {}
 
-export const ClientSettingsPatch = Schema.Struct({
+export class ClientSettingsPatch extends Schema.Class<ClientSettingsPatch>("ClientSettingsPatch")({
   autoOpenPlanSidebar: Schema.optionalKey(Schema.Boolean),
   confirmThreadArchive: Schema.optionalKey(Schema.Boolean),
   confirmThreadDelete: Schema.optionalKey(Schema.Boolean),
@@ -652,5 +662,4 @@ export const ClientSettingsPatch = Schema.Struct({
   sidebarV2ConfiguredByUser: Schema.optionalKey(Schema.Boolean),
   timestampFormat: Schema.optionalKey(TimestampFormat),
   wordWrap: Schema.optionalKey(Schema.Boolean),
-});
-export type ClientSettingsPatch = typeof ClientSettingsPatch.Type;
+}) {}

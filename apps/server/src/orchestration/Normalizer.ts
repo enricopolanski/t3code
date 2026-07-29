@@ -8,6 +8,12 @@ import {
   type OrchestrationCommand,
   OrchestrationDispatchCommandError,
   PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
+  ChatImageAttachment,
+  ProjectCreateCommand,
+  ProjectMetaUpdateCommand,
+  ThreadTurnStartBootstrap,
+  ThreadTurnStartBootstrapCreateThread,
+  ThreadTurnStartCommand,
 } from "@t3tools/contracts";
 
 import { createAttachmentId, resolveAttachmentPath } from "../attachmentStore.ts";
@@ -15,32 +21,34 @@ import { ServerConfig } from "../config.ts";
 import { parseBase64DataUrl } from "../imageMime.ts";
 import * as WorkspacePaths from "../workspace/WorkspacePaths.ts";
 
+/**
+ * Commands are `Schema.Class` instances, so spreading one produces a plain
+ * object that no longer encodes. Copies have to go back through the command's
+ * own constructor, which the union makes impossible to name statically.
+ */
+const withFields = <A extends object>(command: A, fields: Partial<A>): A =>
+  new (command.constructor as new (input: unknown) => A)({ ...command, ...fields });
+
 export const canonicalizeClientCommandTimestamps = (
   command: ClientOrchestrationCommand,
   receivedAt: IsoDateTime,
 ): ClientOrchestrationCommand => {
   const canonicalCommand =
-    "createdAt" in command
-      ? {
-          ...command,
-          createdAt: receivedAt,
-        }
-      : command;
+    "createdAt" in command ? withFields(command, { createdAt: receivedAt }) : command;
 
   if (canonicalCommand.type !== "thread.turn.start" || !canonicalCommand.bootstrap?.createThread) {
     return canonicalCommand;
   }
 
-  return {
-    ...canonicalCommand,
-    bootstrap: {
+  return withFields(canonicalCommand, {
+    bootstrap: ThreadTurnStartBootstrap.make({
       ...canonicalCommand.bootstrap,
-      createThread: {
+      createThread: ThreadTurnStartBootstrapCreateThread.make({
         ...canonicalCommand.bootstrap.createThread,
         createdAt: receivedAt,
-      },
-    },
-  };
+      }),
+    }),
+  });
 };
 
 export const normalizeDispatchCommand = (command: ClientOrchestrationCommand) =>
@@ -80,24 +88,24 @@ export const normalizeDispatchCommand = (command: ClientOrchestrationCommand) =>
         );
 
     if (canonicalCommand.type === "project.create") {
-      return {
+      return ProjectCreateCommand.make({
         ...canonicalCommand,
         workspaceRoot: yield* normalizeProjectWorkspaceRootForCreate(
           canonicalCommand.workspaceRoot,
           canonicalCommand.createWorkspaceRootIfMissing,
         ),
         createWorkspaceRootIfMissing: canonicalCommand.createWorkspaceRootIfMissing === true,
-      } satisfies OrchestrationCommand;
+      }) satisfies OrchestrationCommand;
     }
 
     if (
       canonicalCommand.type === "project.meta.update" &&
       canonicalCommand.workspaceRoot !== undefined
     ) {
-      return {
+      return ProjectMetaUpdateCommand.make({
         ...canonicalCommand,
         workspaceRoot: yield* normalizeProjectWorkspaceRoot(canonicalCommand.workspaceRoot),
-      } satisfies OrchestrationCommand;
+      }) satisfies OrchestrationCommand;
     }
 
     if (canonicalCommand.type !== "thread.turn.start") {
@@ -129,13 +137,13 @@ export const normalizeDispatchCommand = (command: ClientOrchestrationCommand) =>
             });
           }
 
-          const persistedAttachment = {
-            type: "image" as const,
+          const persistedAttachment = ChatImageAttachment.make({
+            type: "image",
             id: attachmentId,
             name: attachment.name,
             mimeType: parsed.mimeType.toLowerCase(),
             sizeBytes: bytes.byteLength,
-          };
+          });
 
           const attachmentPath = resolveAttachmentPath({
             attachmentsDir: serverConfig.attachmentsDir,
@@ -169,11 +177,11 @@ export const normalizeDispatchCommand = (command: ClientOrchestrationCommand) =>
       { concurrency: 1 },
     );
 
-    return {
+    return ThreadTurnStartCommand.make({
       ...canonicalCommand,
       message: {
         ...canonicalCommand.message,
         attachments: normalizedAttachments,
       },
-    } satisfies OrchestrationCommand;
+    }) satisfies OrchestrationCommand;
   });

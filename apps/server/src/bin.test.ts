@@ -11,6 +11,7 @@ import {
   EnvironmentOrchestrationHttpApi,
   ProviderInstanceId,
   ThreadId,
+  ThreadCreateCommand,
 } from "@t3tools/contracts";
 import * as NetService from "@t3tools/shared/Net";
 import { assert, it } from "@effect/vitest";
@@ -502,22 +503,24 @@ it.layer(NodeServices.layer)("bin cli parsing", (it) => {
       const config = yield* makeCliTestServerConfig(baseDir);
       yield* Effect.gen(function* () {
         const engine = yield* OrchestrationEngine.OrchestrationEngineService;
-        yield* engine.dispatch({
-          type: "thread.create",
-          commandId: CommandId.make("cmd-cli-force-remove-thread"),
-          threadId: ThreadId.make("thread-cli-force-remove"),
-          projectId: project!.id,
-          title: "Thread",
-          modelSelection: {
-            instanceId: ProviderInstanceId.make("codex"),
-            model: "gpt-5-codex",
-          },
-          interactionMode: "default",
-          runtimeMode: "approval-required",
-          branch: null,
-          worktreePath: null,
-          createdAt: DateTime.formatIso(yield* DateTime.now),
-        });
+        yield* engine.dispatch(
+          ThreadCreateCommand.make({
+            type: "thread.create",
+            commandId: CommandId.make("cmd-cli-force-remove-thread"),
+            threadId: ThreadId.make("thread-cli-force-remove"),
+            projectId: project!.id,
+            title: "Thread",
+            modelSelection: {
+              instanceId: ProviderInstanceId.make("codex"),
+              model: "gpt-5-codex",
+            },
+            interactionMode: "default",
+            runtimeMode: "approval-required",
+            branch: null,
+            worktreePath: null,
+            createdAt: DateTime.formatIso(yield* DateTime.now),
+          }),
+        );
       }).pipe(Effect.provide(makeProjectPersistenceLayer(config)));
 
       yield* runCliWithRuntime([

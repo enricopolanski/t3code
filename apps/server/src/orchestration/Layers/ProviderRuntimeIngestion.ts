@@ -1,21 +1,28 @@
 import {
   ApprovalRequestId,
   type AssistantDeliveryMode,
+  CheckpointRef,
   CommandId,
+  isToolLifecycleItemType,
   MessageId,
+  type OrchestrationCheckpointSummary,
   type OrchestrationEvent,
   type OrchestrationMessage,
-  type OrchestrationProposedPlanId,
-  CheckpointRef,
-  isToolLifecycleItemType,
-  ThreadId,
-  type ThreadTokenUsageSnapshot,
-  TurnId,
-  type OrchestrationCheckpointSummary,
   type OrchestrationProposedPlan,
+  type OrchestrationProposedPlanId,
   type OrchestrationThread,
   type OrchestrationThreadActivity,
   type ProviderRuntimeEvent,
+  ThreadActivityAppendCommand,
+  ThreadId,
+  ThreadMessageAssistantCompleteCommand,
+  ThreadMessageAssistantDeltaCommand,
+  ThreadMetaUpdateCommand,
+  ThreadProposedPlanUpsertCommand,
+  ThreadSessionSetCommand,
+  type ThreadTokenUsageSnapshot,
+  ThreadTurnDiffCompleteCommand,
+  TurnId,
 } from "@t3tools/contracts";
 import * as Cache from "effect/Cache";
 import * as Cause from "effect/Cause";
@@ -951,15 +958,17 @@ const make = Effect.gen(function* () {
         return false;
       }
 
-      yield* orchestrationEngine.dispatch({
-        type: "thread.message.assistant.delta",
-        commandId: yield* providerCommandId(input.event, input.commandTag),
-        threadId: input.threadId,
-        messageId: input.messageId,
-        delta: bufferedText,
-        ...(input.turnId ? { turnId: input.turnId } : {}),
-        createdAt: input.createdAt,
-      });
+      yield* orchestrationEngine.dispatch(
+        ThreadMessageAssistantDeltaCommand.make({
+          type: "thread.message.assistant.delta",
+          commandId: yield* providerCommandId(input.event, input.commandTag),
+          threadId: input.threadId,
+          messageId: input.messageId,
+          delta: bufferedText,
+          ...(input.turnId ? { turnId: input.turnId } : {}),
+          createdAt: input.createdAt,
+        }),
+      );
       return true;
     });
 
@@ -1018,26 +1027,30 @@ const make = Effect.gen(function* () {
       const hasRenderableText = hasRenderableAssistantText(text);
 
       if (hasRenderableText) {
-        yield* orchestrationEngine.dispatch({
-          type: "thread.message.assistant.delta",
-          commandId: yield* providerCommandId(input.event, input.finalDeltaCommandTag),
-          threadId: input.threadId,
-          messageId: input.messageId,
-          delta: text,
-          ...(input.turnId ? { turnId: input.turnId } : {}),
-          createdAt: input.createdAt,
-        });
+        yield* orchestrationEngine.dispatch(
+          ThreadMessageAssistantDeltaCommand.make({
+            type: "thread.message.assistant.delta",
+            commandId: yield* providerCommandId(input.event, input.finalDeltaCommandTag),
+            threadId: input.threadId,
+            messageId: input.messageId,
+            delta: text,
+            ...(input.turnId ? { turnId: input.turnId } : {}),
+            createdAt: input.createdAt,
+          }),
+        );
       }
 
       if (input.hasProjectedMessage || hasRenderableText) {
-        yield* orchestrationEngine.dispatch({
-          type: "thread.message.assistant.complete",
-          commandId: yield* providerCommandId(input.event, input.commandTag),
-          threadId: input.threadId,
-          messageId: input.messageId,
-          ...(input.turnId ? { turnId: input.turnId } : {}),
-          createdAt: input.createdAt,
-        });
+        yield* orchestrationEngine.dispatch(
+          ThreadMessageAssistantCompleteCommand.make({
+            type: "thread.message.assistant.complete",
+            commandId: yield* providerCommandId(input.event, input.commandTag),
+            threadId: input.threadId,
+            messageId: input.messageId,
+            ...(input.turnId ? { turnId: input.turnId } : {}),
+            createdAt: input.createdAt,
+          }),
+        );
       }
       yield* clearAssistantMessageState(input.messageId);
     });
@@ -1106,21 +1119,23 @@ const make = Effect.gen(function* () {
       }
 
       const existingPlan = findProposedPlanById(input.threadProposedPlans, input.planId);
-      yield* orchestrationEngine.dispatch({
-        type: "thread.proposed-plan.upsert",
-        commandId: yield* providerCommandId(input.event, "proposed-plan-upsert"),
-        threadId: input.threadId,
-        proposedPlan: {
-          id: input.planId,
-          turnId: input.turnId ?? null,
-          planMarkdown,
-          implementedAt: existingPlan?.implementedAt ?? null,
-          implementationThreadId: existingPlan?.implementationThreadId ?? null,
-          createdAt: existingPlan?.createdAt ?? input.createdAt,
-          updatedAt: input.updatedAt,
-        },
-        createdAt: input.updatedAt,
-      });
+      yield* orchestrationEngine.dispatch(
+        ThreadProposedPlanUpsertCommand.make({
+          type: "thread.proposed-plan.upsert",
+          commandId: yield* providerCommandId(input.event, "proposed-plan-upsert"),
+          threadId: input.threadId,
+          proposedPlan: {
+            id: input.planId,
+            turnId: input.turnId ?? null,
+            planMarkdown,
+            implementedAt: existingPlan?.implementedAt ?? null,
+            implementationThreadId: existingPlan?.implementationThreadId ?? null,
+            createdAt: existingPlan?.createdAt ?? input.createdAt,
+            updatedAt: input.updatedAt,
+          },
+          createdAt: input.updatedAt,
+        }),
+      );
     });
 
   const finalizeBufferedProposedPlan = (input: {
@@ -1271,20 +1286,22 @@ const make = Effect.gen(function* () {
       }
 
       const commandUuid = yield* crypto.randomUUIDv4;
-      yield* orchestrationEngine.dispatch({
-        type: "thread.proposed-plan.upsert",
-        commandId: CommandId.make(
-          `provider:source-proposed-plan-implemented:${implementationThreadId}:${commandUuid}`,
-        ),
-        threadId: sourceThread.id,
-        proposedPlan: {
-          ...sourcePlan,
-          implementedAt,
-          implementationThreadId,
-          updatedAt: implementedAt,
-        },
-        createdAt: implementedAt,
-      });
+      yield* orchestrationEngine.dispatch(
+        ThreadProposedPlanUpsertCommand.make({
+          type: "thread.proposed-plan.upsert",
+          commandId: CommandId.make(
+            `provider:source-proposed-plan-implemented:${implementationThreadId}:${commandUuid}`,
+          ),
+          threadId: sourceThread.id,
+          proposedPlan: {
+            ...sourcePlan,
+            implementedAt,
+            implementationThreadId,
+            updatedAt: implementedAt,
+          },
+          createdAt: implementedAt,
+        }),
+      );
     },
   );
 
@@ -1430,24 +1447,26 @@ const make = Effect.gen(function* () {
             );
           }
 
-          yield* orchestrationEngine.dispatch({
-            type: "thread.session.set",
-            commandId: yield* providerCommandId(event, "thread-session-set"),
-            threadId: thread.id,
-            session: {
+          yield* orchestrationEngine.dispatch(
+            ThreadSessionSetCommand.make({
+              type: "thread.session.set",
+              commandId: yield* providerCommandId(event, "thread-session-set"),
               threadId: thread.id,
-              status,
-              providerName: event.provider,
-              ...(event.providerInstanceId !== undefined
-                ? { providerInstanceId: event.providerInstanceId }
-                : {}),
-              runtimeMode: thread.session?.runtimeMode ?? "full-access",
-              activeTurnId: nextActiveTurnId,
-              lastError,
-              updatedAt: now,
-            },
-            createdAt: now,
-          });
+              session: {
+                threadId: thread.id,
+                status,
+                providerName: event.provider,
+                ...(event.providerInstanceId !== undefined
+                  ? { providerInstanceId: event.providerInstanceId }
+                  : {}),
+                runtimeMode: thread.session?.runtimeMode ?? "full-access",
+                activeTurnId: nextActiveTurnId,
+                lastError,
+                updatedAt: now,
+              },
+              createdAt: now,
+            }),
+          );
         }
       }
 
@@ -1476,26 +1495,30 @@ const make = Effect.gen(function* () {
         if (assistantDeliveryMode === "buffered") {
           const spillChunk = yield* appendBufferedAssistantText(assistantMessageId, assistantDelta);
           if (spillChunk.length > 0) {
-            yield* orchestrationEngine.dispatch({
-              type: "thread.message.assistant.delta",
-              commandId: yield* providerCommandId(event, "assistant-delta-buffer-spill"),
-              threadId: thread.id,
-              messageId: assistantMessageId,
-              delta: spillChunk,
-              ...(turnId ? { turnId } : {}),
-              createdAt: now,
-            });
+            yield* orchestrationEngine.dispatch(
+              ThreadMessageAssistantDeltaCommand.make({
+                type: "thread.message.assistant.delta",
+                commandId: yield* providerCommandId(event, "assistant-delta-buffer-spill"),
+                threadId: thread.id,
+                messageId: assistantMessageId,
+                delta: spillChunk,
+                ...(turnId ? { turnId } : {}),
+                createdAt: now,
+              }),
+            );
           }
         } else {
-          yield* orchestrationEngine.dispatch({
-            type: "thread.message.assistant.delta",
-            commandId: yield* providerCommandId(event, "assistant-delta"),
-            threadId: thread.id,
-            messageId: assistantMessageId,
-            delta: assistantDelta,
-            ...(turnId ? { turnId } : {}),
-            createdAt: now,
-          });
+          yield* orchestrationEngine.dispatch(
+            ThreadMessageAssistantDeltaCommand.make({
+              type: "thread.message.assistant.delta",
+              commandId: yield* providerCommandId(event, "assistant-delta"),
+              threadId: thread.id,
+              messageId: assistantMessageId,
+              delta: assistantDelta,
+              ...(turnId ? { turnId } : {}),
+              createdAt: now,
+            }),
+          );
         }
       }
 
@@ -1680,34 +1703,38 @@ const make = Effect.gen(function* () {
           : activeTurnId === null || eventTurnId === undefined || sameId(activeTurnId, eventTurnId);
 
         if (shouldApplyRuntimeError) {
-          yield* orchestrationEngine.dispatch({
-            type: "thread.session.set",
-            commandId: yield* providerCommandId(event, "runtime-error-session-set"),
-            threadId: thread.id,
-            session: {
+          yield* orchestrationEngine.dispatch(
+            ThreadSessionSetCommand.make({
+              type: "thread.session.set",
+              commandId: yield* providerCommandId(event, "runtime-error-session-set"),
               threadId: thread.id,
-              status: "error",
-              providerName: event.provider,
-              ...(event.providerInstanceId !== undefined
-                ? { providerInstanceId: event.providerInstanceId }
-                : {}),
-              runtimeMode: thread.session?.runtimeMode ?? "full-access",
-              activeTurnId: eventTurnId ?? null,
-              lastError: runtimeErrorMessage,
-              updatedAt: now,
-            },
-            createdAt: now,
-          });
+              session: {
+                threadId: thread.id,
+                status: "error",
+                providerName: event.provider,
+                ...(event.providerInstanceId !== undefined
+                  ? { providerInstanceId: event.providerInstanceId }
+                  : {}),
+                runtimeMode: thread.session?.runtimeMode ?? "full-access",
+                activeTurnId: eventTurnId ?? null,
+                lastError: runtimeErrorMessage,
+                updatedAt: now,
+              },
+              createdAt: now,
+            }),
+          );
         }
       }
 
       if (event.type === "thread.metadata.updated" && event.payload.name) {
-        yield* orchestrationEngine.dispatch({
-          type: "thread.meta.update",
-          commandId: yield* providerCommandId(event, "thread-meta-update"),
-          threadId: thread.id,
-          title: event.payload.name,
-        });
+        yield* orchestrationEngine.dispatch(
+          ThreadMetaUpdateCommand.make({
+            type: "thread.meta.update",
+            commandId: yield* providerCommandId(event, "thread-meta-update"),
+            threadId: thread.id,
+            title: event.payload.name,
+          }),
+        );
       }
 
       if (event.type === "turn.diff.updated") {
@@ -1730,19 +1757,21 @@ const make = Effect.gen(function* () {
             const assistantMessageId = MessageId.make(
               `assistant:${event.itemId ?? event.turnId ?? event.eventId}`,
             );
-            yield* orchestrationEngine.dispatch({
-              type: "thread.turn.diff.complete",
-              commandId: yield* providerCommandId(event, "thread-turn-diff-complete"),
-              threadId: thread.id,
-              turnId,
-              completedAt: now,
-              checkpointRef: CheckpointRef.make(`provider-diff:${event.eventId}`),
-              status: "missing",
-              files: [],
-              assistantMessageId,
-              checkpointTurnCount: maxCheckpointTurnCount(checkpointContext.checkpoints) + 1,
-              createdAt: now,
-            });
+            yield* orchestrationEngine.dispatch(
+              ThreadTurnDiffCompleteCommand.make({
+                type: "thread.turn.diff.complete",
+                commandId: yield* providerCommandId(event, "thread-turn-diff-complete"),
+                threadId: thread.id,
+                turnId,
+                completedAt: now,
+                checkpointRef: CheckpointRef.make(`provider-diff:${event.eventId}`),
+                status: "missing",
+                files: [],
+                assistantMessageId,
+                checkpointTurnCount: maxCheckpointTurnCount(checkpointContext.checkpoints) + 1,
+                createdAt: now,
+              }),
+            );
           }
         }
       }
@@ -1766,13 +1795,15 @@ const make = Effect.gen(function* () {
       yield* Effect.forEach(activities, (activity) =>
         providerCommandId(event, "thread-activity-append").pipe(
           Effect.flatMap((commandId) =>
-            orchestrationEngine.dispatch({
-              type: "thread.activity.append",
-              commandId,
-              threadId: thread.id,
-              activity,
-              createdAt: activity.createdAt,
-            }),
+            orchestrationEngine.dispatch(
+              ThreadActivityAppendCommand.make({
+                type: "thread.activity.append",
+                commandId,
+                threadId: thread.id,
+                activity,
+                createdAt: activity.createdAt,
+              }),
+            ),
           ),
         ),
       ).pipe(Effect.asVoid);

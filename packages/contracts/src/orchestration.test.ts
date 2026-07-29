@@ -14,17 +14,21 @@ import {
   ProjectCreatedPayload,
   ProjectMetaUpdatedPayload,
   OrchestrationProposedPlan,
+  OrchestrationProposedPlanId,
   OrchestrationSession,
   OrchestrationThread,
   OrchestrationThreadShell,
   ProjectCreateCommand,
+  SourceProposedPlanReference,
   ThreadMetaUpdatedPayload,
   ThreadTurnStartCommand,
   ThreadCreatedPayload,
   ThreadTurnDiff,
   ThreadTurnStartRequestedPayload,
 } from "./orchestration.ts";
+import { ThreadId } from "./baseSchemas.ts";
 import { ProviderInstanceId } from "./providerInstance.ts";
+import { ProviderOptionSelection } from "./model.ts";
 
 const decodeTurnDiffInput = Schema.decodeUnknownEffect(OrchestrationGetTurnDiffInput);
 const decodeFullThreadDiffInput = Schema.decodeUnknownEffect(OrchestrationGetFullThreadDiffInput);
@@ -557,8 +561,8 @@ it.effect("normalizes legacy object-shaped modelSelection.options on decode", ()
 
     assert.strictEqual(parsed.modelSelection.instanceId, ProviderInstanceId.make("claudeAgent"));
     assert.deepStrictEqual(parsed.modelSelection.options, [
-      { id: "effort", value: "max" },
-      { id: "fastMode", value: true },
+      ProviderOptionSelection.make({ id: "effort", value: "max" }),
+      ProviderOptionSelection.make({ id: "fastMode", value: true }),
     ]);
   }),
 );
@@ -580,7 +584,7 @@ it.effect("normalizes legacy object-shaped defaultModelSelection.options on deco
     });
 
     assert.deepStrictEqual(parsed.defaultModelSelection?.options, [
-      { id: "reasoningEffort", value: "low" },
+      ProviderOptionSelection.make({ id: "reasoningEffort", value: "low" }),
     ]);
   }),
 );
@@ -646,10 +650,13 @@ it.effect("accepts a source proposed plan reference in thread.turn.start", () =>
       },
       createdAt: "2026-01-01T00:00:00.000Z",
     });
-    assert.deepStrictEqual(parsed.sourceProposedPlan, {
-      threadId: "thread-1",
-      planId: "plan-1",
-    });
+    assert.deepStrictEqual(
+      parsed.sourceProposedPlan,
+      SourceProposedPlanReference.make({
+        threadId: ThreadId.make("thread-1"),
+        planId: OrchestrationProposedPlanId.make("plan-1"),
+      }),
+    );
   }),
 );
 
@@ -680,10 +687,13 @@ it.effect("decodes thread.turn-start-requested source proposed plan metadata whe
       },
       createdAt: "2026-01-01T00:00:00.000Z",
     });
-    assert.deepStrictEqual(parsed.sourceProposedPlan, {
-      threadId: "thread-1",
-      planId: "plan-1",
-    });
+    assert.deepStrictEqual(
+      parsed.sourceProposedPlan,
+      SourceProposedPlanReference.make({
+        threadId: ThreadId.make("thread-1"),
+        planId: OrchestrationProposedPlanId.make("plan-1"),
+      }),
+    );
   }),
 );
 
@@ -713,10 +723,13 @@ it.effect("decodes latest turn source proposed plan metadata when present", () =
         planId: "plan-1",
       },
     });
-    assert.deepStrictEqual(parsed.sourceProposedPlan, {
-      threadId: "thread-1",
-      planId: "plan-1",
-    });
+    assert.deepStrictEqual(
+      parsed.sourceProposedPlan,
+      SourceProposedPlanReference.make({
+        threadId: ThreadId.make("thread-1"),
+        planId: OrchestrationProposedPlanId.make("plan-1"),
+      }),
+    );
   }),
 );
 
@@ -792,7 +805,9 @@ it.effect("ModelSelection migrates legacy `provider` field to `instanceId`", () 
     });
     assert.strictEqual(parsed.instanceId, ProviderInstanceId.make("codex"));
     assert.strictEqual(parsed.model, "gpt-5-codex");
-    assert.deepStrictEqual(parsed.options, [{ id: "reasoningEffort", value: "high" }]);
+    assert.deepStrictEqual(parsed.options, [
+      ProviderOptionSelection.make({ id: "reasoningEffort", value: "high" }),
+    ]);
   }),
 );
 

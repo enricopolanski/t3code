@@ -1,12 +1,30 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import {
+  ApprovalRequestId,
   CheckpointRef,
   EventId,
   MessageId,
+  OrchestrationEventMetadata,
+  ProjectCreatedPayload,
   ProjectId,
   ProviderInstanceId,
+  ThreadActivityAppendedPayload,
+  ThreadApprovalResponseRequestedPayload,
+  ThreadArchivedPayload,
+  ThreadCreatedPayload,
+  ThreadDeletedPayload,
   ThreadId,
+  ThreadMessageSentPayload,
+  ThreadMetaUpdatedPayload,
+  ThreadProposedPlanUpsertedPayload,
+  ThreadRevertedPayload,
+  ThreadSessionSetPayload,
+  ThreadSessionStopRequestedPayload,
+  ThreadSettledPayload,
+  ThreadTurnDiffCompletedPayload,
+  ThreadUnarchivedPayload,
+  ThreadUnsettledPayload,
   TurnId,
 } from "@t3tools/contracts";
 import type { OrchestrationThread } from "@t3tools/contracts";
@@ -18,7 +36,7 @@ const baseEventFields = {
   commandId: null,
   causationEventId: null,
   correlationId: null,
-  metadata: {},
+  metadata: OrchestrationEventMetadata.make({}),
 } as const;
 
 const baseThread: OrchestrationThread = {
@@ -54,7 +72,7 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "project",
         aggregateId: ProjectId.make("project-1"),
         type: "project.created",
-        payload: {
+        payload: ProjectCreatedPayload.make({
           projectId: ProjectId.make("project-1"),
           title: "T3 Code",
           workspaceRoot: "/repo",
@@ -63,8 +81,7 @@ describe("applyThreadDetailEvent", () => {
           scripts: [],
           createdAt: "2026-04-01T01:00:00.000Z",
           updatedAt: "2026-04-01T01:00:00.000Z",
-          deletedAt: null,
-        },
+        }),
       } as any);
       expect(result.kind).toBe("unchanged");
     });
@@ -79,7 +96,7 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-2"),
         type: "thread.created",
-        payload: {
+        payload: ThreadCreatedPayload.make({
           threadId: ThreadId.make("thread-2"),
           projectId: ProjectId.make("project-1"),
           title: "New Thread",
@@ -90,7 +107,7 @@ describe("applyThreadDetailEvent", () => {
           worktreePath: null,
           createdAt: "2026-04-01T01:00:00.000Z",
           updatedAt: "2026-04-01T01:00:00.000Z",
-        },
+        }),
       });
 
       expect(result.kind).toBe("updated");
@@ -113,10 +130,10 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.deleted",
-        payload: {
+        payload: ThreadDeletedPayload.make({
           threadId: ThreadId.make("thread-1"),
           deletedAt: "2026-04-01T02:00:00.000Z",
-        },
+        }),
       });
       expect(result.kind).toBe("deleted");
     });
@@ -131,11 +148,11 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.archived",
-        payload: {
+        payload: ThreadArchivedPayload.make({
           threadId: ThreadId.make("thread-1"),
           archivedAt: "2026-04-01T03:00:00.000Z",
           updatedAt: "2026-04-01T03:00:00.000Z",
-        },
+        }),
       });
 
       expect(result.kind).toBe("updated");
@@ -153,10 +170,10 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.unarchived",
-        payload: {
+        payload: ThreadUnarchivedPayload.make({
           threadId: ThreadId.make("thread-1"),
           updatedAt: "2026-04-01T04:00:00.000Z",
-        },
+        }),
       });
 
       expect(result.kind).toBe("updated");
@@ -176,11 +193,11 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.settled",
-        payload: {
+        payload: ThreadSettledPayload.make({
           threadId: ThreadId.make("thread-1"),
           settledAt,
           updatedAt: settledAt,
-        },
+        }),
       });
 
       expect(result.kind).toBe("updated");
@@ -207,11 +224,11 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.unsettled",
-        payload: {
+        payload: ThreadUnsettledPayload.make({
           threadId: ThreadId.make("thread-1"),
           reason,
           updatedAt,
-        },
+        }),
       });
 
       expect(result.kind).toBe("updated");
@@ -231,12 +248,12 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.meta-updated",
-        payload: {
+        payload: ThreadMetaUpdatedPayload.make({
           threadId: ThreadId.make("thread-1"),
           title: "Updated Title",
           branch: "feature/demo",
           updatedAt: "2026-04-01T05:00:00.000Z",
-        },
+        }),
       });
 
       expect(result.kind).toBe("updated");
@@ -258,7 +275,7 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.message-sent",
-        payload: {
+        payload: ThreadMessageSentPayload.make({
           threadId: ThreadId.make("thread-1"),
           messageId: MessageId.make("msg-1"),
           role: "user",
@@ -267,7 +284,7 @@ describe("applyThreadDetailEvent", () => {
           streaming: false,
           createdAt: "2026-04-01T06:00:00.000Z",
           updatedAt: "2026-04-01T06:00:00.000Z",
-        },
+        }),
       });
 
       expect(result.kind).toBe("updated");
@@ -300,7 +317,7 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.message-sent",
-        payload: {
+        payload: ThreadMessageSentPayload.make({
           threadId: ThreadId.make("thread-1"),
           messageId: MessageId.make("msg-2"),
           role: "assistant",
@@ -309,7 +326,7 @@ describe("applyThreadDetailEvent", () => {
           streaming: true,
           createdAt: "2026-04-01T06:00:00.000Z",
           updatedAt: "2026-04-01T06:01:00.000Z",
-        },
+        }),
       });
 
       expect(result.kind).toBe("updated");
@@ -327,7 +344,7 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.message-sent",
-        payload: {
+        payload: ThreadMessageSentPayload.make({
           threadId: ThreadId.make("thread-1"),
           messageId: MessageId.make("msg-3"),
           role: "assistant",
@@ -336,7 +353,7 @@ describe("applyThreadDetailEvent", () => {
           streaming: false,
           createdAt: "2026-04-01T07:00:00.000Z",
           updatedAt: "2026-04-01T07:00:00.000Z",
-        },
+        }),
       });
 
       expect(result.kind).toBe("updated");
@@ -376,7 +393,7 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.message-sent",
-        payload: {
+        payload: ThreadMessageSentPayload.make({
           threadId: ThreadId.make("thread-1"),
           messageId: MessageId.make("msg-3"),
           role: "assistant",
@@ -385,7 +402,7 @@ describe("applyThreadDetailEvent", () => {
           streaming: false,
           createdAt: "2026-04-01T07:00:00.000Z",
           updatedAt: "2026-04-01T07:00:00.000Z",
-        },
+        }),
       });
 
       expect(result.kind).toBe("updated");
@@ -417,7 +434,7 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.session-set",
-        payload: {
+        payload: ThreadSessionSetPayload.make({
           threadId: ThreadId.make("thread-1"),
           session: {
             threadId: ThreadId.make("thread-1"),
@@ -428,7 +445,7 @@ describe("applyThreadDetailEvent", () => {
             lastError: null,
             updatedAt: "2026-04-01T08:00:00.000Z",
           },
-        },
+        }),
       });
 
       expect(result.kind).toBe("updated");
@@ -446,7 +463,7 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.session-set",
-        payload: {
+        payload: ThreadSessionSetPayload.make({
           threadId: ThreadId.make("thread-1"),
           session: {
             threadId: ThreadId.make("thread-1"),
@@ -457,7 +474,7 @@ describe("applyThreadDetailEvent", () => {
             lastError: null,
             updatedAt: "2026-04-01T08:00:00.000Z",
           },
-        },
+        }),
       });
 
       expect(result.kind).toBe("updated");
@@ -491,10 +508,10 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.session-stop-requested",
-        payload: {
+        payload: ThreadSessionStopRequestedPayload.make({
           threadId: ThreadId.make("thread-1"),
           createdAt: "2026-04-01T09:00:00.000Z",
-        },
+        }),
       });
 
       expect(result.kind).toBe("updated");
@@ -512,10 +529,10 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.session-stop-requested",
-        payload: {
+        payload: ThreadSessionStopRequestedPayload.make({
           threadId: ThreadId.make("thread-1"),
           createdAt: "2026-04-01T09:00:00.000Z",
-        },
+        }),
       });
       expect(result.kind).toBe("unchanged");
     });
@@ -530,7 +547,7 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.proposed-plan-upserted",
-        payload: {
+        payload: ThreadProposedPlanUpsertedPayload.make({
           threadId: ThreadId.make("thread-1"),
           proposedPlan: {
             id: "plan-1",
@@ -541,7 +558,7 @@ describe("applyThreadDetailEvent", () => {
             createdAt: "2026-04-01T10:00:00.000Z",
             updatedAt: "2026-04-01T10:00:00.000Z",
           },
-        },
+        }),
       });
 
       expect(result.kind).toBe("updated");
@@ -561,7 +578,7 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.activity-appended",
-        payload: {
+        payload: ThreadActivityAppendedPayload.make({
           threadId: ThreadId.make("thread-1"),
           activity: {
             id: EventId.make("activity-1"),
@@ -572,7 +589,7 @@ describe("applyThreadDetailEvent", () => {
             turnId: TurnId.make("turn-1"),
             createdAt: "2026-04-01T11:00:00.000Z",
           },
-        },
+        }),
       });
 
       expect(result.kind).toBe("updated");
@@ -602,7 +619,7 @@ describe("applyThreadDetailEvent", () => {
           aggregateKind: "thread",
           aggregateId: ThreadId.make("thread-1"),
           type: "thread.activity-appended",
-          payload: {
+          payload: ThreadActivityAppendedPayload.make({
             threadId: ThreadId.make("thread-1"),
             activity: {
               id: EventId.make("activity-129"),
@@ -614,7 +631,7 @@ describe("applyThreadDetailEvent", () => {
               sequence: 129,
               createdAt: "2026-04-01T11:01:00.000Z",
             },
-          },
+          }),
         },
       );
 
@@ -635,7 +652,7 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.turn-diff-completed",
-        payload: {
+        payload: ThreadTurnDiffCompletedPayload.make({
           threadId: ThreadId.make("thread-1"),
           turnId: TurnId.make("turn-1"),
           checkpointTurnCount: 1,
@@ -644,7 +661,7 @@ describe("applyThreadDetailEvent", () => {
           files: [],
           assistantMessageId: MessageId.make("msg-3"),
           completedAt: "2026-04-01T12:00:00.000Z",
-        },
+        }),
       });
 
       expect(result.kind).toBe("updated");
@@ -718,10 +735,10 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.reverted",
-        payload: {
+        payload: ThreadRevertedPayload.make({
           threadId: ThreadId.make("thread-1"),
           turnCount: 1,
-        },
+        }),
       });
 
       expect(result.kind).toBe("updated");
@@ -745,12 +762,12 @@ describe("applyThreadDetailEvent", () => {
         aggregateKind: "thread",
         aggregateId: ThreadId.make("thread-1"),
         type: "thread.approval-response-requested",
-        payload: {
+        payload: ThreadApprovalResponseRequestedPayload.make({
           threadId: ThreadId.make("thread-1"),
-          requestId: "req-1",
-          decision: "approve",
+          requestId: ApprovalRequestId.make("req-1"),
+          decision: "accept",
           createdAt: "2026-04-01T13:00:00.000Z",
-        },
+        }),
       } as any);
       expect(result.kind).toBe("unchanged");
     });

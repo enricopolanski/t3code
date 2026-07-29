@@ -2,13 +2,16 @@ import {
   EnvironmentId,
   EventId,
   ORCHESTRATION_WS_METHODS,
-  ProjectId,
-  ProviderInstanceId,
-  ThreadId,
-  TurnId,
+  OrchestrationEventMetadata,
   type OrchestrationThread,
   type OrchestrationThreadDetailSnapshot,
   type OrchestrationThreadStreamItem,
+  ProjectId,
+  ProviderInstanceId,
+  ThreadDeletedPayload,
+  ThreadId,
+  ThreadMetaUpdatedPayload,
+  TurnId,
 } from "@t3tools/contracts";
 import { describe, expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
@@ -280,15 +283,15 @@ const titleUpdated = (title: string, sequence = 2): OrchestrationThreadStreamIte
     commandId: null,
     causationEventId: null,
     correlationId: null,
-    metadata: {},
+    metadata: OrchestrationEventMetadata.make({}),
     aggregateKind: "thread",
     aggregateId: THREAD_ID,
     type: "thread.meta-updated",
-    payload: {
+    payload: ThreadMetaUpdatedPayload.make({
       threadId: THREAD_ID,
       title,
       updatedAt: "2026-04-01T01:00:00.000Z",
-    },
+    }),
   },
 });
 
@@ -301,14 +304,14 @@ const deleted = (): OrchestrationThreadStreamItem => ({
     commandId: null,
     causationEventId: null,
     correlationId: null,
-    metadata: {},
+    metadata: OrchestrationEventMetadata.make({}),
     aggregateKind: "thread",
     aggregateId: THREAD_ID,
     type: "thread.deleted",
-    payload: {
+    payload: ThreadDeletedPayload.make({
       threadId: THREAD_ID,
       deletedAt: "2026-04-01T02:00:00.000Z",
-    },
+    }),
   },
 });
 

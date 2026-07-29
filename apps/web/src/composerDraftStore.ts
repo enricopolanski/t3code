@@ -745,7 +745,7 @@ function coerceProviderOptionSelections(
       const optionValue = record.value;
       if (typeof id !== "string" || id.length === 0) continue;
       if (typeof optionValue === "string" || typeof optionValue === "boolean") {
-        out.push({ id, value: optionValue });
+        out.push(ProviderOptionSelection.make({ id, value: optionValue }));
       }
     }
     return out.length > 0 ? out : undefined;
@@ -755,7 +755,7 @@ function coerceProviderOptionSelections(
     const out: ProviderOptionSelection[] = [];
     for (const [id, raw] of Object.entries(record)) {
       if (typeof raw === "string" || typeof raw === "boolean") {
-        out.push({ id, value: raw });
+        out.push(ProviderOptionSelection.make({ id, value: raw }));
       }
     }
     return out.length > 0 ? out : undefined;
@@ -788,13 +788,15 @@ function normalizeProviderModelOptions(
   if (provider === "codex" && legacy) {
     const codexExtras: ProviderOptionSelection[] = [];
     if (typeof legacy.effort === "string" && legacy.effort.length > 0) {
-      codexExtras.push({ id: "reasoningEffort", value: legacy.effort });
+      codexExtras.push(
+        ProviderOptionSelection.make({ id: "reasoningEffort", value: legacy.effort }),
+      );
     }
     const fastMode =
       legacy.codexFastMode === true ||
       (typeof legacy.serviceTier === "string" && legacy.serviceTier === "fast");
     if (fastMode) {
-      codexExtras.push({ id: "fastMode", value: true });
+      codexExtras.push(ProviderOptionSelection.make({ id: "fastMode", value: true }));
     }
     if (codexExtras.length > 0) {
       const existing = result.codex ?? [];

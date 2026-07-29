@@ -1,13 +1,16 @@
 import {
-  CommandId,
   type CheckpointRef,
+  CommandId,
   EventId,
   MessageId,
-  type ProjectId,
-  ThreadId,
-  TurnId,
   type OrchestrationEvent,
+  type ProjectId,
   type ProviderRuntimeEvent,
+  ThreadActivityAppendCommand,
+  ThreadId,
+  ThreadRevertCompleteCommand,
+  ThreadTurnDiffCompleteCommand,
+  TurnId,
 } from "@t3tools/contracts";
 import * as Cause from "effect/Cause";
 import * as Crypto from "effect/Crypto";
@@ -102,24 +105,26 @@ const make = Effect.gen(function* () {
       activityId: serverEventId,
     }).pipe(
       Effect.flatMap(({ commandId, activityId }) =>
-        orchestrationEngine.dispatch({
-          type: "thread.activity.append",
-          commandId,
-          threadId: input.threadId,
-          activity: {
-            id: activityId,
-            tone: "error",
-            kind: "checkpoint.revert.failed",
-            summary: "Checkpoint revert failed",
-            payload: {
-              turnCount: input.turnCount,
-              detail: input.detail,
+        orchestrationEngine.dispatch(
+          ThreadActivityAppendCommand.make({
+            type: "thread.activity.append",
+            commandId,
+            threadId: input.threadId,
+            activity: {
+              id: activityId,
+              tone: "error",
+              kind: "checkpoint.revert.failed",
+              summary: "Checkpoint revert failed",
+              payload: {
+                turnCount: input.turnCount,
+                detail: input.detail,
+              },
+              turnId: null,
+              createdAt: input.createdAt,
             },
-            turnId: null,
             createdAt: input.createdAt,
-          },
-          createdAt: input.createdAt,
-        }),
+          }),
+        ),
       ),
     );
 
@@ -134,23 +139,25 @@ const make = Effect.gen(function* () {
       activityId: serverEventId,
     }).pipe(
       Effect.flatMap(({ commandId, activityId }) =>
-        orchestrationEngine.dispatch({
-          type: "thread.activity.append",
-          commandId,
-          threadId: input.threadId,
-          activity: {
-            id: activityId,
-            tone: "error",
-            kind: "checkpoint.capture.failed",
-            summary: "Checkpoint capture failed",
-            payload: {
-              detail: input.detail,
+        orchestrationEngine.dispatch(
+          ThreadActivityAppendCommand.make({
+            type: "thread.activity.append",
+            commandId,
+            threadId: input.threadId,
+            activity: {
+              id: activityId,
+              tone: "error",
+              kind: "checkpoint.capture.failed",
+              summary: "Checkpoint capture failed",
+              payload: {
+                detail: input.detail,
+              },
+              turnId: input.turnId,
+              createdAt: input.createdAt,
             },
-            turnId: input.turnId,
             createdAt: input.createdAt,
-          },
-          createdAt: input.createdAt,
-        }),
+          }),
+        ),
       ),
     );
 
@@ -303,19 +310,21 @@ const make = Effect.gen(function* () {
         .find((entry) => entry.role === "assistant" && entry.turnId === input.turnId)?.id ??
       MessageId.make(`assistant:${input.turnId}`);
 
-    yield* orchestrationEngine.dispatch({
-      type: "thread.turn.diff.complete",
-      commandId: yield* serverCommandId("checkpoint-turn-diff-complete"),
-      threadId: input.threadId,
-      turnId: input.turnId,
-      completedAt: input.createdAt,
-      checkpointRef: targetCheckpointRef,
-      status: input.status,
-      files,
-      assistantMessageId,
-      checkpointTurnCount: input.turnCount,
-      createdAt: input.createdAt,
-    });
+    yield* orchestrationEngine.dispatch(
+      ThreadTurnDiffCompleteCommand.make({
+        type: "thread.turn.diff.complete",
+        commandId: yield* serverCommandId("checkpoint-turn-diff-complete"),
+        threadId: input.threadId,
+        turnId: input.turnId,
+        completedAt: input.createdAt,
+        checkpointRef: targetCheckpointRef,
+        status: input.status,
+        files,
+        assistantMessageId,
+        checkpointTurnCount: input.turnCount,
+        createdAt: input.createdAt,
+      }),
+    );
     yield* receiptBus.publish(
       new CheckpointDiffFinalizedReceipt({
         type: "checkpoint.diff.finalized",
@@ -337,24 +346,26 @@ const make = Effect.gen(function* () {
       }),
     );
 
-    yield* orchestrationEngine.dispatch({
-      type: "thread.activity.append",
-      commandId: yield* serverCommandId("checkpoint-captured-activity"),
-      threadId: input.threadId,
-      activity: {
-        id: EventId.make(yield* randomUUID),
-        tone: "info",
-        kind: "checkpoint.captured",
-        summary: "Checkpoint captured",
-        payload: {
-          turnCount: input.turnCount,
-          status: input.status,
+    yield* orchestrationEngine.dispatch(
+      ThreadActivityAppendCommand.make({
+        type: "thread.activity.append",
+        commandId: yield* serverCommandId("checkpoint-captured-activity"),
+        threadId: input.threadId,
+        activity: {
+          id: EventId.make(yield* randomUUID),
+          tone: "info",
+          kind: "checkpoint.captured",
+          summary: "Checkpoint captured",
+          payload: {
+            turnCount: input.turnCount,
+            status: input.status,
+          },
+          turnId: input.turnId,
+          createdAt: input.createdAt,
         },
-        turnId: input.turnId,
         createdAt: input.createdAt,
-      },
-      createdAt: input.createdAt,
-    });
+      }),
+    );
   });
 
   // Captures a real git checkpoint when a turn completes via a runtime event.
@@ -730,13 +741,15 @@ const make = Effect.gen(function* () {
     }
 
     yield* orchestrationEngine
-      .dispatch({
-        type: "thread.revert.complete",
-        commandId: yield* serverCommandId("checkpoint-revert-complete"),
-        threadId: event.payload.threadId,
-        turnCount: event.payload.turnCount,
-        createdAt: now,
-      })
+      .dispatch(
+        ThreadRevertCompleteCommand.make({
+          type: "thread.revert.complete",
+          commandId: yield* serverCommandId("checkpoint-revert-complete"),
+          threadId: event.payload.threadId,
+          turnCount: event.payload.turnCount,
+          createdAt: now,
+        }),
+      )
       .pipe(
         Effect.catch((error) =>
           appendRevertFailureActivity({

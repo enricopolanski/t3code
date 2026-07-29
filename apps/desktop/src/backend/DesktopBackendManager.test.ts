@@ -11,7 +11,6 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Queue from "effect/Queue";
 import * as Ref from "effect/Ref";
-import * as Schema from "effect/Schema";
 import * as Sink from "effect/Sink";
 import * as Scope from "effect/Scope";
 import * as Stream from "effect/Stream";
@@ -22,17 +21,13 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import * as DesktopBackendManager from "./DesktopBackendManager.ts";
 import * as DesktopObservability from "../app/DesktopObservability.ts";
 
-const decodeDesktopBackendBootstrap = Schema.decodeEffect(
-  Schema.fromJsonString(DesktopBackendBootstrap),
-);
-
 const baseConfig: DesktopBackendManager.DesktopBackendStartConfig = {
   executablePath: "/electron",
   args: ["/server/bin.mjs", "--bootstrap-fd", "3"],
   entryPath: "/server/bin.mjs",
   cwd: "/server",
   env: { ELECTRON_RUN_AS_NODE: "1" },
-  bootstrap: {
+  bootstrap: DesktopBackendBootstrap.make({
     mode: "desktop",
     noBrowser: true,
     port: 3773,
@@ -41,7 +36,7 @@ const baseConfig: DesktopBackendManager.DesktopBackendStartConfig = {
     desktopBootstrapToken: "token",
     tailscaleServeEnabled: false,
     tailscaleServePort: 443,
-  },
+  }),
   bootstrapDelivery: "fd3",
   extendEnv: true,
   httpBaseUrl: new URL("http://127.0.0.1:3773"),
@@ -49,11 +44,11 @@ const baseConfig: DesktopBackendManager.DesktopBackendStartConfig = {
   preflightFailure: Option.none(),
 };
 
-const configWithObservability: DesktopBackendBootstrapValue = {
+const configWithObservability: DesktopBackendBootstrapValue = DesktopBackendBootstrap.make({
   ...baseConfig.bootstrap,
   tailscaleServeEnabled: true,
   otlpTracesUrl: "http://127.0.0.1:4318/v1/traces",
-};
+});
 
 function makeProcess(options?: {
   readonly stdout?: Stream.Stream<Uint8Array>;
@@ -99,7 +94,7 @@ const healthyHttpClientLayer = httpClientLayer((request) =>
 );
 
 function decodeBootstrap(raw: string) {
-  return decodeDesktopBackendBootstrap(raw);
+  return DesktopBackendBootstrap.decodeJson(raw);
 }
 
 interface MakeInstanceInput {

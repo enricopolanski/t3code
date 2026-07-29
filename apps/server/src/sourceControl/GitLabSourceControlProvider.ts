@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
-import { SourceControlProviderError, type ChangeRequest } from "@t3tools/contracts";
+import { SourceControlProviderError, ChangeRequest } from "@t3tools/contracts";
 
 import * as GitLabCli from "./GitLabCli.ts";
 import * as SourceControlProvider from "./SourceControlProvider.ts";
@@ -18,7 +18,7 @@ import {
 import { findAuthenticatedGitLabHost, parseGitLabAuthStatusHosts } from "./gitLabAuthStatus.ts";
 
 function toChangeRequest(summary: GitLabCli.GitLabMergeRequestSummary): ChangeRequest {
-  return {
+  return ChangeRequest.make({
     provider: "gitlab",
     number: summary.number,
     title: summary.title,
@@ -36,7 +36,7 @@ function toChangeRequest(summary: GitLabCli.GitLabMergeRequestSummary): ChangeRe
     ...(summary.headRepositoryOwnerLogin !== undefined
       ? { headRepositoryOwnerLogin: summary.headRepositoryOwnerLogin }
       : {}),
-  };
+  });
 }
 
 function parseGitLabAuth(input: SourceControlAuthProbeInput) {

@@ -1,11 +1,14 @@
 import {
   CommandId,
   MessageId,
-  ThreadId,
   type ModelSelection,
   type ProjectId,
   type ProviderInteractionMode,
   type RuntimeMode,
+  ThreadId,
+  ThreadTurnStartBootstrap,
+  ThreadTurnStartBootstrapCreateThread,
+  ThreadTurnStartBootstrapPrepareWorktree,
 } from "@t3tools/contracts";
 
 import { toUploadChatImageAttachments, type DraftComposerImageAttachment } from "./composerImages";
@@ -61,8 +64,8 @@ export function buildProjectThreadStartTurnInput(spec: ProjectThreadStartTurnSpe
     titleSeed: title,
     runtimeMode: spec.runtimeMode,
     interactionMode: spec.interactionMode,
-    bootstrap: {
-      createThread: {
+    bootstrap: ThreadTurnStartBootstrap.make({
+      createThread: ThreadTurnStartBootstrapCreateThread.make({
         projectId: spec.projectId,
         title,
         modelSelection: spec.modelSelection,
@@ -71,19 +74,19 @@ export function buildProjectThreadStartTurnInput(spec: ProjectThreadStartTurnSpe
         branch: spec.branch,
         worktreePath: isWorktree ? null : spec.worktreePath,
         createdAt: spec.createdAt,
-      },
+      }),
       ...(isWorktree
         ? {
-            prepareWorktree: {
+            prepareWorktree: ThreadTurnStartBootstrapPrepareWorktree.make({
               projectCwd: spec.projectCwd,
               baseBranch: spec.branch!,
               branch: spec.worktreeBranchName,
               ...(spec.startFromOrigin ? { startFromOrigin: true } : {}),
-            },
+            }),
             runSetupScript: true,
           }
         : {}),
-    },
+    }),
     createdAt: spec.createdAt,
   };
 }

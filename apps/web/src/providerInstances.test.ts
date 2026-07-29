@@ -1,4 +1,9 @@
-import { ProviderDriverKind, ProviderInstanceId, type ServerProvider } from "@t3tools/contracts";
+import {
+  ProviderDriverKind,
+  ProviderInstanceConfig,
+  ProviderInstanceId,
+  type ServerProvider,
+} from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 import {
   applyProviderInstanceSettings,
@@ -91,10 +96,10 @@ describe("applyProviderInstanceSettings", () => {
     ]);
     const [entry] = applyProviderInstanceSettings(entries, {
       providerInstances: {
-        [ProviderInstanceId.make("codex")]: {
+        [ProviderInstanceId.make("codex")]: ProviderInstanceConfig.make({
           driver: ProviderDriverKind.make("codex"),
           enabled: false,
-        },
+        }),
       },
       providers: {} as never,
     });

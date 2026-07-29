@@ -8,6 +8,8 @@ import {
 import { makeEnvironmentHttpApiClient } from "@t3tools/client-runtime/rpc";
 import {
   RelayCloudEnvironmentHealthProofPayload,
+  RelayCloudEnvironmentHealthRequest,
+  RelayCloudMintCredentialRequest,
   RelayEnvironmentHealthResponse,
   RelayEnvironmentHealthResponseProofPayload,
   RelayEnvironmentMintResponse,
@@ -477,14 +479,18 @@ const make = Effect.gen(function* () {
       const checkedAt = DateTime.formatIso(now);
       const traceId = yield* currentTraceId;
       const environmentClient = yield* makeEnvironmentClient(endpoint.httpBaseUrl);
-      const responseOption = yield* environmentClient.connect.health({ payload: { proof } }).pipe(
-        withoutRedirects,
-        Effect.match({
-          onFailure: (cause) => ({ _tag: "Failure" as const, cause }),
-          onSuccess: (response) => ({ _tag: "Success" as const, response }),
-        }),
-        Effect.timeoutOption(Duration.millis(ENVIRONMENT_MINT_REQUEST_TIMEOUT_MS)),
-      );
+      const responseOption = yield* environmentClient.connect
+        .health({
+          payload: RelayCloudEnvironmentHealthRequest.make({ proof }),
+        })
+        .pipe(
+          withoutRedirects,
+          Effect.match({
+            onFailure: (cause) => ({ _tag: "Failure" as const, cause }),
+            onSuccess: (response) => ({ _tag: "Success" as const, response }),
+          }),
+          Effect.timeoutOption(Duration.millis(ENVIRONMENT_MINT_REQUEST_TIMEOUT_MS)),
+        );
       if (Option.isNone(responseOption)) {
         yield* Effect.annotateCurrentSpan({
           "relay.environment_health.outcome": "timeout",
@@ -634,7 +640,7 @@ const make = Effect.gen(function* () {
       );
       const environmentClient = yield* makeEnvironmentClient(endpoint.httpBaseUrl);
       const decoded = yield* environmentClient.connect
-        .t3MintCredential({ payload: { proof } })
+        .t3MintCredential({ payload: RelayCloudMintCredentialRequest.make({ proof }) })
         .pipe(
           withoutRedirects,
           Effect.mapError(

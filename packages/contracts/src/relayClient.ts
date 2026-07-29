@@ -1,22 +1,34 @@
 import * as Schema from "effect/Schema";
 
+export class RelayClientAvailableStatus extends Schema.Class<RelayClientAvailableStatus>(
+  "RelayClientAvailableStatus",
+)({
+  status: Schema.Literal("available"),
+  executablePath: Schema.String,
+  source: Schema.Literals(["override", "managed", "path"]),
+  version: Schema.String,
+}) {}
+
+export class RelayClientMissingStatus extends Schema.Class<RelayClientMissingStatus>(
+  "RelayClientMissingStatus",
+)({
+  status: Schema.Literal("missing"),
+  version: Schema.String,
+}) {}
+
+export class RelayClientUnsupportedStatus extends Schema.Class<RelayClientUnsupportedStatus>(
+  "RelayClientUnsupportedStatus",
+)({
+  status: Schema.Literal("unsupported"),
+  platform: Schema.String,
+  arch: Schema.String,
+  version: Schema.String,
+}) {}
+
 export const RelayClientStatusSchema = Schema.Union([
-  Schema.Struct({
-    status: Schema.Literal("available"),
-    executablePath: Schema.String,
-    source: Schema.Literals(["override", "managed", "path"]),
-    version: Schema.String,
-  }),
-  Schema.Struct({
-    status: Schema.Literal("missing"),
-    version: Schema.String,
-  }),
-  Schema.Struct({
-    status: Schema.Literal("unsupported"),
-    platform: Schema.String,
-    arch: Schema.String,
-    version: Schema.String,
-  }),
+  RelayClientAvailableStatus,
+  RelayClientMissingStatus,
+  RelayClientUnsupportedStatus,
 ]);
 export type RelayClientStatus = typeof RelayClientStatusSchema.Type;
 
@@ -31,15 +43,23 @@ export const RelayClientInstallProgressStageSchema = Schema.Literals([
 ]);
 export type RelayClientInstallProgressStage = typeof RelayClientInstallProgressStageSchema.Type;
 
+export class RelayClientInstallProgressUpdate extends Schema.Class<RelayClientInstallProgressUpdate>(
+  "RelayClientInstallProgressUpdate",
+)({
+  type: Schema.Literal("progress"),
+  stage: RelayClientInstallProgressStageSchema,
+}) {}
+
+export class RelayClientInstallCompleted extends Schema.Class<RelayClientInstallCompleted>(
+  "RelayClientInstallCompleted",
+)({
+  type: Schema.Literal("complete"),
+  status: RelayClientStatusSchema,
+}) {}
+
 export const RelayClientInstallProgressEventSchema = Schema.Union([
-  Schema.Struct({
-    type: Schema.Literal("progress"),
-    stage: RelayClientInstallProgressStageSchema,
-  }),
-  Schema.Struct({
-    type: Schema.Literal("complete"),
-    status: RelayClientStatusSchema,
-  }),
+  RelayClientInstallProgressUpdate,
+  RelayClientInstallCompleted,
 ]);
 export type RelayClientInstallProgressEvent = typeof RelayClientInstallProgressEventSchema.Type;
 

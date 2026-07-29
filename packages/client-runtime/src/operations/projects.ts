@@ -1,11 +1,11 @@
-import type {
-  CommandId,
-  EnvironmentId,
-  OrchestrationCommand,
-  ProjectId,
-  SourceControlDiscoveryResult,
-  SourceControlProviderKind,
-  SourceControlRepositoryInfo,
+import {
+  type CommandId,
+  type EnvironmentId,
+  ProjectCreateCommand,
+  type ProjectId,
+  type SourceControlDiscoveryResult,
+  type SourceControlProviderKind,
+  type SourceControlRepositoryInfo,
 } from "@t3tools/contracts";
 import * as Arr from "effect/Array";
 import * as Option from "effect/Option";
@@ -206,8 +206,8 @@ export function buildProjectCreateCommand(input: {
   readonly projectId: ProjectId;
   readonly workspaceRoot: string;
   readonly createdAt: string;
-}): Extract<OrchestrationCommand, { type: "project.create" }> {
-  return {
+}): ProjectCreateCommand {
+  return ProjectCreateCommand.make({
     type: "project.create",
     commandId: input.commandId,
     projectId: input.projectId,
@@ -216,5 +216,5 @@ export function buildProjectCreateCommand(input: {
     createWorkspaceRootIfMissing: true,
     defaultModelSelection: null,
     createdAt: input.createdAt,
-  };
+  });
 }

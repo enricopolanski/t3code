@@ -1,5 +1,6 @@
 import { createAdvertisedEndpoint } from "@t3tools/shared/advertisedEndpoint";
-import type { AdvertisedEndpoint, AdvertisedEndpointProvider } from "@t3tools/contracts";
+import { AdvertisedEndpointProvider } from "@t3tools/contracts";
+import type { AdvertisedEndpoint } from "@t3tools/contracts";
 import {
   buildTailscaleHttpsBaseUrl,
   isTailscaleIpv4Address,
@@ -16,12 +17,12 @@ import type { NetworkInterfaces } from "./DesktopNetworkInterfaces.ts";
 
 export { isTailscaleIpv4Address, parseTailscaleMagicDnsName } from "@t3tools/tailscale";
 
-const TAILSCALE_ENDPOINT_PROVIDER: AdvertisedEndpointProvider = {
+const TAILSCALE_ENDPOINT_PROVIDER: AdvertisedEndpointProvider = AdvertisedEndpointProvider.make({
   id: "tailscale",
   label: "Tailscale",
   kind: "private-network",
   isAddon: true,
-};
+});
 
 function resolveTailscaleIpAdvertisedEndpoints(input: {
   readonly port: number;

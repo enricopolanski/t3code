@@ -8,8 +8,8 @@ import * as Schema from "effect/Schema";
 import {
   NonNegativeInt,
   TrimmedNonEmptyString,
-  type SourceControlProviderAuth,
-  type SourceControlRepositoryCloneUrls,
+  SourceControlProviderAuth,
+  SourceControlRepositoryCloneUrls,
   type SourceControlRepositoryVisibility,
 } from "@t3tools/contracts";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http";
@@ -380,11 +380,11 @@ function normalizeRepositoryCloneUrls(
     raw.links.html?.href;
   const sshClone = raw.links.clone?.find((entry) => entry.name.toLowerCase() === "ssh")?.href;
 
-  return {
+  return SourceControlRepositoryCloneUrls.make({
     nameWithOwner: raw.full_name,
     url: httpClone ?? raw.links.html?.href ?? raw.full_name,
     sshUrl: sshClone ?? httpClone ?? raw.full_name,
-  };
+  });
 }
 
 function defaultChangeRequestTargetBranch(input: {
@@ -446,31 +446,31 @@ function authFromConfig(
   config: Config.Success<typeof BitbucketApiEnvConfig>,
 ): SourceControlProviderAuth {
   if (Option.isSome(config.accessToken)) {
-    return {
+    return SourceControlProviderAuth.make({
       status: "unknown",
       account: Option.none(),
       host: Option.some("bitbucket.org"),
       detail: Option.some("Bitbucket access token is configured."),
-    };
+    });
   }
 
   if (Option.isSome(config.email) && Option.isSome(config.apiToken)) {
-    return {
+    return SourceControlProviderAuth.make({
       status: "unknown",
       account: config.email,
       host: Option.some("bitbucket.org"),
       detail: Option.some("Bitbucket API token is configured."),
-    };
+    });
   }
 
-  return {
+  return SourceControlProviderAuth.make({
     status: "unauthenticated",
     account: Option.none(),
     host: Option.some("bitbucket.org"),
     detail: Option.some(
       "Set T3CODE_BITBUCKET_EMAIL and T3CODE_BITBUCKET_API_TOKEN, or T3CODE_BITBUCKET_ACCESS_TOKEN.",
     ),
-  };
+  });
 }
 
 function responseError(
@@ -695,12 +695,14 @@ export const make = Effect.gen(function* () {
       HttpClientRequest.get(apiUrl("/user")),
       BitbucketUserSchema,
     ).pipe(
-      Effect.map((user) => ({
-        status: "authenticated" as const,
-        account: nonEmpty(user.username ?? user.display_name ?? user.account_id),
-        host: Option.some("bitbucket.org"),
-        detail: Option.none<string>(),
-      })),
+      Effect.map((user) =>
+        SourceControlProviderAuth.make({
+          status: "authenticated",
+          account: nonEmpty(user.username ?? user.display_name ?? user.account_id),
+          host: Option.some("bitbucket.org"),
+          detail: Option.none<string>(),
+        }),
+      ),
       Effect.orElseSucceed(() => authFromConfig(config)),
     ),
     listPullRequests: (input) =>

@@ -1,6 +1,7 @@
 import {
   DEFAULT_SERVER_SETTINGS,
   ProviderDriverKind,
+  ProviderInstanceConfig,
   ProviderInstanceId,
   type ServerProvider,
 } from "@t3tools/contracts";
@@ -209,11 +210,11 @@ describe("serverSettings helpers", () => {
     const settings = {
       ...DEFAULT_SERVER_SETTINGS,
       providerInstances: {
-        [instanceId]: {
+        [instanceId]: ProviderInstanceConfig.make({
           driver: ProviderDriverKind.make("codex"),
           enabled: false,
           config: {},
-        },
+        }),
       },
       sourceControlWriterModelSelection,
     };
@@ -233,10 +234,10 @@ describe("serverSettings helpers", () => {
     const settings = {
       ...DEFAULT_SERVER_SETTINGS,
       providerInstances: {
-        [instanceId]: {
+        [instanceId]: ProviderInstanceConfig.make({
           driver: ProviderDriverKind.make("missing-driver"),
           config: {},
-        },
+        }),
       },
       sourceControlWriterModelSelection,
     };
@@ -267,32 +268,34 @@ describe("serverSettings helpers", () => {
     const current = {
       ...DEFAULT_SERVER_SETTINGS,
       providerInstances: {
-        [codexId]: {
+        [codexId]: ProviderInstanceConfig.make({
           driver: ProviderDriverKind.make("codex"),
           displayName: "Codex Work",
           accentColor: "#7c3aed",
           enabled: true,
           config: { homePath: "~/.codex" },
-        },
+        }),
       },
     };
 
     expect(
       applyServerSettingsPatch(current, {
         providerInstances: {
-          [codexId]: {
+          [codexId]: ProviderInstanceConfig.make({
             driver: ProviderDriverKind.make("codex"),
             displayName: "Codex Work",
             enabled: true,
             config: { homePath: "~/.codex" },
-          },
+          }),
         },
       }).providerInstances[codexId],
-    ).toEqual({
-      driver: ProviderDriverKind.make("codex"),
-      displayName: "Codex Work",
-      enabled: true,
-      config: { homePath: "~/.codex" },
-    });
+    ).toEqual(
+      ProviderInstanceConfig.make({
+        driver: ProviderDriverKind.make("codex"),
+        displayName: "Codex Work",
+        enabled: true,
+        config: { homePath: "~/.codex" },
+      }),
+    );
   });
 });

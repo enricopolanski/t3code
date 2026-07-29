@@ -31,23 +31,21 @@ const RuntimeEventRawSource = Schema.Union([
 ]);
 export type RuntimeEventRawSource = typeof RuntimeEventRawSource.Type;
 
-export const RuntimeEventRaw = Schema.Struct({
+export class RuntimeEventRaw extends Schema.Class<RuntimeEventRaw>("RuntimeEventRaw")({
   source: RuntimeEventRawSource,
   method: Schema.optional(TrimmedNonEmptyStringSchema),
   messageType: Schema.optional(TrimmedNonEmptyStringSchema),
   payload: Schema.Unknown,
-});
-export type RuntimeEventRaw = typeof RuntimeEventRaw.Type;
+}) {}
 
 const ProviderRequestId = TrimmedNonEmptyStringSchema;
 export type ProviderRequestId = typeof ProviderRequestId.Type;
 
-const ProviderRefs = Schema.Struct({
+export class ProviderRefs extends Schema.Class<ProviderRefs>("ProviderRefs")({
   providerTurnId: Schema.optional(TrimmedNonEmptyStringSchema),
   providerItemId: Schema.optional(ProviderItemId),
   providerRequestId: Schema.optional(ProviderRequestId),
-});
-export type ProviderRefs = typeof ProviderRefs.Type;
+}) {}
 
 const RuntimeSessionState = Schema.Literals([
   "starting",
@@ -245,7 +243,9 @@ const ToolDeniedType = Schema.Literal("tool.denied");
 const RuntimeWarningType = Schema.Literal("runtime.warning");
 const RuntimeErrorType = Schema.Literal("runtime.error");
 
-const ProviderRuntimeEventBase = Schema.Struct({
+export class ProviderRuntimeEventBase extends Schema.Class<ProviderRuntimeEventBase>(
+  "ProviderRuntimeEventBase",
+)({
   eventId: EventId,
   provider: ProviderDriverKind,
   // Optional during the driver/instance migration. See providerInstance.ts
@@ -259,52 +259,60 @@ const ProviderRuntimeEventBase = Schema.Struct({
   requestId: Schema.optional(RuntimeRequestId),
   providerRefs: Schema.optional(ProviderRefs),
   raw: Schema.optional(RuntimeEventRaw),
-});
-export type ProviderRuntimeEventBase = typeof ProviderRuntimeEventBase.Type;
+}) {}
 
-const SessionStartedPayload = Schema.Struct({
+export class SessionStartedPayload extends Schema.Class<SessionStartedPayload>(
+  "SessionStartedPayload",
+)({
   message: Schema.optional(TrimmedNonEmptyStringSchema),
   resume: Schema.optional(Schema.Unknown),
-});
-export type SessionStartedPayload = typeof SessionStartedPayload.Type;
+}) {}
 
-const SessionConfiguredPayload = Schema.Struct({
+export class SessionConfiguredPayload extends Schema.Class<SessionConfiguredPayload>(
+  "SessionConfiguredPayload",
+)({
   config: UnknownRecordSchema,
-});
-export type SessionConfiguredPayload = typeof SessionConfiguredPayload.Type;
+}) {}
 
-const SessionStateChangedPayload = Schema.Struct({
+export class SessionStateChangedPayload extends Schema.Class<SessionStateChangedPayload>(
+  "SessionStateChangedPayload",
+)({
   state: RuntimeSessionState,
   reason: Schema.optional(TrimmedNonEmptyStringSchema),
   detail: Schema.optional(Schema.Unknown),
-});
-export type SessionStateChangedPayload = typeof SessionStateChangedPayload.Type;
+}) {}
 
-const SessionExitedPayload = Schema.Struct({
+export class SessionExitedPayload extends Schema.Class<SessionExitedPayload>(
+  "SessionExitedPayload",
+)({
   reason: Schema.optional(TrimmedNonEmptyStringSchema),
   recoverable: Schema.optional(Schema.Boolean),
   exitKind: Schema.optional(RuntimeSessionExitKind),
-});
-export type SessionExitedPayload = typeof SessionExitedPayload.Type;
+}) {}
 
-const ThreadStartedPayload = Schema.Struct({
+export class ThreadStartedPayload extends Schema.Class<ThreadStartedPayload>(
+  "ThreadStartedPayload",
+)({
   providerThreadId: Schema.optional(TrimmedNonEmptyStringSchema),
-});
-export type ThreadStartedPayload = typeof ThreadStartedPayload.Type;
+}) {}
 
-const ThreadStateChangedPayload = Schema.Struct({
+export class ThreadStateChangedPayload extends Schema.Class<ThreadStateChangedPayload>(
+  "ThreadStateChangedPayload",
+)({
   state: RuntimeThreadState,
   detail: Schema.optional(Schema.Unknown),
-});
-export type ThreadStateChangedPayload = typeof ThreadStateChangedPayload.Type;
+}) {}
 
-const ThreadMetadataUpdatedPayload = Schema.Struct({
+export class ThreadMetadataUpdatedPayload extends Schema.Class<ThreadMetadataUpdatedPayload>(
+  "ThreadMetadataUpdatedPayload",
+)({
   name: Schema.optional(TrimmedNonEmptyStringSchema),
   metadata: Schema.optional(UnknownRecordSchema),
-});
-export type ThreadMetadataUpdatedPayload = typeof ThreadMetadataUpdatedPayload.Type;
+}) {}
 
-export const ThreadTokenUsageSnapshot = Schema.Struct({
+export class ThreadTokenUsageSnapshot extends Schema.Class<ThreadTokenUsageSnapshot>(
+  "ThreadTokenUsageSnapshot",
+)({
   usedTokens: NonNegativeInt,
   totalProcessedTokens: Schema.optional(NonNegativeInt),
   maxTokens: Schema.optional(PositiveInt),
@@ -320,125 +328,135 @@ export const ThreadTokenUsageSnapshot = Schema.Struct({
   toolUses: Schema.optional(NonNegativeInt),
   durationMs: Schema.optional(NonNegativeInt),
   compactsAutomatically: Schema.optional(Schema.Boolean),
-});
-export type ThreadTokenUsageSnapshot = typeof ThreadTokenUsageSnapshot.Type;
+}) {}
 
-const ThreadTokenUsageUpdatedPayload = Schema.Struct({
+export class ThreadTokenUsageUpdatedPayload extends Schema.Class<ThreadTokenUsageUpdatedPayload>(
+  "ThreadTokenUsageUpdatedPayload",
+)({
   usage: ThreadTokenUsageSnapshot,
-});
-export type ThreadTokenUsageUpdatedPayload = typeof ThreadTokenUsageUpdatedPayload.Type;
+}) {}
 
-const ThreadRealtimeStartedPayload = Schema.Struct({
+export class ThreadRealtimeStartedPayload extends Schema.Class<ThreadRealtimeStartedPayload>(
+  "ThreadRealtimeStartedPayload",
+)({
   realtimeSessionId: Schema.optional(TrimmedNonEmptyStringSchema),
-});
-export type ThreadRealtimeStartedPayload = typeof ThreadRealtimeStartedPayload.Type;
+}) {}
 
-const ThreadRealtimeItemAddedPayload = Schema.Struct({
+export class ThreadRealtimeItemAddedPayload extends Schema.Class<ThreadRealtimeItemAddedPayload>(
+  "ThreadRealtimeItemAddedPayload",
+)({
   item: Schema.Unknown,
-});
-export type ThreadRealtimeItemAddedPayload = typeof ThreadRealtimeItemAddedPayload.Type;
+}) {}
 
-const ThreadRealtimeAudioDeltaPayload = Schema.Struct({
+export class ThreadRealtimeAudioDeltaPayload extends Schema.Class<ThreadRealtimeAudioDeltaPayload>(
+  "ThreadRealtimeAudioDeltaPayload",
+)({
   audio: Schema.Unknown,
-});
-export type ThreadRealtimeAudioDeltaPayload = typeof ThreadRealtimeAudioDeltaPayload.Type;
+}) {}
 
-const ThreadRealtimeErrorPayload = Schema.Struct({
+export class ThreadRealtimeErrorPayload extends Schema.Class<ThreadRealtimeErrorPayload>(
+  "ThreadRealtimeErrorPayload",
+)({
   message: TrimmedNonEmptyStringSchema,
-});
-export type ThreadRealtimeErrorPayload = typeof ThreadRealtimeErrorPayload.Type;
+}) {}
 
-const ThreadRealtimeClosedPayload = Schema.Struct({
+export class ThreadRealtimeClosedPayload extends Schema.Class<ThreadRealtimeClosedPayload>(
+  "ThreadRealtimeClosedPayload",
+)({
   reason: Schema.optional(TrimmedNonEmptyStringSchema),
-});
-export type ThreadRealtimeClosedPayload = typeof ThreadRealtimeClosedPayload.Type;
+}) {}
 
-const TurnStartedPayload = Schema.Struct({
+export class TurnStartedPayload extends Schema.Class<TurnStartedPayload>("TurnStartedPayload")({
   model: Schema.optional(TrimmedNonEmptyStringSchema),
   effort: Schema.optional(TrimmedNonEmptyStringSchema),
-});
-export type TurnStartedPayload = typeof TurnStartedPayload.Type;
+}) {}
 
-const TurnCompletedPayload = Schema.Struct({
+export class TurnCompletedPayload extends Schema.Class<TurnCompletedPayload>(
+  "TurnCompletedPayload",
+)({
   state: RuntimeTurnState,
   stopReason: Schema.optional(Schema.NullOr(TrimmedNonEmptyStringSchema)),
   usage: Schema.optional(Schema.Unknown),
   modelUsage: Schema.optional(UnknownRecordSchema),
   totalCostUsd: Schema.optional(Schema.Number),
   errorMessage: Schema.optional(TrimmedNonEmptyStringSchema),
-});
-export type TurnCompletedPayload = typeof TurnCompletedPayload.Type;
+}) {}
 
-const TurnAbortedPayload = Schema.Struct({
+export class TurnAbortedPayload extends Schema.Class<TurnAbortedPayload>("TurnAbortedPayload")({
   reason: TrimmedNonEmptyStringSchema,
-});
-export type TurnAbortedPayload = typeof TurnAbortedPayload.Type;
+}) {}
 
-const RuntimePlanStep = Schema.Struct({
+export class RuntimePlanStep extends Schema.Class<RuntimePlanStep>("RuntimePlanStep")({
   step: TrimmedNonEmptyStringSchema,
   status: RuntimePlanStepStatus,
-});
-export type RuntimePlanStep = typeof RuntimePlanStep.Type;
+}) {}
 
-const TurnPlanUpdatedPayload = Schema.Struct({
+export class TurnPlanUpdatedPayload extends Schema.Class<TurnPlanUpdatedPayload>(
+  "TurnPlanUpdatedPayload",
+)({
   explanation: Schema.optional(Schema.NullOr(TrimmedNonEmptyStringSchema)),
   plan: Schema.Array(RuntimePlanStep),
-});
-export type TurnPlanUpdatedPayload = typeof TurnPlanUpdatedPayload.Type;
+}) {}
 
-const TurnProposedDeltaPayload = Schema.Struct({
+export class TurnProposedDeltaPayload extends Schema.Class<TurnProposedDeltaPayload>(
+  "TurnProposedDeltaPayload",
+)({
   delta: Schema.String,
-});
-export type TurnProposedDeltaPayload = typeof TurnProposedDeltaPayload.Type;
+}) {}
 
-const TurnProposedCompletedPayload = Schema.Struct({
+export class TurnProposedCompletedPayload extends Schema.Class<TurnProposedCompletedPayload>(
+  "TurnProposedCompletedPayload",
+)({
   planMarkdown: TrimmedNonEmptyStringSchema,
-});
-export type TurnProposedCompletedPayload = typeof TurnProposedCompletedPayload.Type;
+}) {}
 
-const TurnDiffUpdatedPayload = Schema.Struct({
+export class TurnDiffUpdatedPayload extends Schema.Class<TurnDiffUpdatedPayload>(
+  "TurnDiffUpdatedPayload",
+)({
   unifiedDiff: Schema.String,
-});
-export type TurnDiffUpdatedPayload = typeof TurnDiffUpdatedPayload.Type;
+}) {}
 
-export const ItemLifecyclePayload = Schema.Struct({
+export class ItemLifecyclePayload extends Schema.Class<ItemLifecyclePayload>(
+  "ItemLifecyclePayload",
+)({
   itemType: CanonicalItemType,
   status: Schema.optional(RuntimeItemStatus),
   title: Schema.optional(TrimmedNonEmptyStringSchema),
   detail: Schema.optional(TrimmedNonEmptyStringSchema),
   data: Schema.optional(Schema.Unknown),
-});
-export type ItemLifecyclePayload = typeof ItemLifecyclePayload.Type;
+}) {}
 
-const ContentDeltaPayload = Schema.Struct({
+export class ContentDeltaPayload extends Schema.Class<ContentDeltaPayload>("ContentDeltaPayload")({
   streamKind: RuntimeContentStreamKind,
   delta: Schema.String,
   contentIndex: Schema.optional(Schema.Int),
   summaryIndex: Schema.optional(Schema.Int),
-});
-export type ContentDeltaPayload = typeof ContentDeltaPayload.Type;
+}) {}
 
-const RequestOpenedPayload = Schema.Struct({
+export class RequestOpenedPayload extends Schema.Class<RequestOpenedPayload>(
+  "RequestOpenedPayload",
+)({
   requestType: CanonicalRequestType,
   detail: Schema.optional(TrimmedNonEmptyStringSchema),
   args: Schema.optional(Schema.Unknown),
-});
-export type RequestOpenedPayload = typeof RequestOpenedPayload.Type;
+}) {}
 
-const RequestResolvedPayload = Schema.Struct({
+export class RequestResolvedPayload extends Schema.Class<RequestResolvedPayload>(
+  "RequestResolvedPayload",
+)({
   requestType: CanonicalRequestType,
   decision: Schema.optional(TrimmedNonEmptyStringSchema),
   resolution: Schema.optional(Schema.Unknown),
-});
-export type RequestResolvedPayload = typeof RequestResolvedPayload.Type;
+}) {}
 
-const UserInputQuestionOption = Schema.Struct({
+export class UserInputQuestionOption extends Schema.Class<UserInputQuestionOption>(
+  "UserInputQuestionOption",
+)({
   label: TrimmedNonEmptyStringSchema,
   description: TrimmedNonEmptyStringSchema,
-});
-export type UserInputQuestionOption = typeof UserInputQuestionOption.Type;
+}) {}
 
-export const UserInputQuestion = Schema.Struct({
+export class UserInputQuestion extends Schema.Class<UserInputQuestion>("UserInputQuestion")({
   id: TrimmedNonEmptyStringSchema,
   header: TrimmedNonEmptyStringSchema,
   question: TrimmedNonEmptyStringSchema,
@@ -446,133 +464,138 @@ export const UserInputQuestion = Schema.Struct({
   multiSelect: Schema.optional(Schema.Boolean).pipe(
     Schema.withConstructorDefault(Effect.succeed(false)),
   ),
-});
-export type UserInputQuestion = typeof UserInputQuestion.Type;
+}) {}
 
-const UserInputRequestedPayload = Schema.Struct({
+export class UserInputRequestedPayload extends Schema.Class<UserInputRequestedPayload>(
+  "UserInputRequestedPayload",
+)({
   questions: Schema.Array(UserInputQuestion),
-});
-export type UserInputRequestedPayload = typeof UserInputRequestedPayload.Type;
+}) {}
 
-const UserInputResolvedPayload = Schema.Struct({
+export class UserInputResolvedPayload extends Schema.Class<UserInputResolvedPayload>(
+  "UserInputResolvedPayload",
+)({
   answers: UnknownRecordSchema,
-});
-export type UserInputResolvedPayload = typeof UserInputResolvedPayload.Type;
+}) {}
 
-const TaskStartedPayload = Schema.Struct({
+export class TaskStartedPayload extends Schema.Class<TaskStartedPayload>("TaskStartedPayload")({
   taskId: RuntimeTaskId,
   description: Schema.optional(TrimmedNonEmptyStringSchema),
   taskType: Schema.optional(TrimmedNonEmptyStringSchema),
-});
-export type TaskStartedPayload = typeof TaskStartedPayload.Type;
+}) {}
 
-const TaskProgressPayload = Schema.Struct({
+export class TaskProgressPayload extends Schema.Class<TaskProgressPayload>("TaskProgressPayload")({
   taskId: RuntimeTaskId,
   description: TrimmedNonEmptyStringSchema,
   summary: Schema.optional(TrimmedNonEmptyStringSchema),
   usage: Schema.optional(Schema.Unknown),
   lastToolName: Schema.optional(TrimmedNonEmptyStringSchema),
-});
-export type TaskProgressPayload = typeof TaskProgressPayload.Type;
+}) {}
 
-const TaskCompletedPayload = Schema.Struct({
+export class TaskCompletedPayload extends Schema.Class<TaskCompletedPayload>(
+  "TaskCompletedPayload",
+)({
   taskId: RuntimeTaskId,
   status: Schema.Literals(["completed", "failed", "stopped"]),
   summary: Schema.optional(TrimmedNonEmptyStringSchema),
   usage: Schema.optional(Schema.Unknown),
-});
-export type TaskCompletedPayload = typeof TaskCompletedPayload.Type;
+}) {}
 
-const HookStartedPayload = Schema.Struct({
+export class HookStartedPayload extends Schema.Class<HookStartedPayload>("HookStartedPayload")({
   hookId: TrimmedNonEmptyStringSchema,
   hookName: TrimmedNonEmptyStringSchema,
   hookEvent: TrimmedNonEmptyStringSchema,
-});
-export type HookStartedPayload = typeof HookStartedPayload.Type;
+}) {}
 
-const HookProgressPayload = Schema.Struct({
+export class HookProgressPayload extends Schema.Class<HookProgressPayload>("HookProgressPayload")({
   hookId: TrimmedNonEmptyStringSchema,
   output: Schema.optional(Schema.String),
   stdout: Schema.optional(Schema.String),
   stderr: Schema.optional(Schema.String),
-});
-export type HookProgressPayload = typeof HookProgressPayload.Type;
+}) {}
 
-const HookCompletedPayload = Schema.Struct({
+export class HookCompletedPayload extends Schema.Class<HookCompletedPayload>(
+  "HookCompletedPayload",
+)({
   hookId: TrimmedNonEmptyStringSchema,
   outcome: Schema.Literals(["success", "error", "cancelled"]),
   output: Schema.optional(Schema.String),
   stdout: Schema.optional(Schema.String),
   stderr: Schema.optional(Schema.String),
   exitCode: Schema.optional(Schema.Int),
-});
-export type HookCompletedPayload = typeof HookCompletedPayload.Type;
+}) {}
 
-const ToolProgressPayload = Schema.Struct({
+export class ToolProgressPayload extends Schema.Class<ToolProgressPayload>("ToolProgressPayload")({
   toolUseId: Schema.optional(TrimmedNonEmptyStringSchema),
   toolName: Schema.optional(TrimmedNonEmptyStringSchema),
   summary: Schema.optional(TrimmedNonEmptyStringSchema),
   elapsedSeconds: Schema.optional(Schema.Number),
-});
-export type ToolProgressPayload = typeof ToolProgressPayload.Type;
+}) {}
 
-const ToolSummaryPayload = Schema.Struct({
+export class ToolSummaryPayload extends Schema.Class<ToolSummaryPayload>("ToolSummaryPayload")({
   summary: TrimmedNonEmptyStringSchema,
   precedingToolUseIds: Schema.optional(Schema.Array(TrimmedNonEmptyStringSchema)),
-});
-export type ToolSummaryPayload = typeof ToolSummaryPayload.Type;
+}) {}
 
-const AuthStatusPayload = Schema.Struct({
+export class AuthStatusPayload extends Schema.Class<AuthStatusPayload>("AuthStatusPayload")({
   isAuthenticating: Schema.optional(Schema.Boolean),
   output: Schema.optional(Schema.Array(Schema.String)),
   error: Schema.optional(TrimmedNonEmptyStringSchema),
-});
-export type AuthStatusPayload = typeof AuthStatusPayload.Type;
+}) {}
 
-const AccountUpdatedPayload = Schema.Struct({
+export class AccountUpdatedPayload extends Schema.Class<AccountUpdatedPayload>(
+  "AccountUpdatedPayload",
+)({
   account: Schema.Unknown,
-});
-export type AccountUpdatedPayload = typeof AccountUpdatedPayload.Type;
+}) {}
 
-const AccountRateLimitsUpdatedPayload = Schema.Struct({
+export class AccountRateLimitsUpdatedPayload extends Schema.Class<AccountRateLimitsUpdatedPayload>(
+  "AccountRateLimitsUpdatedPayload",
+)({
   rateLimits: Schema.Unknown,
-});
-export type AccountRateLimitsUpdatedPayload = typeof AccountRateLimitsUpdatedPayload.Type;
+}) {}
 
-const McpStatusUpdatedPayload = Schema.Struct({
+export class McpStatusUpdatedPayload extends Schema.Class<McpStatusUpdatedPayload>(
+  "McpStatusUpdatedPayload",
+)({
   status: Schema.Unknown,
-});
-export type McpStatusUpdatedPayload = typeof McpStatusUpdatedPayload.Type;
+}) {}
 
-const McpOauthCompletedPayload = Schema.Struct({
+export class McpOauthCompletedPayload extends Schema.Class<McpOauthCompletedPayload>(
+  "McpOauthCompletedPayload",
+)({
   success: Schema.Boolean,
   name: Schema.optional(TrimmedNonEmptyStringSchema),
   error: Schema.optional(TrimmedNonEmptyStringSchema),
-});
-export type McpOauthCompletedPayload = typeof McpOauthCompletedPayload.Type;
+}) {}
 
-const ModelReroutedPayload = Schema.Struct({
+export class ModelReroutedPayload extends Schema.Class<ModelReroutedPayload>(
+  "ModelReroutedPayload",
+)({
   fromModel: TrimmedNonEmptyStringSchema,
   toModel: TrimmedNonEmptyStringSchema,
   reason: TrimmedNonEmptyStringSchema,
-});
-export type ModelReroutedPayload = typeof ModelReroutedPayload.Type;
+}) {}
 
-const ConfigWarningPayload = Schema.Struct({
+export class ConfigWarningPayload extends Schema.Class<ConfigWarningPayload>(
+  "ConfigWarningPayload",
+)({
   summary: TrimmedNonEmptyStringSchema,
   details: Schema.optional(TrimmedNonEmptyStringSchema),
   path: Schema.optional(TrimmedNonEmptyStringSchema),
   range: Schema.optional(Schema.Unknown),
-});
-export type ConfigWarningPayload = typeof ConfigWarningPayload.Type;
+}) {}
 
-const DeprecationNoticePayload = Schema.Struct({
+export class DeprecationNoticePayload extends Schema.Class<DeprecationNoticePayload>(
+  "DeprecationNoticePayload",
+)({
   summary: TrimmedNonEmptyStringSchema,
   details: Schema.optional(TrimmedNonEmptyStringSchema),
-});
-export type DeprecationNoticePayload = typeof DeprecationNoticePayload.Type;
+}) {}
 
-const FilesPersistedPayload = Schema.Struct({
+export class FilesPersistedPayload extends Schema.Class<FilesPersistedPayload>(
+  "FilesPersistedPayload",
+)({
   files: Schema.Array(
     Schema.Struct({
       filename: TrimmedNonEmptyStringSchema,
@@ -587,382 +610,411 @@ const FilesPersistedPayload = Schema.Struct({
       }),
     ),
   ),
-});
-export type FilesPersistedPayload = typeof FilesPersistedPayload.Type;
+}) {}
 
-const ToolDeniedPayload = Schema.Struct({
+export class ToolDeniedPayload extends Schema.Class<ToolDeniedPayload>("ToolDeniedPayload")({
   toolName: TrimmedNonEmptyStringSchema,
   toolUseId: Schema.optional(TrimmedNonEmptyStringSchema),
   reason: Schema.optional(TrimmedNonEmptyStringSchema),
   agentId: Schema.optional(TrimmedNonEmptyStringSchema),
-});
-export type ToolDeniedPayload = typeof ToolDeniedPayload.Type;
+}) {}
 
-const RuntimeWarningPayload = Schema.Struct({
+export class RuntimeWarningPayload extends Schema.Class<RuntimeWarningPayload>(
+  "RuntimeWarningPayload",
+)({
   message: TrimmedNonEmptyStringSchema,
   detail: Schema.optional(Schema.Unknown),
-});
-export type RuntimeWarningPayload = typeof RuntimeWarningPayload.Type;
+}) {}
 
-const RuntimeErrorPayload = Schema.Struct({
+export class RuntimeErrorPayload extends Schema.Class<RuntimeErrorPayload>("RuntimeErrorPayload")({
   message: TrimmedNonEmptyStringSchema,
   class: Schema.optional(RuntimeErrorClass),
   detail: Schema.optional(Schema.Unknown),
-});
-export type RuntimeErrorPayload = typeof RuntimeErrorPayload.Type;
+}) {}
 
-const ProviderRuntimeSessionStartedEvent = Schema.Struct({
+export class ProviderRuntimeSessionStartedEvent extends Schema.Class<ProviderRuntimeSessionStartedEvent>(
+  "ProviderRuntimeSessionStartedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: SessionStartedType,
   payload: SessionStartedPayload,
-});
-export type ProviderRuntimeSessionStartedEvent = typeof ProviderRuntimeSessionStartedEvent.Type;
+}) {}
 
-const ProviderRuntimeSessionConfiguredEvent = Schema.Struct({
+export class ProviderRuntimeSessionConfiguredEvent extends Schema.Class<ProviderRuntimeSessionConfiguredEvent>(
+  "ProviderRuntimeSessionConfiguredEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: SessionConfiguredType,
   payload: SessionConfiguredPayload,
-});
-export type ProviderRuntimeSessionConfiguredEvent =
-  typeof ProviderRuntimeSessionConfiguredEvent.Type;
+}) {}
 
-const ProviderRuntimeSessionStateChangedEvent = Schema.Struct({
+export class ProviderRuntimeSessionStateChangedEvent extends Schema.Class<ProviderRuntimeSessionStateChangedEvent>(
+  "ProviderRuntimeSessionStateChangedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: SessionStateChangedType,
   payload: SessionStateChangedPayload,
-});
-export type ProviderRuntimeSessionStateChangedEvent =
-  typeof ProviderRuntimeSessionStateChangedEvent.Type;
+}) {}
 
-const ProviderRuntimeSessionExitedEvent = Schema.Struct({
+export class ProviderRuntimeSessionExitedEvent extends Schema.Class<ProviderRuntimeSessionExitedEvent>(
+  "ProviderRuntimeSessionExitedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: SessionExitedType,
   payload: SessionExitedPayload,
-});
-export type ProviderRuntimeSessionExitedEvent = typeof ProviderRuntimeSessionExitedEvent.Type;
+}) {}
 
-const ProviderRuntimeThreadStartedEvent = Schema.Struct({
+export class ProviderRuntimeThreadStartedEvent extends Schema.Class<ProviderRuntimeThreadStartedEvent>(
+  "ProviderRuntimeThreadStartedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ThreadStartedType,
   payload: ThreadStartedPayload,
-});
-export type ProviderRuntimeThreadStartedEvent = typeof ProviderRuntimeThreadStartedEvent.Type;
+}) {}
 
-const ProviderRuntimeThreadStateChangedEvent = Schema.Struct({
+export class ProviderRuntimeThreadStateChangedEvent extends Schema.Class<ProviderRuntimeThreadStateChangedEvent>(
+  "ProviderRuntimeThreadStateChangedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ThreadStateChangedType,
   payload: ThreadStateChangedPayload,
-});
-export type ProviderRuntimeThreadStateChangedEvent =
-  typeof ProviderRuntimeThreadStateChangedEvent.Type;
+}) {}
 
-const ProviderRuntimeThreadMetadataUpdatedEvent = Schema.Struct({
+export class ProviderRuntimeThreadMetadataUpdatedEvent extends Schema.Class<ProviderRuntimeThreadMetadataUpdatedEvent>(
+  "ProviderRuntimeThreadMetadataUpdatedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ThreadMetadataUpdatedType,
   payload: ThreadMetadataUpdatedPayload,
-});
-export type ProviderRuntimeThreadMetadataUpdatedEvent =
-  typeof ProviderRuntimeThreadMetadataUpdatedEvent.Type;
+}) {}
 
-const ProviderRuntimeThreadTokenUsageUpdatedEvent = Schema.Struct({
+export class ProviderRuntimeThreadTokenUsageUpdatedEvent extends Schema.Class<ProviderRuntimeThreadTokenUsageUpdatedEvent>(
+  "ProviderRuntimeThreadTokenUsageUpdatedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ThreadTokenUsageUpdatedType,
   payload: ThreadTokenUsageUpdatedPayload,
-});
-export type ProviderRuntimeThreadTokenUsageUpdatedEvent =
-  typeof ProviderRuntimeThreadTokenUsageUpdatedEvent.Type;
+}) {}
 
-const ProviderRuntimeThreadRealtimeStartedEvent = Schema.Struct({
+export class ProviderRuntimeThreadRealtimeStartedEvent extends Schema.Class<ProviderRuntimeThreadRealtimeStartedEvent>(
+  "ProviderRuntimeThreadRealtimeStartedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ThreadRealtimeStartedType,
   payload: ThreadRealtimeStartedPayload,
-});
-export type ProviderRuntimeThreadRealtimeStartedEvent =
-  typeof ProviderRuntimeThreadRealtimeStartedEvent.Type;
+}) {}
 
-const ProviderRuntimeThreadRealtimeItemAddedEvent = Schema.Struct({
+export class ProviderRuntimeThreadRealtimeItemAddedEvent extends Schema.Class<ProviderRuntimeThreadRealtimeItemAddedEvent>(
+  "ProviderRuntimeThreadRealtimeItemAddedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ThreadRealtimeItemAddedType,
   payload: ThreadRealtimeItemAddedPayload,
-});
-export type ProviderRuntimeThreadRealtimeItemAddedEvent =
-  typeof ProviderRuntimeThreadRealtimeItemAddedEvent.Type;
+}) {}
 
-const ProviderRuntimeThreadRealtimeAudioDeltaEvent = Schema.Struct({
+export class ProviderRuntimeThreadRealtimeAudioDeltaEvent extends Schema.Class<ProviderRuntimeThreadRealtimeAudioDeltaEvent>(
+  "ProviderRuntimeThreadRealtimeAudioDeltaEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ThreadRealtimeAudioDeltaType,
   payload: ThreadRealtimeAudioDeltaPayload,
-});
-export type ProviderRuntimeThreadRealtimeAudioDeltaEvent =
-  typeof ProviderRuntimeThreadRealtimeAudioDeltaEvent.Type;
+}) {}
 
-const ProviderRuntimeThreadRealtimeErrorEvent = Schema.Struct({
+export class ProviderRuntimeThreadRealtimeErrorEvent extends Schema.Class<ProviderRuntimeThreadRealtimeErrorEvent>(
+  "ProviderRuntimeThreadRealtimeErrorEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ThreadRealtimeErrorType,
   payload: ThreadRealtimeErrorPayload,
-});
-export type ProviderRuntimeThreadRealtimeErrorEvent =
-  typeof ProviderRuntimeThreadRealtimeErrorEvent.Type;
+}) {}
 
-const ProviderRuntimeThreadRealtimeClosedEvent = Schema.Struct({
+export class ProviderRuntimeThreadRealtimeClosedEvent extends Schema.Class<ProviderRuntimeThreadRealtimeClosedEvent>(
+  "ProviderRuntimeThreadRealtimeClosedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ThreadRealtimeClosedType,
   payload: ThreadRealtimeClosedPayload,
-});
-export type ProviderRuntimeThreadRealtimeClosedEvent =
-  typeof ProviderRuntimeThreadRealtimeClosedEvent.Type;
+}) {}
 
-const ProviderRuntimeTurnStartedEvent = Schema.Struct({
+export class ProviderRuntimeTurnStartedEvent extends Schema.Class<ProviderRuntimeTurnStartedEvent>(
+  "ProviderRuntimeTurnStartedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: TurnStartedType,
   payload: TurnStartedPayload,
-});
-export type ProviderRuntimeTurnStartedEvent = typeof ProviderRuntimeTurnStartedEvent.Type;
+}) {}
 
-const ProviderRuntimeTurnCompletedEvent = Schema.Struct({
+export class ProviderRuntimeTurnCompletedEvent extends Schema.Class<ProviderRuntimeTurnCompletedEvent>(
+  "ProviderRuntimeTurnCompletedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: TurnCompletedType,
   payload: TurnCompletedPayload,
-});
-export type ProviderRuntimeTurnCompletedEvent = typeof ProviderRuntimeTurnCompletedEvent.Type;
+}) {}
 
-const ProviderRuntimeTurnAbortedEvent = Schema.Struct({
+export class ProviderRuntimeTurnAbortedEvent extends Schema.Class<ProviderRuntimeTurnAbortedEvent>(
+  "ProviderRuntimeTurnAbortedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: TurnAbortedType,
   payload: TurnAbortedPayload,
-});
-export type ProviderRuntimeTurnAbortedEvent = typeof ProviderRuntimeTurnAbortedEvent.Type;
+}) {}
 
-const ProviderRuntimeTurnPlanUpdatedEvent = Schema.Struct({
+export class ProviderRuntimeTurnPlanUpdatedEvent extends Schema.Class<ProviderRuntimeTurnPlanUpdatedEvent>(
+  "ProviderRuntimeTurnPlanUpdatedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: TurnPlanUpdatedType,
   payload: TurnPlanUpdatedPayload,
-});
-export type ProviderRuntimeTurnPlanUpdatedEvent = typeof ProviderRuntimeTurnPlanUpdatedEvent.Type;
+}) {}
 
-const ProviderRuntimeTurnProposedDeltaEvent = Schema.Struct({
+export class ProviderRuntimeTurnProposedDeltaEvent extends Schema.Class<ProviderRuntimeTurnProposedDeltaEvent>(
+  "ProviderRuntimeTurnProposedDeltaEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: TurnProposedDeltaType,
   payload: TurnProposedDeltaPayload,
-});
-export type ProviderRuntimeTurnProposedDeltaEvent =
-  typeof ProviderRuntimeTurnProposedDeltaEvent.Type;
+}) {}
 
-const ProviderRuntimeTurnProposedCompletedEvent = Schema.Struct({
+export class ProviderRuntimeTurnProposedCompletedEvent extends Schema.Class<ProviderRuntimeTurnProposedCompletedEvent>(
+  "ProviderRuntimeTurnProposedCompletedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: TurnProposedCompletedType,
   payload: TurnProposedCompletedPayload,
-});
-export type ProviderRuntimeTurnProposedCompletedEvent =
-  typeof ProviderRuntimeTurnProposedCompletedEvent.Type;
+}) {}
 
-const ProviderRuntimeTurnDiffUpdatedEvent = Schema.Struct({
+export class ProviderRuntimeTurnDiffUpdatedEvent extends Schema.Class<ProviderRuntimeTurnDiffUpdatedEvent>(
+  "ProviderRuntimeTurnDiffUpdatedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: TurnDiffUpdatedType,
   payload: TurnDiffUpdatedPayload,
-});
-export type ProviderRuntimeTurnDiffUpdatedEvent = typeof ProviderRuntimeTurnDiffUpdatedEvent.Type;
+}) {}
 
-const ProviderRuntimeItemStartedEvent = Schema.Struct({
+export class ProviderRuntimeItemStartedEvent extends Schema.Class<ProviderRuntimeItemStartedEvent>(
+  "ProviderRuntimeItemStartedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ItemStartedType,
   payload: ItemLifecyclePayload,
-});
-export type ProviderRuntimeItemStartedEvent = typeof ProviderRuntimeItemStartedEvent.Type;
+}) {}
 
-const ProviderRuntimeItemUpdatedEvent = Schema.Struct({
+export class ProviderRuntimeItemUpdatedEvent extends Schema.Class<ProviderRuntimeItemUpdatedEvent>(
+  "ProviderRuntimeItemUpdatedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ItemUpdatedType,
   payload: ItemLifecyclePayload,
-});
-export type ProviderRuntimeItemUpdatedEvent = typeof ProviderRuntimeItemUpdatedEvent.Type;
+}) {}
 
-const ProviderRuntimeItemCompletedEvent = Schema.Struct({
+export class ProviderRuntimeItemCompletedEvent extends Schema.Class<ProviderRuntimeItemCompletedEvent>(
+  "ProviderRuntimeItemCompletedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ItemCompletedType,
   payload: ItemLifecyclePayload,
-});
-export type ProviderRuntimeItemCompletedEvent = typeof ProviderRuntimeItemCompletedEvent.Type;
+}) {}
 
-const ProviderRuntimeContentDeltaEvent = Schema.Struct({
+export class ProviderRuntimeContentDeltaEvent extends Schema.Class<ProviderRuntimeContentDeltaEvent>(
+  "ProviderRuntimeContentDeltaEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ContentDeltaType,
   payload: ContentDeltaPayload,
-});
-export type ProviderRuntimeContentDeltaEvent = typeof ProviderRuntimeContentDeltaEvent.Type;
+}) {}
 
-const ProviderRuntimeRequestOpenedEvent = Schema.Struct({
+export class ProviderRuntimeRequestOpenedEvent extends Schema.Class<ProviderRuntimeRequestOpenedEvent>(
+  "ProviderRuntimeRequestOpenedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: RequestOpenedType,
   payload: RequestOpenedPayload,
-});
-export type ProviderRuntimeRequestOpenedEvent = typeof ProviderRuntimeRequestOpenedEvent.Type;
+}) {}
 
-const ProviderRuntimeRequestResolvedEvent = Schema.Struct({
+export class ProviderRuntimeRequestResolvedEvent extends Schema.Class<ProviderRuntimeRequestResolvedEvent>(
+  "ProviderRuntimeRequestResolvedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: RequestResolvedType,
   payload: RequestResolvedPayload,
-});
-export type ProviderRuntimeRequestResolvedEvent = typeof ProviderRuntimeRequestResolvedEvent.Type;
+}) {}
 
-const ProviderRuntimeUserInputRequestedEvent = Schema.Struct({
+export class ProviderRuntimeUserInputRequestedEvent extends Schema.Class<ProviderRuntimeUserInputRequestedEvent>(
+  "ProviderRuntimeUserInputRequestedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: UserInputRequestedType,
   payload: UserInputRequestedPayload,
-});
-export type ProviderRuntimeUserInputRequestedEvent =
-  typeof ProviderRuntimeUserInputRequestedEvent.Type;
+}) {}
 
-const ProviderRuntimeUserInputResolvedEvent = Schema.Struct({
+export class ProviderRuntimeUserInputResolvedEvent extends Schema.Class<ProviderRuntimeUserInputResolvedEvent>(
+  "ProviderRuntimeUserInputResolvedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: UserInputResolvedType,
   payload: UserInputResolvedPayload,
-});
-export type ProviderRuntimeUserInputResolvedEvent =
-  typeof ProviderRuntimeUserInputResolvedEvent.Type;
+}) {}
 
-const ProviderRuntimeTaskStartedEvent = Schema.Struct({
+export class ProviderRuntimeTaskStartedEvent extends Schema.Class<ProviderRuntimeTaskStartedEvent>(
+  "ProviderRuntimeTaskStartedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: TaskStartedType,
   payload: TaskStartedPayload,
-});
-export type ProviderRuntimeTaskStartedEvent = typeof ProviderRuntimeTaskStartedEvent.Type;
+}) {}
 
-const ProviderRuntimeTaskProgressEvent = Schema.Struct({
+export class ProviderRuntimeTaskProgressEvent extends Schema.Class<ProviderRuntimeTaskProgressEvent>(
+  "ProviderRuntimeTaskProgressEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: TaskProgressType,
   payload: TaskProgressPayload,
-});
-export type ProviderRuntimeTaskProgressEvent = typeof ProviderRuntimeTaskProgressEvent.Type;
+}) {}
 
-const ProviderRuntimeTaskCompletedEvent = Schema.Struct({
+export class ProviderRuntimeTaskCompletedEvent extends Schema.Class<ProviderRuntimeTaskCompletedEvent>(
+  "ProviderRuntimeTaskCompletedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: TaskCompletedType,
   payload: TaskCompletedPayload,
-});
-export type ProviderRuntimeTaskCompletedEvent = typeof ProviderRuntimeTaskCompletedEvent.Type;
+}) {}
 
-const ProviderRuntimeHookStartedEvent = Schema.Struct({
+export class ProviderRuntimeHookStartedEvent extends Schema.Class<ProviderRuntimeHookStartedEvent>(
+  "ProviderRuntimeHookStartedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: HookStartedType,
   payload: HookStartedPayload,
-});
-export type ProviderRuntimeHookStartedEvent = typeof ProviderRuntimeHookStartedEvent.Type;
+}) {}
 
-const ProviderRuntimeHookProgressEvent = Schema.Struct({
+export class ProviderRuntimeHookProgressEvent extends Schema.Class<ProviderRuntimeHookProgressEvent>(
+  "ProviderRuntimeHookProgressEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: HookProgressType,
   payload: HookProgressPayload,
-});
-export type ProviderRuntimeHookProgressEvent = typeof ProviderRuntimeHookProgressEvent.Type;
+}) {}
 
-const ProviderRuntimeHookCompletedEvent = Schema.Struct({
+export class ProviderRuntimeHookCompletedEvent extends Schema.Class<ProviderRuntimeHookCompletedEvent>(
+  "ProviderRuntimeHookCompletedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: HookCompletedType,
   payload: HookCompletedPayload,
-});
-export type ProviderRuntimeHookCompletedEvent = typeof ProviderRuntimeHookCompletedEvent.Type;
+}) {}
 
-const ProviderRuntimeToolProgressEvent = Schema.Struct({
+export class ProviderRuntimeToolProgressEvent extends Schema.Class<ProviderRuntimeToolProgressEvent>(
+  "ProviderRuntimeToolProgressEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ToolProgressType,
   payload: ToolProgressPayload,
-});
-export type ProviderRuntimeToolProgressEvent = typeof ProviderRuntimeToolProgressEvent.Type;
+}) {}
 
-const ProviderRuntimeToolSummaryEvent = Schema.Struct({
+export class ProviderRuntimeToolSummaryEvent extends Schema.Class<ProviderRuntimeToolSummaryEvent>(
+  "ProviderRuntimeToolSummaryEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ToolSummaryType,
   payload: ToolSummaryPayload,
-});
-export type ProviderRuntimeToolSummaryEvent = typeof ProviderRuntimeToolSummaryEvent.Type;
+}) {}
 
-const ProviderRuntimeAuthStatusEvent = Schema.Struct({
+export class ProviderRuntimeAuthStatusEvent extends Schema.Class<ProviderRuntimeAuthStatusEvent>(
+  "ProviderRuntimeAuthStatusEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: AuthStatusType,
   payload: AuthStatusPayload,
-});
-export type ProviderRuntimeAuthStatusEvent = typeof ProviderRuntimeAuthStatusEvent.Type;
+}) {}
 
-const ProviderRuntimeAccountUpdatedEvent = Schema.Struct({
+export class ProviderRuntimeAccountUpdatedEvent extends Schema.Class<ProviderRuntimeAccountUpdatedEvent>(
+  "ProviderRuntimeAccountUpdatedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: AccountUpdatedType,
   payload: AccountUpdatedPayload,
-});
-export type ProviderRuntimeAccountUpdatedEvent = typeof ProviderRuntimeAccountUpdatedEvent.Type;
+}) {}
 
-const ProviderRuntimeAccountRateLimitsUpdatedEvent = Schema.Struct({
+export class ProviderRuntimeAccountRateLimitsUpdatedEvent extends Schema.Class<ProviderRuntimeAccountRateLimitsUpdatedEvent>(
+  "ProviderRuntimeAccountRateLimitsUpdatedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: AccountRateLimitsUpdatedType,
   payload: AccountRateLimitsUpdatedPayload,
-});
-export type ProviderRuntimeAccountRateLimitsUpdatedEvent =
-  typeof ProviderRuntimeAccountRateLimitsUpdatedEvent.Type;
+}) {}
 
-const ProviderRuntimeMcpStatusUpdatedEvent = Schema.Struct({
+export class ProviderRuntimeMcpStatusUpdatedEvent extends Schema.Class<ProviderRuntimeMcpStatusUpdatedEvent>(
+  "ProviderRuntimeMcpStatusUpdatedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: McpStatusUpdatedType,
   payload: McpStatusUpdatedPayload,
-});
-export type ProviderRuntimeMcpStatusUpdatedEvent = typeof ProviderRuntimeMcpStatusUpdatedEvent.Type;
+}) {}
 
-const ProviderRuntimeMcpOauthCompletedEvent = Schema.Struct({
+export class ProviderRuntimeMcpOauthCompletedEvent extends Schema.Class<ProviderRuntimeMcpOauthCompletedEvent>(
+  "ProviderRuntimeMcpOauthCompletedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: McpOauthCompletedType,
   payload: McpOauthCompletedPayload,
-});
-export type ProviderRuntimeMcpOauthCompletedEvent =
-  typeof ProviderRuntimeMcpOauthCompletedEvent.Type;
+}) {}
 
-const ProviderRuntimeModelReroutedEvent = Schema.Struct({
+export class ProviderRuntimeModelReroutedEvent extends Schema.Class<ProviderRuntimeModelReroutedEvent>(
+  "ProviderRuntimeModelReroutedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ModelReroutedType,
   payload: ModelReroutedPayload,
-});
-export type ProviderRuntimeModelReroutedEvent = typeof ProviderRuntimeModelReroutedEvent.Type;
+}) {}
 
-const ProviderRuntimeConfigWarningEvent = Schema.Struct({
+export class ProviderRuntimeConfigWarningEvent extends Schema.Class<ProviderRuntimeConfigWarningEvent>(
+  "ProviderRuntimeConfigWarningEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ConfigWarningType,
   payload: ConfigWarningPayload,
-});
-export type ProviderRuntimeConfigWarningEvent = typeof ProviderRuntimeConfigWarningEvent.Type;
+}) {}
 
-const ProviderRuntimeDeprecationNoticeEvent = Schema.Struct({
+export class ProviderRuntimeDeprecationNoticeEvent extends Schema.Class<ProviderRuntimeDeprecationNoticeEvent>(
+  "ProviderRuntimeDeprecationNoticeEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: DeprecationNoticeType,
   payload: DeprecationNoticePayload,
-});
-export type ProviderRuntimeDeprecationNoticeEvent =
-  typeof ProviderRuntimeDeprecationNoticeEvent.Type;
+}) {}
 
-const ProviderRuntimeFilesPersistedEvent = Schema.Struct({
+export class ProviderRuntimeFilesPersistedEvent extends Schema.Class<ProviderRuntimeFilesPersistedEvent>(
+  "ProviderRuntimeFilesPersistedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: FilesPersistedType,
   payload: FilesPersistedPayload,
-});
-export type ProviderRuntimeFilesPersistedEvent = typeof ProviderRuntimeFilesPersistedEvent.Type;
+}) {}
 
-const ProviderRuntimeToolDeniedEvent = Schema.Struct({
+export class ProviderRuntimeToolDeniedEvent extends Schema.Class<ProviderRuntimeToolDeniedEvent>(
+  "ProviderRuntimeToolDeniedEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: ToolDeniedType,
   payload: ToolDeniedPayload,
-});
-export type ProviderRuntimeToolDeniedEvent = typeof ProviderRuntimeToolDeniedEvent.Type;
+}) {}
 
-const ProviderRuntimeWarningEvent = Schema.Struct({
+export class ProviderRuntimeWarningEvent extends Schema.Class<ProviderRuntimeWarningEvent>(
+  "ProviderRuntimeWarningEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: RuntimeWarningType,
   payload: RuntimeWarningPayload,
-});
-export type ProviderRuntimeWarningEvent = typeof ProviderRuntimeWarningEvent.Type;
+}) {}
 
-const ProviderRuntimeErrorEvent = Schema.Struct({
+export class ProviderRuntimeErrorEvent extends Schema.Class<ProviderRuntimeErrorEvent>(
+  "ProviderRuntimeErrorEvent",
+)({
   ...ProviderRuntimeEventBase.fields,
   type: RuntimeErrorType,
   payload: RuntimeErrorPayload,
-});
-export type ProviderRuntimeErrorEvent = typeof ProviderRuntimeErrorEvent.Type;
+}) {}
 
 export const ProviderRuntimeEventV2 = Schema.Union([
   ProviderRuntimeSessionStartedEvent,

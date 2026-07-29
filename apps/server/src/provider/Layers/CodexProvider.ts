@@ -22,6 +22,7 @@ import type {
   ServerProviderModel,
   ServerProviderSkill,
 } from "@t3tools/contracts";
+import { ServerProviderAuth } from "@t3tools/contracts";
 import { PREFERRED_DEFAULT_CODEX_MODELS, ServerSettingsError } from "@t3tools/contracts";
 
 import { createModelCapabilities } from "@t3tools/shared/model";
@@ -443,7 +444,7 @@ const makePendingCodexProvider = (
           installed: false,
           version: null,
           status: "warning",
-          auth: { status: "unknown" },
+          auth: ServerProviderAuth.make({ status: "unknown" }),
           message: "Codex is disabled in T3 Code settings.",
         },
       });
@@ -459,7 +460,7 @@ const makePendingCodexProvider = (
         installed: false,
         version: null,
         status: "warning",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: "Codex provider status has not been checked in this session yet.",
       },
     });
@@ -486,7 +487,7 @@ function accountProbeStatus(account: CodexAppServerProviderSnapshot["account"]):
   if (account.requiresOpenaiAuth) {
     return {
       status: "error",
-      auth: { status: "unauthenticated" },
+      auth: ServerProviderAuth.make({ status: "unauthenticated" }),
       message: "Codex CLI is not authenticated. Run `codex login` and try again.",
     };
   }
@@ -529,7 +530,7 @@ export const checkCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(fu
         installed: false,
         version: null,
         status: "warning",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: "Codex is disabled in T3 Code settings.",
       },
     });
@@ -561,7 +562,7 @@ export const checkCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(fu
         installed,
         version: null,
         status: "error",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: installed
           ? `Codex app-server provider probe failed: ${error.message}.`
           : "Codex CLI (`codex`) is not installed or not on PATH.",
@@ -580,7 +581,7 @@ export const checkCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(fu
         installed: true,
         version: null,
         status: "error",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: "Timed out while checking Codex app-server provider status.",
       },
     });

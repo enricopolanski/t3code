@@ -1,6 +1,7 @@
 import {
   DEFAULT_SERVER_SETTINGS,
   ProviderDriverKind,
+  ProviderInstanceConfig,
   ProviderInstanceId,
 } from "@t3tools/contracts";
 import { DEFAULT_CLIENT_SETTINGS } from "@t3tools/contracts/settings";
@@ -24,10 +25,10 @@ describe("mergeEnvironmentSettings", () => {
     const serverSettings = {
       ...DEFAULT_SERVER_SETTINGS,
       providerInstances: {
-        [ProviderInstanceId.make("codex_remote")]: {
+        [ProviderInstanceId.make("codex_remote")]: ProviderInstanceConfig.make({
           driver: ProviderDriverKind.make("codex"),
           enabled: true,
-        },
+        }),
       },
     };
     const clientSettings = {

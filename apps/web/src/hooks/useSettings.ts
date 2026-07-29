@@ -15,10 +15,10 @@ import {
   DEFAULT_SERVER_SETTINGS,
   type EnvironmentId,
   ServerSettings,
-  type ServerSettingsPatch,
+  ServerSettingsPatch,
 } from "@t3tools/contracts";
 import {
-  type ClientSettingsPatch,
+  ClientSettingsPatch,
   type ClientSettings,
   DEFAULT_CLIENT_SETTINGS,
   type EnvironmentIdentificationMode,
@@ -163,8 +163,8 @@ function splitPatch(patch: UnifiedSettingsPatch): {
     }
   }
   return {
-    serverPatch: serverPatch as ServerSettingsPatch,
-    clientPatch: clientPatch as ClientSettingsPatch,
+    serverPatch: ServerSettingsPatch.make(serverPatch as ServerSettingsPatch),
+    clientPatch: ClientSettingsPatch.make(clientPatch as ClientSettingsPatch),
   };
 }
 

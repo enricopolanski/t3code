@@ -2,7 +2,9 @@ import * as Schema from "effect/Schema";
 
 import { PortSchema } from "./baseSchemas.ts";
 
-export const DesktopBackendBootstrap = Schema.Struct({
+export class DesktopBackendBootstrap extends Schema.Class<DesktopBackendBootstrap>(
+  "DesktopBackendBootstrap",
+)({
   mode: Schema.Literal("desktop"),
   noBrowser: Schema.Boolean,
   port: PortSchema,
@@ -16,6 +18,9 @@ export const DesktopBackendBootstrap = Schema.Struct({
   tailscaleServePort: PortSchema,
   otlpTracesUrl: Schema.optional(Schema.String),
   otlpMetricsUrl: Schema.optional(Schema.String),
-});
-
-export type DesktopBackendBootstrap = typeof DesktopBackendBootstrap.Type;
+}) {
+  /** The envelope crosses the desktop -> backend boundary as a JSON string. */
+  static readonly Json = Schema.fromJsonString(this);
+  static readonly decodeJson = Schema.decodeEffect(this.Json);
+  static readonly encodeJson = Schema.encodeEffect(this.Json);
+}

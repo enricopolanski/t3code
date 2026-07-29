@@ -11,7 +11,13 @@ import { ChildProcessSpawner } from "effect/unstable/process";
 
 import {
   GitCommandError,
+  VcsDriverCapabilities,
+  VcsFreshness,
+  VcsListRemotesResult,
+  VcsListWorkspaceFilesResult,
   VcsProcessExitError,
+  VcsRemote,
+  VcsRepositoryIdentity,
   type VcsSwitchRefInput,
   type VcsSwitchRefResult,
   type VcsCreateRefInput,
@@ -279,11 +285,11 @@ const WORKSPACE_GIT_HARDENED_CONFIG_ARGS = [
 
 const nowFreshness = Effect.fn("GitVcsDriver.nowFreshness")(function* () {
   const now = yield* DateTime.now;
-  return {
-    source: "live-local" as const,
+  return VcsFreshness.make({
+    source: "live-local",
     observedAt: now,
     expiresAt: Option.none(),
-  };
+  });
 });
 
 function splitNullSeparatedPaths(input: string, truncated: boolean): string[] {
@@ -395,14 +401,14 @@ export const makeVcsDriverShape = Effect.fn("makeGitVcsDriverShape")(function* (
   const fileSystem = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const vcsProcess = yield* VcsProcess.VcsProcess;
-  const capabilities = {
-    kind: "git" as const,
+  const capabilities = VcsDriverCapabilities.make({
+    kind: "git",
     supportsWorktrees: true,
     supportsBookmarks: false,
     supportsAtomicSnapshot: false,
     supportsPushDefaultRemote: true,
-    ignoreClassifier: "native" as const,
-  };
+    ignoreClassifier: "native",
+  });
 
   const isInsideWorkTree: VcsDriver.VcsDriver["Service"]["isInsideWorkTree"] = (cwd) =>
     gitCommand(
@@ -447,12 +453,12 @@ export const makeVcsDriverShape = Effect.fn("makeGitVcsDriverShape")(function* (
       ["rev-parse", "--git-common-dir"],
     ).pipe(Effect.orElseSucceed(() => null));
 
-    return {
-      kind: "git" as const,
+    return VcsRepositoryIdentity.make({
+      kind: "git",
       rootPath: root.stdout.trim(),
       metadataPath: gitCommonDir?.stdout.trim() || null,
       freshness: yield* nowFreshness(),
-    };
+    });
   });
 
   const listWorkspaceFiles: VcsDriver.VcsDriver["Service"]["listWorkspaceFiles"] = (cwd) =>
@@ -479,11 +485,11 @@ export const makeVcsDriverShape = Effect.fn("makeGitVcsDriverShape")(function* (
         result.exitCode === 0
           ? Effect.gen(function* () {
               const freshness = yield* nowFreshness();
-              return {
+              return VcsListWorkspaceFilesResult.make({
                 paths: splitNullSeparatedPaths(result.stdout, result.stdoutTruncated),
                 truncated: result.stdoutTruncated,
                 freshness,
-              };
+              });
             })
           : Effect.fail(
               new VcsProcessExitError({
@@ -527,19 +533,19 @@ export const makeVcsDriverShape = Effect.fn("makeGitVcsDriverShape")(function* (
           return [];
         }
         return [
-          {
+          VcsRemote.make({
             name,
             url: remote.url,
             pushUrl: remote.pushUrl ? Option.some(remote.pushUrl) : Option.none(),
             isPrimary: name === "origin",
-          },
+          }),
         ];
       });
 
-      return {
+      return VcsListRemotesResult.make({
         remotes,
         freshness: yield* nowFreshness(),
-      };
+      });
     },
   );
 

@@ -1,3 +1,4 @@
+import { ChangeRequest } from "@t3tools/contracts";
 import { assert, it } from "@effect/vitest";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -52,19 +53,22 @@ it.effect("maps GitHub PR summaries into provider-neutral change requests", () =
       reference: "42",
     });
 
-    assert.deepStrictEqual(changeRequest, {
-      provider: "github",
-      number: 42,
-      title: "Add GitHub provider",
-      url: "https://github.com/pingdotgg/t3code/pull/42",
-      baseRefName: "main",
-      headRefName: "feature/source-control",
-      state: "open",
-      updatedAt: Option.none(),
-      isCrossRepository: true,
-      headRepositoryNameWithOwner: "fork/t3code",
-      headRepositoryOwnerLogin: "fork",
-    });
+    assert.deepStrictEqual(
+      changeRequest,
+      ChangeRequest.make({
+        provider: "github",
+        number: 42,
+        title: "Add GitHub provider",
+        url: "https://github.com/pingdotgg/t3code/pull/42",
+        baseRefName: "main",
+        headRefName: "feature/source-control",
+        state: "open",
+        updatedAt: Option.none(),
+        isCrossRepository: true,
+        headRepositoryNameWithOwner: "fork/t3code",
+        headRepositoryOwnerLogin: "fork",
+      }),
+    );
   }),
 );
 

@@ -1,8 +1,9 @@
-import type {
+import {
+  RelayAgentActivityAggregateRow,
   RelayAgentActivityAggregateState,
-  RelayAgentActivityState,
-  RelayDeliveryResult,
-  RelayPublishResponse,
+  type RelayAgentActivityState,
+  type RelayDeliveryResult,
+  type RelayPublishResponse,
 } from "@t3tools/contracts/relay";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
@@ -203,7 +204,7 @@ function statusForPhase(phase: RelayAgentActivityState["phase"]): string {
 }
 
 function aggregateRowForState(state: RelayAgentActivityState) {
-  return {
+  return RelayAgentActivityAggregateRow.make({
     environmentId: state.environmentId,
     threadId: state.threadId,
     projectTitle: state.projectTitle,
@@ -213,17 +214,19 @@ function aggregateRowForState(state: RelayAgentActivityState) {
     status: statusForPhase(state.phase),
     updatedAt: state.updatedAt,
     deepLink: state.deepLink,
-  };
+  });
 }
 
 function terminalAggregateState(state: RelayAgentActivityState): RelayAgentActivityAggregateState {
-  return sanitizeAgentActivityAggregateState({
-    title: "T3 Code",
-    subtitle: state.phase === "failed" ? "Agent work failed" : "Agent work completed",
-    activeCount: 0,
-    updatedAt: state.updatedAt,
-    activities: [aggregateRowForState(state)],
-  });
+  return sanitizeAgentActivityAggregateState(
+    RelayAgentActivityAggregateState.make({
+      title: "T3 Code",
+      subtitle: state.phase === "failed" ? "Agent work failed" : "Agent work completed",
+      activeCount: 0,
+      updatedAt: state.updatedAt,
+      activities: [aggregateRowForState(state)],
+    }),
+  );
 }
 
 // How long a finished thread keeps its Done/Failed row in the aggregate while
@@ -269,13 +272,15 @@ export function makeAggregateState(input: {
     if (!newest) {
       return null;
     }
-    return sanitizeAgentActivityAggregateState({
-      title: "T3 Code",
-      subtitle: newest.phase === "failed" ? "Agent work failed" : "Agent work completed",
-      activeCount: 0,
-      updatedAt: newest.updatedAt,
-      activities: recentTerminal.slice(0, MAX_ACTIVITY_ROWS).map(aggregateRowForState),
-    });
+    return sanitizeAgentActivityAggregateState(
+      RelayAgentActivityAggregateState.make({
+        title: "T3 Code",
+        subtitle: newest.phase === "failed" ? "Agent work failed" : "Agent work completed",
+        activeCount: 0,
+        updatedAt: newest.updatedAt,
+        activities: recentTerminal.slice(0, MAX_ACTIVITY_ROWS).map(aggregateRowForState),
+      }),
+    );
   }
   // Recently finished threads ride along after the active ones (display slots
   // permitting) so a completion is visible as Done/Failed instead of the row
@@ -290,13 +295,15 @@ export function makeAggregateState(input: {
   const updatedAt = [...activeStates, ...recentTerminalStates].reduce((latest, state) =>
     state.updatedAt.localeCompare(latest.updatedAt) > 0 ? state : latest,
   ).updatedAt;
-  return sanitizeAgentActivityAggregateState({
-    title: "T3 Code",
-    subtitle: "Agent work in progress",
-    activeCount: activeStates.length,
-    updatedAt,
-    activities: displayedStates.map(aggregateRowForState),
-  });
+  return sanitizeAgentActivityAggregateState(
+    RelayAgentActivityAggregateState.make({
+      title: "T3 Code",
+      subtitle: "Agent work in progress",
+      activeCount: activeStates.length,
+      updatedAt,
+      activities: displayedStates.map(aggregateRowForState),
+    }),
+  );
 }
 
 export const layer = Layer.effect(AgentActivityPublisher, make);

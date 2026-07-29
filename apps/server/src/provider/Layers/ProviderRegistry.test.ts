@@ -18,8 +18,10 @@ import {
   DEFAULT_SERVER_SETTINGS,
   ProviderDriverKind,
   ProviderInstanceId,
+  ProviderOptionChoice,
+  ServerProvider,
+  ServerProviderModel,
   ServerSettings,
-  type ServerProvider,
   type ServerProviderSlashCommand,
   type ServerSettings as ContractServerSettings,
 } from "@t3tools/contracts";
@@ -1028,10 +1030,13 @@ it.layer(Layer.mergeAll(NodeServices.layer, ServerSettingsModule.layerTest(), Te
               cachedProvider = yield* readProviderStatusCache(filePath);
             }
 
-            assert.deepStrictEqual(cachedProvider, {
-              ...refreshedProvider,
-              models: [...initialProvider.models],
-            });
+            assert.deepStrictEqual(
+              cachedProvider,
+              ServerProvider.make({
+                ...refreshedProvider,
+                models: [...initialProvider.models],
+              }),
+            );
           }).pipe(Effect.provide(runtimeServices));
         }),
       );
@@ -1153,7 +1158,9 @@ it.layer(Layer.mergeAll(NodeServices.layer, ServerSettingsModule.layerTest(), Te
                 cachedProvider = yield* readProviderStatusCache(filePath);
               }
 
-              assert.deepStrictEqual(cachedProvider?.models, [authoritativeProvider.models[0]!]);
+              assert.deepStrictEqual(cachedProvider?.models, [
+                ServerProviderModel.make(authoritativeProvider.models[0]!),
+              ]);
 
               yield* PubSub.publish(changes, failedProvider);
               for (
@@ -1166,7 +1173,9 @@ it.layer(Layer.mergeAll(NodeServices.layer, ServerSettingsModule.layerTest(), Te
                 cachedProvider = yield* readProviderStatusCache(filePath);
               }
 
-              assert.deepStrictEqual(cachedProvider?.models, [authoritativeProvider.models[0]!]);
+              assert.deepStrictEqual(cachedProvider?.models, [
+                ServerProviderModel.make(authoritativeProvider.models[0]!),
+              ]);
               assert.deepStrictEqual((yield* registry.getProviders)[0]?.models, [
                 authoritativeProvider.models[0]!,
               ]);
@@ -1978,7 +1987,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, ServerSettingsModule.layerTest(), Te
               effortDescriptor?.type === "select"
                 ? effortDescriptor.options.find((option) => option.isDefault)
                 : undefined,
-              { id: "xhigh", label: "Extra High", isDefault: true },
+              ProviderOptionChoice.make({ id: "xhigh", label: "Extra High", isDefault: true }),
             );
           }).pipe(
             Effect.provide(

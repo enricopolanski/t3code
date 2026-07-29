@@ -1,3 +1,10 @@
+import {
+  RelayEnvironmentConfigRequest,
+  RelayEnvironmentLinkChallengeRequest,
+  RelayEnvironmentLinkRequest,
+  RelayLinkProofRequest,
+  RelayManagedEndpoint,
+} from "@t3tools/contracts/relay";
 import * as Data from "effect/Data";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
@@ -7,6 +14,7 @@ import { HttpClient } from "effect/unstable/http";
 import {
   EnvironmentCloudEndpointUnavailableError,
   type EnvironmentCloudLinkStateResult,
+  EnvironmentCloudPreferencesRequest,
   EnvironmentHttpBadRequestError,
   EnvironmentHttpConflictError,
   EnvironmentHttpForbiddenError,
@@ -344,7 +352,9 @@ export function updatePrimaryCloudPreferences(input: {
     return yield* client.connect
       .preferences({
         headers: {},
-        payload: input,
+        payload: EnvironmentCloudPreferencesRequest.make({
+          publishAgentActivity: input.publishAgentActivity,
+        }),
       })
       .pipe(
         Effect.mapError(environmentApiError("Could not update environment cloud preferences.")),
@@ -421,11 +431,11 @@ export function linkPrimaryEnvironmentToCloud(input: {
     const challenge = yield* relayClient
       .createEnvironmentLinkChallenge({
         clerkToken: input.clerkToken,
-        payload: {
+        payload: RelayEnvironmentLinkChallengeRequest.make({
           notificationsEnabled: true,
           liveActivitiesEnabled: true,
           managedTunnelsEnabled,
-        },
+        }),
       })
       .pipe(
         Effect.mapError(
@@ -437,27 +447,27 @@ export function linkPrimaryEnvironmentToCloud(input: {
     const proof = yield* environmentClient.connect
       .linkProof({
         headers: {},
-        payload: {
+        payload: RelayLinkProofRequest.make({
           challenge: challenge.challenge,
           relayIssuer: configuredRelayUrl,
-          endpoint: {
+          endpoint: RelayManagedEndpoint.make({
             httpBaseUrl: input.target.httpBaseUrl,
             wsBaseUrl: input.target.wsBaseUrl,
             providerKind,
-          },
+          }),
           origin: endpointOrigin(input.target.httpBaseUrl),
-        },
+        }),
       })
       .pipe(Effect.mapError(environmentApiError("Could not obtain environment link proof.")));
     const link = yield* relayClient
       .linkEnvironment({
         clerkToken: input.clerkToken,
-        payload: {
+        payload: RelayEnvironmentLinkRequest.make({
           proof,
           notificationsEnabled: true,
           liveActivitiesEnabled: true,
           managedTunnelsEnabled,
-        },
+        }),
       })
       .pipe(
         Effect.mapError(
@@ -473,14 +483,14 @@ export function linkPrimaryEnvironmentToCloud(input: {
     yield* environmentClient.connect
       .relayConfig({
         headers: {},
-        payload: {
+        payload: RelayEnvironmentConfigRequest.make({
           relayUrl: configuredRelayUrl,
           relayIssuer: link.relayIssuer,
           cloudUserId: link.cloudUserId,
           environmentCredential: link.environmentCredential,
           cloudMintPublicKey: link.cloudMintPublicKey,
           endpointRuntime: link.endpointRuntime,
-        },
+        }),
       })
       .pipe(Effect.mapError(environmentApiError("Could not configure environment relay access.")));
   }).pipe(Effect.provide(primaryEnvironmentHttpLayer));

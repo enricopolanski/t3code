@@ -44,11 +44,10 @@ export const EDITORS = [
 export const EditorId = Schema.Literals(EDITORS.map((e) => e.id));
 export type EditorId = typeof EditorId.Type;
 
-export const LaunchEditorInput = Schema.Struct({
+export class LaunchEditorInput extends Schema.Class<LaunchEditorInput>("LaunchEditorInput")({
   cwd: TrimmedNonEmptyString,
   editor: EditorId,
-});
-export type LaunchEditorInput = typeof LaunchEditorInput.Type;
+}) {}
 
 export class ExternalLauncherUnknownEditorError extends Schema.TaggedErrorClass<ExternalLauncherUnknownEditorError>()(
   "ExternalLauncherUnknownEditorError",

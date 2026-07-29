@@ -1,4 +1,10 @@
-import { CommandId, EventId, ProjectId } from "@t3tools/contracts";
+import {
+  CommandId,
+  EventId,
+  OrchestrationEventMetadata,
+  ProjectCreatedPayload,
+  ProjectId,
+} from "@t3tools/contracts";
 import { assert, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -31,10 +37,10 @@ layer("OrchestrationEventStore", (it) => {
         commandId: CommandId.make("cmd-store-roundtrip"),
         causationEventId: null,
         correlationId: CommandId.make("cmd-store-roundtrip"),
-        metadata: {
+        metadata: OrchestrationEventMetadata.make({
           adapterKey: "codex",
-        },
-        payload: {
+        }),
+        payload: ProjectCreatedPayload.make({
           projectId: ProjectId.make("project-roundtrip"),
           title: "Roundtrip Project",
           workspaceRoot: "/tmp/project-roundtrip",
@@ -42,7 +48,7 @@ layer("OrchestrationEventStore", (it) => {
           scripts: [],
           createdAt: now,
           updatedAt: now,
-        },
+        }),
       });
 
       const storedRows = yield* sql<{

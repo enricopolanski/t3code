@@ -11,7 +11,7 @@
  * Polling is reference-counted via scoped `retain`. A single layer-scoped fiber
  * polls forever, but each tick is a no-op when the retain count is zero.
  */
-import { ThreadId, type DiscoveredLocalServer } from "@t3tools/contracts";
+import { ThreadId, DiscoveredLocalServer, DiscoveredLocalServerTerminal } from "@t3tools/contracts";
 import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
 import * as Net from "@t3tools/shared/Net";
 import { LSOF_LOCAL_HOST_TOKENS } from "@t3tools/shared/preview";
@@ -69,10 +69,7 @@ interface ScannerState {
   readonly retainCount: number;
 }
 
-interface TerminalProcessOwner {
-  readonly threadId: ThreadId;
-  readonly terminalId: string;
-}
+type TerminalProcessOwner = DiscoveredLocalServerTerminal;
 
 const terminalOwnerKey = (owner: {
   readonly threadId: string;
@@ -107,14 +104,17 @@ const parseLsofOutput = (
       const url = `http://localhost:${portMatch}`;
       const key = `localhost:${portMatch}`;
       if (seen.has(key)) continue;
-      seen.set(key, {
-        host: "localhost",
-        port: portMatch,
-        url,
-        processName,
-        pid,
-        terminal: pid === null ? null : (terminalByProcessId.get(pid) ?? null),
-      });
+      seen.set(
+        key,
+        DiscoveredLocalServer.make({
+          host: "localhost",
+          port: portMatch,
+          url,
+          processName,
+          pid,
+          terminal: pid === null ? null : (terminalByProcessId.get(pid) ?? null),
+        }),
+      );
     }
   }
 
@@ -150,14 +150,17 @@ const parseWindowsListenerOutput = (
     if (!Number.isInteger(port) || port <= 0 || port >= 65536) continue;
     const normalizedPid = Number.isInteger(pid) && pid > 0 ? pid : null;
     if (seen.has(port)) continue;
-    seen.set(port, {
-      host: "localhost",
+    seen.set(
       port,
-      url: `http://localhost:${port}`,
-      processName: processNameRaw?.trim() || null,
-      pid: normalizedPid,
-      terminal: normalizedPid === null ? null : (terminalByProcessId.get(normalizedPid) ?? null),
-    });
+      DiscoveredLocalServer.make({
+        host: "localhost",
+        port,
+        url: `http://localhost:${port}`,
+        processName: processNameRaw?.trim() || null,
+        pid: normalizedPid,
+        terminal: normalizedPid === null ? null : (terminalByProcessId.get(normalizedPid) ?? null),
+      }),
+    );
   }
   return [...seen.values()].toSorted((left, right) => left.port - right.port);
 };
@@ -211,14 +214,16 @@ export const make = Effect.gen(function* PortDiscoveryMake() {
     );
     return results
       .filter((result) => result.listening)
-      .map<DiscoveredLocalServer>((result) => ({
-        host: "localhost",
-        port: result.port,
-        url: `http://localhost:${result.port}`,
-        processName: null,
-        pid: null,
-        terminal: null,
-      }));
+      .map((result) =>
+        DiscoveredLocalServer.make({
+          host: "localhost",
+          port: result.port,
+          url: `http://localhost:${result.port}`,
+          processName: null,
+          pid: null,
+          terminal: null,
+        }),
+      );
   });
 
   const recoverProcessProbeFailure =
@@ -349,10 +354,10 @@ export const make = Effect.gen(function* PortDiscoveryMake() {
 
   const registerTerminalProcesses: PortDiscovery["Service"]["registerTerminalProcesses"] =
     Effect.fn("PortDiscovery.registerTerminalProcesses")(function* (input) {
-      const owner = {
+      const owner = DiscoveredLocalServerTerminal.make({
         threadId: ThreadId.make(input.threadId),
         terminalId: input.terminalId,
-      };
+      });
       const processIds = new Set(
         input.processIds.filter((processId) => Number.isInteger(processId) && processId > 0),
       );

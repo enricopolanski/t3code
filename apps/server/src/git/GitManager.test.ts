@@ -23,6 +23,7 @@ import {
   DEFAULT_SERVER_SETTINGS,
   GitCommandError,
   ProviderDriverKind,
+  ProviderInstanceConfig,
   ProviderInstanceId,
   TextGenerationError,
 } from "@t3tools/contracts";
@@ -1638,10 +1639,10 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       const { manager } = yield* makeManager({
         serverSettings: {
           providerInstances: {
-            [missingInstanceId]: {
+            [missingInstanceId]: ProviderInstanceConfig.make({
               driver: ProviderDriverKind.make("missing-driver"),
               config: {},
-            },
+            }),
           },
           sourceControlWriterModelSelection: {
             instanceId: missingInstanceId,

@@ -279,18 +279,20 @@ describe("ServerSettingsPatch string normalization", () => {
 
   it("trims encoded server settings values before validation", () => {
     const defaultSettings = decodeServerSettings({});
-    const encoded = encodeServerSettings({
-      ...defaultSettings,
-      addProjectBaseDirectory: "  ~/Development  ",
-      providers: {
-        ...defaultSettings.providers,
-        codex: {
-          ...defaultSettings.providers.codex,
-          binaryPath: "  /opt/homebrew/bin/codex  ",
-          launchArgs: "  --strict-config  ",
+    const encoded = encodeServerSettings(
+      ServerSettings.make({
+        ...defaultSettings,
+        addProjectBaseDirectory: "  ~/Development  ",
+        providers: {
+          ...defaultSettings.providers,
+          codex: {
+            ...defaultSettings.providers.codex,
+            binaryPath: "  /opt/homebrew/bin/codex  ",
+            launchArgs: "  --strict-config  ",
+          },
         },
-      },
-    });
+      }),
+    );
 
     expect(encoded.addProjectBaseDirectory).toBe("~/Development");
     expect(encoded.providers?.codex?.binaryPath).toBe("/opt/homebrew/bin/codex");

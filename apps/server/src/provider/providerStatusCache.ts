@@ -1,7 +1,7 @@
 import {
   type ProviderDriverKind,
   type ProviderInstanceId,
-  type ServerProvider,
+  ServerProvider,
   ServerProvider as ServerProviderSchema,
 } from "@t3tools/contracts";
 import { causeErrorTag } from "@t3tools/shared/observability";
@@ -57,7 +57,7 @@ export const hydrateCachedProvider = (input: {
   }
 
   const { message: _fallbackMessage, ...fallbackWithoutMessage } = input.fallbackProvider;
-  const hydratedProvider: ServerProvider = {
+  const hydratedProvider = ServerProvider.make({
     ...fallbackWithoutMessage,
     models: mergeProviderModels(input.fallbackProvider.models, input.cachedProvider.models),
     installed: input.cachedProvider.installed,
@@ -67,10 +67,10 @@ export const hydrateCachedProvider = (input: {
     checkedAt: input.cachedProvider.checkedAt,
     slashCommands: input.cachedProvider.slashCommands,
     skills: input.cachedProvider.skills,
-  };
+  });
 
   return input.cachedProvider.message
-    ? { ...hydratedProvider, message: input.cachedProvider.message }
+    ? ServerProvider.make({ ...hydratedProvider, message: input.cachedProvider.message })
     : hydratedProvider;
 };
 

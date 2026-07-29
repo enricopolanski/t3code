@@ -1,7 +1,7 @@
-import type {
+import {
   AuthClientMetadata,
-  AuthClientMetadataDeviceType,
-  AuthClientPresentationMetadata,
+  type AuthClientMetadataDeviceType,
+  type AuthClientPresentationMetadata,
 } from "@t3tools/contracts";
 import type * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
 import * as NodeCrypto from "node:crypto";
@@ -173,12 +173,12 @@ export function deriveAuthClientMetadata(input: {
   const ipAddress = readRemoteAddressFromSource(input.request.source);
   const os = input.presented?.os ?? inferOs(userAgent);
   const browser = inferBrowser(userAgent);
-  return {
+  return AuthClientMetadata.make({
     ...(input.presented?.label ? { label: input.presented.label } : {}),
     ...(ipAddress ? { ipAddress } : {}),
     ...(userAgent ? { userAgent } : {}),
     deviceType: input.presented?.deviceType ?? inferDeviceType(userAgent),
     ...(os ? { os } : {}),
     ...(browser ? { browser } : {}),
-  };
+  });
 }
