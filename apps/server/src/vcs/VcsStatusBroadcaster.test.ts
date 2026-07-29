@@ -13,54 +13,56 @@ import * as Path from "effect/Path";
 import * as Scope from "effect/Scope";
 import * as Stream from "effect/Stream";
 import * as TestClock from "effect/testing/TestClock";
-import type {
+import {
+  SourceControlProviderInfo,
+  VcsStatusChangeRequest,
   VcsStatusLocalResult,
   VcsStatusRemoteResult,
   VcsStatusResult,
-  VcsStatusStreamEvent,
+  type VcsStatusStreamEvent,
 } from "@t3tools/contracts";
 import { GitManagerError } from "@t3tools/contracts";
 
 import * as VcsStatusBroadcaster from "./VcsStatusBroadcaster.ts";
 import * as GitWorkflowService from "../git/GitWorkflowService.ts";
 
-const baseLocalStatus: VcsStatusLocalResult = {
+const baseLocalStatus = VcsStatusLocalResult.make({
   isRepo: true,
-  sourceControlProvider: {
+  sourceControlProvider: SourceControlProviderInfo.make({
     kind: "github",
     name: "GitHub",
     baseUrl: "https://github.com",
-  },
+  }),
   hasPrimaryRemote: true,
   isDefaultRef: false,
   refName: "feature/status-broadcast",
   hasWorkingTreeChanges: false,
   workingTree: { files: [], insertions: 0, deletions: 0 },
-};
+});
 
-const baseRemoteStatus: VcsStatusRemoteResult = {
+const baseRemoteStatus = VcsStatusRemoteResult.make({
   hasUpstream: true,
   aheadCount: 0,
   behindCount: 0,
   pr: null,
-};
+});
 
-const remoteStatusWithPr: VcsStatusRemoteResult = {
+const remoteStatusWithPr = VcsStatusRemoteResult.make({
   ...baseRemoteStatus,
-  pr: {
+  pr: VcsStatusChangeRequest.make({
     number: 2978,
     title: "[codex] Rewrite client connection architecture",
     url: "https://github.com/pingdotgg/t3code/pull/2978",
     baseRef: "main",
     headRef: "codex/connection-state-audit",
     state: "open",
-  },
-};
+  }),
+});
 
-const baseStatus: VcsStatusResult = {
+const baseStatus = VcsStatusResult.make({
   ...baseLocalStatus,
   ...baseRemoteStatus,
-};
+});
 
 function makeTestLayer(state: {
   currentLocalStatus: VcsStatusLocalResult;
@@ -156,14 +158,12 @@ describe("VcsStatusBroadcaster", () => {
       const cached = yield* broadcaster.getStatus({ cwd: "/repo" });
 
       assert.deepStrictEqual(initial, baseStatus);
-      assert.deepStrictEqual(refreshed, {
+      const expected = VcsStatusResult.make({
         ...state.currentLocalStatus,
         ...state.currentRemoteStatus,
       });
-      assert.deepStrictEqual(cached, {
-        ...state.currentLocalStatus,
-        ...state.currentRemoteStatus,
-      });
+      assert.deepStrictEqual(refreshed, expected);
+      assert.deepStrictEqual(cached, expected);
       assert.equal(state.localStatusCalls, 2);
       assert.equal(state.remoteStatusCalls, 2);
       assert.equal(state.localInvalidationCalls, 1);
@@ -267,10 +267,13 @@ describe("VcsStatusBroadcaster", () => {
 
       assert.deepStrictEqual(initial, baseStatus);
       assert.deepStrictEqual(refreshedLocal, state.currentLocalStatus);
-      assert.deepStrictEqual(cached, {
-        ...state.currentLocalStatus,
-        ...baseRemoteStatus,
-      });
+      assert.deepStrictEqual(
+        cached,
+        VcsStatusResult.make({
+          ...state.currentLocalStatus,
+          ...baseRemoteStatus,
+        }),
+      );
       assert.equal(state.localStatusCalls, 2);
       assert.equal(state.remoteStatusCalls, 1);
       assert.equal(state.localInvalidationCalls, 1);

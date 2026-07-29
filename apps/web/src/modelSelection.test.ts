@@ -1,4 +1,9 @@
-import { ProviderDriverKind, ProviderInstanceId, type ServerProvider } from "@t3tools/contracts";
+import {
+  ProviderDriverKind,
+  ProviderInstanceConfig,
+  ProviderInstanceId,
+  type ServerProvider,
+} from "@t3tools/contracts";
 import { DEFAULT_UNIFIED_SETTINGS, type UnifiedSettings } from "@t3tools/contracts/settings";
 import { describe, expect, it } from "vite-plus/test";
 import { deriveProviderInstanceEntries } from "./providerInstances";
@@ -42,14 +47,14 @@ function settingsWithProviderInstances(): UnifiedSettings {
   return {
     ...DEFAULT_UNIFIED_SETTINGS,
     providerInstances: {
-      [ProviderInstanceId.make("claudeAgent")]: {
+      [ProviderInstanceId.make("claudeAgent")]: ProviderInstanceConfig.make({
         driver: ProviderDriverKind.make("claudeAgent"),
         config: { customModels: [] },
-      },
-      [ProviderInstanceId.make("claude_openrouter")]: {
+      }),
+      [ProviderInstanceId.make("claude_openrouter")]: ProviderInstanceConfig.make({
         driver: ProviderDriverKind.make("claudeAgent"),
         config: { customModels: ["openai/gpt-5.5"] },
-      },
+      }),
     },
   };
 }
@@ -113,10 +118,10 @@ describe("instance-scoped model selection", () => {
       ...settingsWithProviderInstances(),
       providerInstances: {
         ...settingsWithProviderInstances().providerInstances,
-        [ProviderInstanceId.make("claude_openrouter")]: {
+        [ProviderInstanceId.make("claude_openrouter")]: ProviderInstanceConfig.make({
           driver: ProviderDriverKind.make("claudeAgent"),
           config: { customModels: ["opus"] },
-        },
+        }),
       },
     };
     const openrouter = deriveProviderInstanceEntries(providers)[0]!;
@@ -140,10 +145,10 @@ describe("instance-scoped model selection", () => {
       ...settingsWithProviderInstances(),
       providerInstances: {
         ...settingsWithProviderInstances().providerInstances,
-        [ProviderInstanceId.make("grok")]: {
+        [ProviderInstanceId.make("grok")]: ProviderInstanceConfig.make({
           driver: ProviderDriverKind.make("grok"),
           config: { customModels: ["grok-test-custom-model"] },
-        },
+        }),
       },
     };
     const grok = deriveProviderInstanceEntries(providers).find(

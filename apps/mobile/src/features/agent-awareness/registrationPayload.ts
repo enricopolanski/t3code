@@ -1,4 +1,7 @@
-import type { RelayDeviceRegistrationRequest } from "@t3tools/contracts/relay";
+import {
+  RelayAgentAwarenessPreferences,
+  RelayDeviceRegistrationRequest,
+} from "@t3tools/contracts/relay";
 
 import type { Preferences } from "../../persistence/mobile-preferences";
 import { supportsAgentAwarenessPush } from "./capabilities";
@@ -24,7 +27,7 @@ export function makeRelayDeviceRegistrationRequest(input: {
 }): RelayDeviceRegistrationRequest {
   const pushAvailable = supportsAgentAwarenessPush();
   const liveActivitiesEnabled = pushAvailable && input.preferences.liveActivitiesEnabled !== false;
-  return {
+  return RelayDeviceRegistrationRequest.make({
     deviceId: input.deviceId,
     label: input.label,
     platform: "ios",
@@ -34,13 +37,13 @@ export function makeRelayDeviceRegistrationRequest(input: {
     ...(input.apsEnvironment ? { apsEnvironment: input.apsEnvironment } : {}),
     ...(input.pushToken ? { pushToken: input.pushToken } : {}),
     ...(input.pushToStartToken ? { pushToStartToken: input.pushToStartToken } : {}),
-    preferences: {
+    preferences: RelayAgentAwarenessPreferences.make({
       liveActivitiesEnabled,
       notificationsEnabled: pushAvailable && input.notificationsEnabled,
       notifyOnApproval: true,
       notifyOnInput: true,
       notifyOnCompletion: true,
       notifyOnFailure: true,
-    },
-  };
+    }),
+  });
 }

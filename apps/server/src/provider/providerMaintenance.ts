@@ -1,7 +1,7 @@
 import {
   ProviderDriverKind,
   type ServerProvider,
-  type ServerProviderVersionAdvisory,
+  ServerProviderVersionAdvisory,
 } from "@t3tools/contracts";
 import { compareSemverVersions } from "@t3tools/shared/semver";
 import { resolveCommandPath } from "@t3tools/shared/shell";
@@ -409,7 +409,7 @@ export function createProviderVersionAdvisory(input: {
     latestVersion,
   });
 
-  return {
+  return ServerProviderVersionAdvisory.make({
     status: advisory.status,
     currentVersion: input.currentVersion,
     latestVersion,
@@ -417,7 +417,7 @@ export function createProviderVersionAdvisory(input: {
     canUpdate: capabilities.update !== null,
     checkedAt: input.checkedAt ?? null,
     message: advisory.message,
-  };
+  });
 }
 
 const fetchNpmLatestVersion = Effect.fn("fetchNpmLatestVersion")(function* (packageName: string) {

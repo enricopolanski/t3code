@@ -3,17 +3,20 @@ import { TrimmedNonEmptyString } from "./baseSchemas.ts";
 import { GitCommandError } from "./git.ts";
 import { VcsError } from "./vcs.ts";
 
-export const ReviewDiffPreviewInput = Schema.Struct({
+export class ReviewDiffPreviewInput extends Schema.Class<ReviewDiffPreviewInput>(
+  "ReviewDiffPreviewInput",
+)({
   cwd: TrimmedNonEmptyString,
   baseRef: Schema.optional(TrimmedNonEmptyString),
   ignoreWhitespace: Schema.optionalKey(Schema.Boolean),
-});
-export type ReviewDiffPreviewInput = typeof ReviewDiffPreviewInput.Type;
+}) {}
 
 export const ReviewDiffPreviewSourceKind = Schema.Literals(["working-tree", "branch-range"]);
 export type ReviewDiffPreviewSourceKind = typeof ReviewDiffPreviewSourceKind.Type;
 
-export const ReviewDiffPreviewSource = Schema.Struct({
+export class ReviewDiffPreviewSource extends Schema.Class<ReviewDiffPreviewSource>(
+  "ReviewDiffPreviewSource",
+)({
   id: TrimmedNonEmptyString,
   kind: ReviewDiffPreviewSourceKind,
   title: TrimmedNonEmptyString,
@@ -22,15 +25,15 @@ export const ReviewDiffPreviewSource = Schema.Struct({
   diff: Schema.String,
   diffHash: TrimmedNonEmptyString,
   truncated: Schema.Boolean,
-});
-export type ReviewDiffPreviewSource = typeof ReviewDiffPreviewSource.Type;
+}) {}
 
-export const ReviewDiffPreviewResult = Schema.Struct({
+export class ReviewDiffPreviewResult extends Schema.Class<ReviewDiffPreviewResult>(
+  "ReviewDiffPreviewResult",
+)({
   cwd: TrimmedNonEmptyString,
   generatedAt: Schema.DateTimeUtc,
   sources: Schema.Array(ReviewDiffPreviewSource),
-});
-export type ReviewDiffPreviewResult = typeof ReviewDiffPreviewResult.Type;
+}) {}
 
 export const ReviewDiffPreviewError = Schema.Union([VcsError, GitCommandError]);
 export type ReviewDiffPreviewError = typeof ReviewDiffPreviewError.Type;

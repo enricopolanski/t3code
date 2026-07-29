@@ -24,12 +24,18 @@ const TerminalEnvSchema = Schema.Record(TerminalEnvKeySchema, TerminalEnvValueSc
   Schema.isMaxProperties(128),
 );
 
-export const TerminalThreadInput = Schema.Struct({
+export class TerminalThreadInput extends Schema.Class<TerminalThreadInput>("TerminalThreadInput")({
   threadId: TrimmedNonEmptyStringSchema,
-});
-export type TerminalThreadInput = typeof TerminalThreadInput.Type;
+}) {}
 
-/** Terminal ids are ALWAYS chosen by the client and sent explicitly — no server-side allocation. */
+/**
+ * Terminal ids are ALWAYS chosen by the client and sent explicitly — no
+ * server-side allocation.
+ *
+ * The `*Input` schemas below stay `Schema.Struct`s: each publishes its type as
+ * `Schema.Codec.Encoded<...>` (the raw wire shape callers build by hand), so a
+ * `Schema.Class` instance type would not describe them.
+ */
 const TerminalSessionInput = Schema.Struct({
   ...TerminalThreadInput.fields,
   terminalId: TerminalIdSchema,
@@ -83,17 +89,18 @@ export const TerminalRestartInput = Schema.Struct({
 });
 export type TerminalRestartInput = Schema.Codec.Encoded<typeof TerminalRestartInput>;
 
-export const TerminalCloseInput = Schema.Struct({
+export class TerminalCloseInput extends Schema.Class<TerminalCloseInput>("TerminalCloseInput")({
   ...TerminalThreadInput.fields,
   terminalId: Schema.optional(TerminalIdSchema),
   deleteHistory: Schema.optional(Schema.Boolean),
-});
-export type TerminalCloseInput = typeof TerminalCloseInput.Type;
+}) {}
 
 export const TerminalSessionStatus = Schema.Literals(["starting", "running", "exited", "error"]);
 export type TerminalSessionStatus = typeof TerminalSessionStatus.Type;
 
-export const TerminalSessionSnapshot = Schema.Struct({
+export class TerminalSessionSnapshot extends Schema.Class<TerminalSessionSnapshot>(
+  "TerminalSessionSnapshot",
+)({
   threadId: Schema.String.check(Schema.isNonEmpty()),
   terminalId: Schema.String.check(Schema.isNonEmpty()),
   cwd: Schema.String.check(Schema.isNonEmpty()),
@@ -107,10 +114,9 @@ export const TerminalSessionSnapshot = Schema.Struct({
   label: Schema.String.check(Schema.isMaxLength(128)),
   updatedAt: Schema.String,
   sequence: Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
-});
-export type TerminalSessionSnapshot = typeof TerminalSessionSnapshot.Type;
+}) {}
 
-export const TerminalSummary = Schema.Struct({
+export class TerminalSummary extends Schema.Class<TerminalSummary>("TerminalSummary")({
   threadId: Schema.String.check(Schema.isNonEmpty()),
   terminalId: Schema.String.check(Schema.isNonEmpty()),
   cwd: Schema.String.check(Schema.isNonEmpty()),
@@ -123,24 +129,29 @@ export const TerminalSummary = Schema.Struct({
   /** Server-computed display title (idle shell vs subprocess command). */
   label: Schema.String.check(Schema.isMaxLength(128)),
   updatedAt: Schema.String,
-});
-export type TerminalSummary = typeof TerminalSummary.Type;
+}) {}
 
-const TerminalMetadataSnapshotEvent = Schema.Struct({
+export class TerminalMetadataSnapshotEvent extends Schema.Class<TerminalMetadataSnapshotEvent>(
+  "TerminalMetadataSnapshotEvent",
+)({
   type: Schema.Literal("snapshot"),
   terminals: Schema.Array(TerminalSummary),
-});
+}) {}
 
-const TerminalMetadataUpsertEvent = Schema.Struct({
+export class TerminalMetadataUpsertEvent extends Schema.Class<TerminalMetadataUpsertEvent>(
+  "TerminalMetadataUpsertEvent",
+)({
   type: Schema.Literal("upsert"),
   terminal: TerminalSummary,
-});
+}) {}
 
-const TerminalMetadataRemoveEvent = Schema.Struct({
+export class TerminalMetadataRemoveEvent extends Schema.Class<TerminalMetadataRemoveEvent>(
+  "TerminalMetadataRemoveEvent",
+)({
   type: Schema.Literal("remove"),
   threadId: Schema.String.check(Schema.isNonEmpty()),
   terminalId: Schema.String.check(Schema.isNonEmpty()),
-});
+}) {}
 
 export const TerminalMetadataStreamEvent = Schema.Union([
   TerminalMetadataSnapshotEvent,
@@ -155,53 +166,61 @@ const TerminalEventBaseSchema = Schema.Struct({
   sequence: Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
 });
 
-const TerminalStartedEvent = Schema.Struct({
+export class TerminalStartedEvent extends Schema.Class<TerminalStartedEvent>(
+  "TerminalStartedEvent",
+)({
   ...TerminalEventBaseSchema.fields,
   type: Schema.Literal("started"),
   snapshot: TerminalSessionSnapshot,
-});
+}) {}
 
-const TerminalOutputEvent = Schema.Struct({
+export class TerminalOutputEvent extends Schema.Class<TerminalOutputEvent>("TerminalOutputEvent")({
   ...TerminalEventBaseSchema.fields,
   type: Schema.Literal("output"),
   data: Schema.String,
-});
+}) {}
 
-const TerminalExitedEvent = Schema.Struct({
+export class TerminalExitedEvent extends Schema.Class<TerminalExitedEvent>("TerminalExitedEvent")({
   ...TerminalEventBaseSchema.fields,
   type: Schema.Literal("exited"),
   exitCode: Schema.NullOr(Schema.Int),
   exitSignal: Schema.NullOr(Schema.Int),
-});
+}) {}
 
-const TerminalClosedEvent = Schema.Struct({
+export class TerminalClosedEvent extends Schema.Class<TerminalClosedEvent>("TerminalClosedEvent")({
   ...TerminalEventBaseSchema.fields,
   type: Schema.Literal("closed"),
-});
+}) {}
 
-const TerminalErrorEvent = Schema.Struct({
+export class TerminalErrorEvent extends Schema.Class<TerminalErrorEvent>("TerminalErrorEvent")({
   ...TerminalEventBaseSchema.fields,
   type: Schema.Literal("error"),
   message: Schema.String.check(Schema.isNonEmpty()),
-});
+}) {}
 
-const TerminalClearedEvent = Schema.Struct({
+export class TerminalClearedEvent extends Schema.Class<TerminalClearedEvent>(
+  "TerminalClearedEvent",
+)({
   ...TerminalEventBaseSchema.fields,
   type: Schema.Literal("cleared"),
-});
+}) {}
 
-const TerminalRestartedEvent = Schema.Struct({
+export class TerminalRestartedEvent extends Schema.Class<TerminalRestartedEvent>(
+  "TerminalRestartedEvent",
+)({
   ...TerminalEventBaseSchema.fields,
   type: Schema.Literal("restarted"),
   snapshot: TerminalSessionSnapshot,
-});
+}) {}
 
-const TerminalActivityEvent = Schema.Struct({
+export class TerminalActivityEvent extends Schema.Class<TerminalActivityEvent>(
+  "TerminalActivityEvent",
+)({
   ...TerminalEventBaseSchema.fields,
   type: Schema.Literal("activity"),
   hasRunningSubprocess: Schema.Boolean,
   label: Schema.String.check(Schema.isMaxLength(128)),
-});
+}) {}
 
 export const TerminalEvent = Schema.Union([
   TerminalStartedEvent,
@@ -215,10 +234,12 @@ export const TerminalEvent = Schema.Union([
 ]);
 export type TerminalEvent = typeof TerminalEvent.Type;
 
-const TerminalAttachSnapshotEvent = Schema.Struct({
+export class TerminalAttachSnapshotEvent extends Schema.Class<TerminalAttachSnapshotEvent>(
+  "TerminalAttachSnapshotEvent",
+)({
   type: Schema.Literal("snapshot"),
   snapshot: TerminalSessionSnapshot,
-});
+}) {}
 
 export const TerminalAttachStreamEvent = Schema.Union([
   TerminalAttachSnapshotEvent,

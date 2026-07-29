@@ -23,6 +23,12 @@ const trimmedNonEmpty = (annotations: { readonly description: string }, maxLengt
   return encoded.pipe(Schema.decodeTo(encoded, SchemaTransformation.trim()));
 };
 
+/**
+ * Stays a `Schema.Struct` (along with {@link T3ProjectFile}): both feed
+ * `Schema.toJsonSchemaDocument`, and `Schema.Class` renders a class as a
+ * `$ref` into `$defs` instead of an inline object — which would change the
+ * published schema served from {@link T3_PROJECT_FILE_SCHEMA_URL}.
+ */
 export const T3ProjectFileScript = Schema.Struct({
   name: trimmedNonEmpty({
     description: "Display name for the script, shown in the T3 Code scripts menu.",

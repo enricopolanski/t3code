@@ -22,7 +22,8 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import {
   GitCommandError,
   type ReviewDiffPreviewInput,
-  type ReviewDiffPreviewSource,
+  ReviewDiffPreviewResult,
+  ReviewDiffPreviewSource,
   type VcsRef,
 } from "@t3tools/contracts";
 import { dedupeRemoteBranchesWithLocalMatches, normalizeGitRemoteUrl } from "@t3tools/shared/git";
@@ -1952,7 +1953,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function* 
     ]);
 
     const sources: ReviewDiffPreviewSource[] = [
-      {
+      ReviewDiffPreviewSource.make({
         id: "working-tree",
         kind: "working-tree",
         title: "Dirty worktree",
@@ -1961,8 +1962,8 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function* 
         diff: dirtyDiff,
         diffHash: dirtyDiffHash,
         truncated: dirtyTrackedResult.stdoutTruncated || dirtyUntracked.truncated,
-      },
-      {
+      }),
+      ReviewDiffPreviewSource.make({
         id: "branch-range",
         kind: "branch-range",
         title: baseRef ? `Against ${baseRef}` : "Against base branch",
@@ -1971,14 +1972,14 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function* 
         diff: baseDiff,
         diffHash: baseDiffHash,
         truncated: baseResult?.stdoutTruncated ?? false,
-      },
+      }),
     ];
 
-    return {
+    return ReviewDiffPreviewResult.make({
       cwd: input.cwd,
       generatedAt: yield* DateTime.now,
       sources,
-    };
+    });
   });
 
   const readConfigValue: GitVcsDriver.GitVcsDriver["Service"]["readConfigValue"] = (cwd, key) =>

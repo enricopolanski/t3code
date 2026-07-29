@@ -11,17 +11,18 @@ export const SourceControlProviderKind = Schema.Literals([
 ]);
 export type SourceControlProviderKind = typeof SourceControlProviderKind.Type;
 
-export const SourceControlProviderInfo = Schema.Struct({
+export class SourceControlProviderInfo extends Schema.Class<SourceControlProviderInfo>(
+  "SourceControlProviderInfo",
+)({
   kind: SourceControlProviderKind,
   name: TrimmedNonEmptyString,
   baseUrl: Schema.String,
-});
-export type SourceControlProviderInfo = typeof SourceControlProviderInfo.Type;
+}) {}
 
 export const ChangeRequestState = Schema.Literals(["open", "closed", "merged"]);
 export type ChangeRequestState = typeof ChangeRequestState.Type;
 
-export const ChangeRequest = Schema.Struct({
+export class ChangeRequest extends Schema.Class<ChangeRequest>("ChangeRequest")({
   provider: SourceControlProviderKind,
   number: PositiveInt,
   title: TrimmedNonEmptyString,
@@ -33,15 +34,15 @@ export const ChangeRequest = Schema.Struct({
   isCrossRepository: Schema.optional(Schema.Boolean),
   headRepositoryNameWithOwner: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   headRepositoryOwnerLogin: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
-});
-export type ChangeRequest = typeof ChangeRequest.Type;
+}) {}
 
-export const SourceControlRepositoryCloneUrls = Schema.Struct({
+export class SourceControlRepositoryCloneUrls extends Schema.Class<SourceControlRepositoryCloneUrls>(
+  "SourceControlRepositoryCloneUrls",
+)({
   nameWithOwner: TrimmedNonEmptyString,
   url: TrimmedNonEmptyString,
   sshUrl: TrimmedNonEmptyString,
-});
-export type SourceControlRepositoryCloneUrls = typeof SourceControlRepositoryCloneUrls.Type;
+}) {}
 
 export const SourceControlRepositoryVisibility = Schema.Literals(["private", "public"]);
 export type SourceControlRepositoryVisibility = typeof SourceControlRepositoryVisibility.Type;
@@ -49,59 +50,65 @@ export type SourceControlRepositoryVisibility = typeof SourceControlRepositoryVi
 export const SourceControlCloneProtocol = Schema.Literals(["auto", "ssh", "https"]);
 export type SourceControlCloneProtocol = typeof SourceControlCloneProtocol.Type;
 
-export const SourceControlRepositoryInfo = Schema.Struct({
+export class SourceControlRepositoryInfo extends Schema.Class<SourceControlRepositoryInfo>(
+  "SourceControlRepositoryInfo",
+)({
   provider: SourceControlProviderKind,
   nameWithOwner: TrimmedNonEmptyString,
   url: TrimmedNonEmptyString,
   sshUrl: TrimmedNonEmptyString,
-});
-export type SourceControlRepositoryInfo = typeof SourceControlRepositoryInfo.Type;
+}) {}
 
-export const SourceControlRepositoryLookupInput = Schema.Struct({
+export class SourceControlRepositoryLookupInput extends Schema.Class<SourceControlRepositoryLookupInput>(
+  "SourceControlRepositoryLookupInput",
+)({
   provider: SourceControlProviderKind,
   repository: TrimmedNonEmptyString,
   cwd: Schema.optional(TrimmedNonEmptyString),
-});
-export type SourceControlRepositoryLookupInput = typeof SourceControlRepositoryLookupInput.Type;
+}) {}
 
-export const SourceControlCloneRepositoryInput = Schema.Struct({
+export class SourceControlCloneRepositoryInput extends Schema.Class<SourceControlCloneRepositoryInput>(
+  "SourceControlCloneRepositoryInput",
+)({
   provider: Schema.optional(SourceControlProviderKind),
   repository: Schema.optional(TrimmedNonEmptyString),
   remoteUrl: Schema.optional(TrimmedNonEmptyString),
   destinationPath: TrimmedNonEmptyString,
   protocol: Schema.optional(SourceControlCloneProtocol),
-});
-export type SourceControlCloneRepositoryInput = typeof SourceControlCloneRepositoryInput.Type;
+}) {}
 
-export const SourceControlCloneRepositoryResult = Schema.Struct({
+export class SourceControlCloneRepositoryResult extends Schema.Class<SourceControlCloneRepositoryResult>(
+  "SourceControlCloneRepositoryResult",
+)({
   cwd: TrimmedNonEmptyString,
   remoteUrl: TrimmedNonEmptyString,
   repository: Schema.NullOr(SourceControlRepositoryInfo),
-});
-export type SourceControlCloneRepositoryResult = typeof SourceControlCloneRepositoryResult.Type;
+}) {}
 
-export const SourceControlPublishRepositoryInput = Schema.Struct({
+export class SourceControlPublishRepositoryInput extends Schema.Class<SourceControlPublishRepositoryInput>(
+  "SourceControlPublishRepositoryInput",
+)({
   cwd: TrimmedNonEmptyString,
   provider: SourceControlProviderKind,
   repository: TrimmedNonEmptyString,
   visibility: SourceControlRepositoryVisibility,
   remoteName: Schema.optional(TrimmedNonEmptyString),
   protocol: Schema.optional(SourceControlCloneProtocol),
-});
-export type SourceControlPublishRepositoryInput = typeof SourceControlPublishRepositoryInput.Type;
+}) {}
 
 export const SourceControlPublishStatus = Schema.Literals(["pushed", "remote_added"]);
 export type SourceControlPublishStatus = typeof SourceControlPublishStatus.Type;
 
-export const SourceControlPublishRepositoryResult = Schema.Struct({
+export class SourceControlPublishRepositoryResult extends Schema.Class<SourceControlPublishRepositoryResult>(
+  "SourceControlPublishRepositoryResult",
+)({
   repository: SourceControlRepositoryInfo,
   remoteName: TrimmedNonEmptyString,
   remoteUrl: TrimmedNonEmptyString,
   branch: TrimmedNonEmptyString,
   upstreamBranch: Schema.optional(TrimmedNonEmptyString),
   status: SourceControlPublishStatus,
-});
-export type SourceControlPublishRepositoryResult = typeof SourceControlPublishRepositoryResult.Type;
+}) {}
 
 export const SourceControlDiscoveryStatus = Schema.Literals(["available", "missing"]);
 export type SourceControlDiscoveryStatus = typeof SourceControlDiscoveryStatus.Type;
@@ -113,13 +120,14 @@ export const SourceControlProviderAuthStatus = Schema.Literals([
 ]);
 export type SourceControlProviderAuthStatus = typeof SourceControlProviderAuthStatus.Type;
 
-export const SourceControlProviderAuth = Schema.Struct({
+export class SourceControlProviderAuth extends Schema.Class<SourceControlProviderAuth>(
+  "SourceControlProviderAuth",
+)({
   status: SourceControlProviderAuthStatus,
   account: Schema.Option(TrimmedNonEmptyString),
   host: Schema.Option(TrimmedNonEmptyString),
   detail: Schema.Option(TrimmedNonEmptyString),
-});
-export type SourceControlProviderAuth = typeof SourceControlProviderAuth.Type;
+}) {}
 
 const SourceControlDiscoverySharedFields = {
   label: TrimmedNonEmptyString,
@@ -130,25 +138,26 @@ const SourceControlDiscoverySharedFields = {
   detail: Schema.Option(TrimmedNonEmptyString),
 } as const;
 
-export const VcsDiscoveryItem = Schema.Struct({
+export class VcsDiscoveryItem extends Schema.Class<VcsDiscoveryItem>("VcsDiscoveryItem")({
   kind: VcsDriverKind,
   implemented: Schema.Boolean,
   ...SourceControlDiscoverySharedFields,
-});
-export type VcsDiscoveryItem = typeof VcsDiscoveryItem.Type;
+}) {}
 
-export const SourceControlProviderDiscoveryItem = Schema.Struct({
+export class SourceControlProviderDiscoveryItem extends Schema.Class<SourceControlProviderDiscoveryItem>(
+  "SourceControlProviderDiscoveryItem",
+)({
   kind: SourceControlProviderKind,
   ...SourceControlDiscoverySharedFields,
   auth: SourceControlProviderAuth,
-});
-export type SourceControlProviderDiscoveryItem = typeof SourceControlProviderDiscoveryItem.Type;
+}) {}
 
-export const SourceControlDiscoveryResult = Schema.Struct({
+export class SourceControlDiscoveryResult extends Schema.Class<SourceControlDiscoveryResult>(
+  "SourceControlDiscoveryResult",
+)({
   versionControlSystems: Schema.Array(VcsDiscoveryItem),
   sourceControlProviders: Schema.Array(SourceControlProviderDiscoveryItem),
-});
-export type SourceControlDiscoveryResult = typeof SourceControlDiscoveryResult.Type;
+}) {}
 
 export class SourceControlProviderError extends Schema.TaggedErrorClass<SourceControlProviderError>()(
   "SourceControlProviderError",

@@ -66,7 +66,9 @@ const PreviewAutomationTabTargetFields = {
 export const PreviewAutomationTabTargetInput = Schema.Struct(PreviewAutomationTabTargetFields);
 export type PreviewAutomationTabTargetInput = typeof PreviewAutomationTabTargetInput.Type;
 
-export const PreviewAutomationStatus = Schema.Struct({
+export class PreviewAutomationStatus extends Schema.Class<PreviewAutomationStatus>(
+  "PreviewAutomationStatus",
+)({
   available: Schema.Boolean,
   visible: Schema.Boolean,
   tabId: Schema.NullOr(PreviewTabId),
@@ -77,8 +79,7 @@ export const PreviewAutomationStatus = Schema.Struct({
   viewportSetting: Schema.optional(PreviewViewportSetting),
   /** Measured guest-page viewport in CSS pixels when a webview is ready. */
   viewport: Schema.optional(PreviewRenderedViewportSize),
-});
-export type PreviewAutomationStatus = typeof PreviewAutomationStatus.Type;
+}) {}
 
 export const PreviewAutomationOpenInput = Schema.Struct({
   ...PreviewAutomationTabTargetFields,
@@ -86,9 +87,16 @@ export const PreviewAutomationOpenInput = Schema.Struct({
     description:
       "Optional initial page URL, for example https://t3.chat or localhost:5173. Omit to open a blank tab.",
   }),
+  open: Schema.optional(
+    Schema.Boolean.annotate({
+      description:
+        "Whether to open the thread-bound inline preview for the human. Defaults to true; set false for background-only automation.",
+    }),
+  ),
   show: Schema.optional(
     Schema.Boolean.annotate({
-      description: "Whether to reveal the preview panel to the human. Defaults to true.",
+      description:
+        "Deprecated alias for open. Whether to reveal the thread-bound inline preview to the human.",
     }),
   ),
   reuseExistingTab: Schema.optional(
@@ -248,17 +256,21 @@ export const PreviewAutomationResizeInput = Schema.Struct({
   });
 export type PreviewAutomationResizeInput = typeof PreviewAutomationResizeInput.Type;
 
-export const PreviewAutomationResizeResult = Schema.Struct({
+export class PreviewAutomationResizeResult extends Schema.Class<PreviewAutomationResizeResult>(
+  "PreviewAutomationResizeResult",
+)({
   tabId: PreviewTabId,
   setting: PreviewViewportSetting,
   viewport: PreviewRenderedViewportSize,
-});
-export type PreviewAutomationResizeResult = typeof PreviewAutomationResizeResult.Type;
+}) {}
 
 /** Mirrors DesktopPreviewColorScheme; declared here to keep this module free of ipc.ts imports. */
 export const PreviewAutomationColorScheme = Schema.Literals(["system", "light", "dark"]);
 export type PreviewAutomationColorScheme = typeof PreviewAutomationColorScheme.Type;
 
+// Stays a `Schema.Struct`: this is an MCP tool `parameters` schema, and
+// `Schema.Class` renders it as a `$ref` into `$defs` instead of an inline
+// object, which breaks the published tool definition.
 export const PreviewAutomationSetColorSchemeInput = Schema.Struct({
   ...PreviewAutomationTabTargetFields,
   colorScheme: PreviewAutomationColorScheme.annotate({
@@ -271,12 +283,12 @@ export const PreviewAutomationSetColorSchemeInput = Schema.Struct({
 });
 export type PreviewAutomationSetColorSchemeInput = typeof PreviewAutomationSetColorSchemeInput.Type;
 
-export const PreviewAutomationSetColorSchemeResult = Schema.Struct({
+export class PreviewAutomationSetColorSchemeResult extends Schema.Class<PreviewAutomationSetColorSchemeResult>(
+  "PreviewAutomationSetColorSchemeResult",
+)({
   tabId: PreviewTabId,
   colorScheme: PreviewAutomationColorScheme,
-});
-export type PreviewAutomationSetColorSchemeResult =
-  typeof PreviewAutomationSetColorSchemeResult.Type;
+}) {}
 
 const Locator = TrimmedNonEmptyString.annotate({
   description:
@@ -413,6 +425,9 @@ export const PreviewAutomationScrollInput = Schema.Struct({
   });
 export type PreviewAutomationScrollInput = typeof PreviewAutomationScrollInput.Type;
 
+// Stays a `Schema.Struct`: this is an MCP tool `parameters` schema, and
+// `Schema.Class` renders it as a `$ref` into `$defs` instead of an inline
+// object, which breaks the published tool definition.
 export const PreviewAutomationEvaluateInput = Schema.Struct({
   ...PreviewAutomationTabTargetFields,
   expression: Schema.String.check(Schema.isTrimmed())
@@ -485,7 +500,9 @@ export const PreviewAutomationWaitForInput = Schema.Struct({
   });
 export type PreviewAutomationWaitForInput = typeof PreviewAutomationWaitForInput.Type;
 
-export const PreviewAutomationElement = Schema.Struct({
+export class PreviewAutomationElement extends Schema.Class<PreviewAutomationElement>(
+  "PreviewAutomationElement",
+)({
   tag: Schema.String,
   role: Schema.NullOr(Schema.String),
   name: Schema.String,
@@ -494,38 +511,42 @@ export const PreviewAutomationElement = Schema.Struct({
   y: Schema.Number,
   width: Schema.Number,
   height: Schema.Number,
-});
-export type PreviewAutomationElement = typeof PreviewAutomationElement.Type;
+}) {}
 
-export const PreviewAutomationConsoleEntry = Schema.Struct({
+export class PreviewAutomationConsoleEntry extends Schema.Class<PreviewAutomationConsoleEntry>(
+  "PreviewAutomationConsoleEntry",
+)({
   level: Schema.String,
   text: Schema.String,
   timestamp: Schema.String,
   source: Schema.optional(Schema.String),
-});
-export type PreviewAutomationConsoleEntry = typeof PreviewAutomationConsoleEntry.Type;
+}) {}
 
-export const PreviewAutomationNetworkEntry = Schema.Struct({
+export class PreviewAutomationNetworkEntry extends Schema.Class<PreviewAutomationNetworkEntry>(
+  "PreviewAutomationNetworkEntry",
+)({
   url: Schema.String,
   method: Schema.String,
   status: Schema.NullOr(Schema.Number),
   failed: Schema.Boolean,
   errorText: Schema.optional(Schema.String),
   timestamp: Schema.String,
-});
-export type PreviewAutomationNetworkEntry = typeof PreviewAutomationNetworkEntry.Type;
+}) {}
 
-export const PreviewAutomationActionEvent = Schema.Struct({
+export class PreviewAutomationActionEvent extends Schema.Class<PreviewAutomationActionEvent>(
+  "PreviewAutomationActionEvent",
+)({
   id: Schema.String,
   action: Schema.String,
   status: Schema.Literals(["running", "succeeded", "failed", "interrupted"]),
   startedAt: Schema.String,
   completedAt: Schema.optional(Schema.String),
   error: Schema.optional(Schema.String),
-});
-export type PreviewAutomationActionEvent = typeof PreviewAutomationActionEvent.Type;
+}) {}
 
-export const PreviewAutomationSnapshot = Schema.Struct({
+export class PreviewAutomationSnapshot extends Schema.Class<PreviewAutomationSnapshot>(
+  "PreviewAutomationSnapshot",
+)({
   url: Schema.String,
   title: Schema.String,
   loading: Schema.Boolean,
@@ -541,55 +562,61 @@ export const PreviewAutomationSnapshot = Schema.Struct({
     width: Schema.Int,
     height: Schema.Int,
   }),
-});
-export type PreviewAutomationSnapshot = typeof PreviewAutomationSnapshot.Type;
+}) {}
 
-export const PreviewAutomationRecordingStatus = Schema.Struct({
+export class PreviewAutomationRecordingStatus extends Schema.Class<PreviewAutomationRecordingStatus>(
+  "PreviewAutomationRecordingStatus",
+)({
   tabId: PreviewTabId,
   recording: Schema.Boolean,
   startedAt: Schema.NullOr(Schema.String),
-});
-export type PreviewAutomationRecordingStatus = typeof PreviewAutomationRecordingStatus.Type;
+}) {}
 
-export const PreviewAutomationRecordingArtifact = Schema.Struct({
+export class PreviewAutomationRecordingArtifact extends Schema.Class<PreviewAutomationRecordingArtifact>(
+  "PreviewAutomationRecordingArtifact",
+)({
   id: Schema.String,
   tabId: PreviewTabId,
   path: Schema.String,
   mimeType: Schema.String,
   sizeBytes: Schema.Int,
   createdAt: Schema.String,
-});
-export type PreviewAutomationRecordingArtifact = typeof PreviewAutomationRecordingArtifact.Type;
+}) {}
 
 export const PreviewAutomationClientId = TrimmedNonEmptyString.check(Schema.isMaxLength(128));
 export type PreviewAutomationClientId = typeof PreviewAutomationClientId.Type;
 export const PreviewAutomationConnectionId = TrimmedNonEmptyString.check(Schema.isMaxLength(64));
 export type PreviewAutomationConnectionId = typeof PreviewAutomationConnectionId.Type;
 
-export const PreviewAutomationHostIdentity = Schema.Struct({
+export class PreviewAutomationHostIdentity extends Schema.Class<PreviewAutomationHostIdentity>(
+  "PreviewAutomationHostIdentity",
+)({
   clientId: PreviewAutomationClientId,
   environmentId: EnvironmentId,
-});
-export type PreviewAutomationHostIdentity = typeof PreviewAutomationHostIdentity.Type;
+}) {}
 
-export const PreviewAutomationHost = Schema.Struct({
+export class PreviewAutomationHost extends Schema.Class<PreviewAutomationHost>(
+  "PreviewAutomationHost",
+)({
   ...PreviewAutomationHostIdentity.fields,
   /**
    * Missing means the pre-capability-negotiation V1 operation set. This lets
    * a newer server safely coexist with an older desktop during rollout.
    */
   supportedOperations: Schema.optional(Schema.Array(PreviewAutomationOperation)),
-});
-export type PreviewAutomationHost = typeof PreviewAutomationHost.Type;
+}) {}
 
-export const PreviewAutomationHostFocus = Schema.Struct({
+export class PreviewAutomationHostFocus extends Schema.Class<PreviewAutomationHostFocus>(
+  "PreviewAutomationHostFocus",
+)({
   ...PreviewAutomationHostIdentity.fields,
   connectionId: PreviewAutomationConnectionId,
   focused: Schema.Boolean,
-});
-export type PreviewAutomationHostFocus = typeof PreviewAutomationHostFocus.Type;
+}) {}
 
-export const PreviewAutomationRequest = Schema.Struct({
+export class PreviewAutomationRequest extends Schema.Class<PreviewAutomationRequest>(
+  "PreviewAutomationRequest",
+)({
   requestId: TrimmedNonEmptyString,
   threadId: ThreadId,
   tabId: Schema.optional(PreviewTabId),
@@ -597,8 +624,7 @@ export const PreviewAutomationRequest = Schema.Struct({
   operation: PreviewAutomationOperation,
   input: Schema.Unknown,
   timeoutMs: Schema.Int.check(Schema.isGreaterThan(0)),
-});
-export type PreviewAutomationRequest = typeof PreviewAutomationRequest.Type;
+}) {}
 
 export const PreviewAutomationStreamEvent = Schema.Union([
   Schema.Struct({
@@ -613,7 +639,9 @@ export const PreviewAutomationStreamEvent = Schema.Union([
 ]);
 export type PreviewAutomationStreamEvent = typeof PreviewAutomationStreamEvent.Type;
 
-export const PreviewAutomationResponse = Schema.Struct({
+export class PreviewAutomationResponse extends Schema.Class<PreviewAutomationResponse>(
+  "PreviewAutomationResponse",
+)({
   clientId: PreviewAutomationClientId,
   connectionId: PreviewAutomationConnectionId,
   requestId: TrimmedNonEmptyString,
@@ -626,8 +654,7 @@ export const PreviewAutomationResponse = Schema.Struct({
       detail: Schema.optional(Schema.Unknown),
     }),
   ),
-});
-export type PreviewAutomationResponse = typeof PreviewAutomationResponse.Type;
+}) {}
 
 export class PreviewAutomationUnavailableError extends Schema.TaggedErrorClass<PreviewAutomationUnavailableError>()(
   "PreviewAutomationUnavailableError",
@@ -872,10 +899,11 @@ export const PreviewAutomationError = Schema.Union([
 ]);
 export type PreviewAutomationError = typeof PreviewAutomationError.Type;
 
-export const PreviewUrlResolution = Schema.Struct({
+export class PreviewUrlResolution extends Schema.Class<PreviewUrlResolution>(
+  "PreviewUrlResolution",
+)({
   requestedUrl: Schema.String,
   resolvedUrl: Schema.String,
   resolutionKind: Schema.Literals(["direct", "direct-private-network"]),
   environmentId: EnvironmentId,
-});
-export type PreviewUrlResolution = typeof PreviewUrlResolution.Type;
+}) {}

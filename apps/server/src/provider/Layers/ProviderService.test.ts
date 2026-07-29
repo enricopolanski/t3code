@@ -690,9 +690,11 @@ it.effect("ProviderServiceLive keeps persisted resumable sessions on startup", (
 
     const runtime = yield* Effect.gen(function* () {
       const repository = yield* ProviderSessionRuntime.ProviderSessionRuntimeRepository;
-      return yield* repository.getByThreadId({
-        threadId: asThreadId("thread-stale"),
-      });
+      return yield* repository.getByThreadId(
+        new ProviderSessionRuntime.GetProviderSessionRuntimeInput({
+          threadId: asThreadId("thread-stale"),
+        }),
+      );
     }).pipe(Effect.provide(runtimeRepositoryLayer));
     assert.equal(Option.isSome(runtime), true);
 
@@ -773,9 +775,11 @@ it.effect(
 
       const persistedAfterStopAll = yield* Effect.gen(function* () {
         const repository = yield* ProviderSessionRuntime.ProviderSessionRuntimeRepository;
-        return yield* repository.getByThreadId({
-          threadId: startedSession.threadId,
-        });
+        return yield* repository.getByThreadId(
+          new ProviderSessionRuntime.GetProviderSessionRuntimeInput({
+            threadId: startedSession.threadId,
+          }),
+        );
       }).pipe(Effect.provide(runtimeRepositoryLayer));
       assert.equal(Option.isSome(persistedAfterStopAll), true);
       if (Option.isSome(persistedAfterStopAll)) {
@@ -983,9 +987,11 @@ routing.layer("ProviderServiceLive routing", (it) => {
 
       yield* provider.stopSession({ threadId: initial.threadId });
 
-      const persistedAfterStop = yield* runtimeRepository.getByThreadId({
-        threadId: initial.threadId,
-      });
+      const persistedAfterStop = yield* runtimeRepository.getByThreadId(
+        new ProviderSessionRuntime.GetProviderSessionRuntimeInput({
+          threadId: initial.threadId,
+        }),
+      );
       assert.equal(Option.isSome(persistedAfterStop), true);
       if (Option.isSome(persistedAfterStop)) {
         assert.equal(persistedAfterStop.value.status, "stopped");
@@ -1256,9 +1262,11 @@ routing.layer("ProviderServiceLive routing", (it) => {
         attachments: [],
       });
 
-      const runningRuntime = yield* runtimeRepository.getByThreadId({
-        threadId: session.threadId,
-      });
+      const runningRuntime = yield* runtimeRepository.getByThreadId(
+        new ProviderSessionRuntime.GetProviderSessionRuntimeInput({
+          threadId: session.threadId,
+        }),
+      );
       assert.equal(Option.isSome(runningRuntime), true);
       if (Option.isSome(runningRuntime)) {
         assert.equal(runningRuntime.value.status, "running");
@@ -1882,9 +1890,11 @@ validation.layer("ProviderServiceLive validation", (it) => {
 
       assert.equal(session.threadId, asThreadId("thread-missing"));
 
-      const runtime = yield* runtimeRepository.getByThreadId({
-        threadId: session.threadId,
-      });
+      const runtime = yield* runtimeRepository.getByThreadId(
+        new ProviderSessionRuntime.GetProviderSessionRuntimeInput({
+          threadId: session.threadId,
+        }),
+      );
       assert.equal(Option.isSome(runtime), true);
       if (Option.isSome(runtime)) {
         assert.equal(runtime.value.threadId, session.threadId);

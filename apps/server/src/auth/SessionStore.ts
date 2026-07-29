@@ -2,8 +2,8 @@ import {
   AuthSessionId,
   AuthStandardClientScopes,
   AuthEnvironmentScopes,
-  type AuthClientMetadata,
-  type AuthClientSession,
+  AuthClientMetadata,
+  AuthClientSession,
   type AuthEnvironmentScope,
   type ServerAuthSessionMethod,
 } from "@t3tools/contracts";
@@ -403,7 +403,7 @@ const SIGNING_SECRET_NAME = "server-signing-key";
 const DEFAULT_SESSION_TTL = Duration.days(30);
 const DEFAULT_WEBSOCKET_TOKEN_TTL = Duration.minutes(5);
 
-const SessionClaims = Schema.Struct({
+class SessionClaims extends Schema.Class<SessionClaims>("SessionClaims")({
   v: Schema.Literal(1),
   kind: Schema.Literal("session"),
   sid: AuthSessionId,
@@ -413,25 +413,23 @@ const SessionClaims = Schema.Struct({
   jkt: Schema.optionalKey(Schema.String),
   iat: Schema.Number,
   exp: Schema.Number,
-});
-type SessionClaims = typeof SessionClaims.Type;
+}) {}
 
-const WebSocketClaims = Schema.Struct({
+class WebSocketClaims extends Schema.Class<WebSocketClaims>("WebSocketClaims")({
   v: Schema.Literal(1),
   kind: Schema.Literal("websocket"),
   sid: AuthSessionId,
   iat: Schema.Number,
   exp: Schema.Number,
-});
-type WebSocketClaims = typeof WebSocketClaims.Type;
+}) {}
 
 const decodeSessionClaims = Schema.decodeUnknownEffect(Schema.fromJsonString(SessionClaims));
 const decodeWebSocketClaims = Schema.decodeUnknownEffect(Schema.fromJsonString(WebSocketClaims));
 
 function createDefaultClientMetadata(): AuthClientMetadata {
-  return {
+  return AuthClientMetadata.make({
     deviceType: "unknown",
-  };
+  });
 }
 
 function toClientMetadata(record: {
@@ -442,21 +440,21 @@ function toClientMetadata(record: {
   readonly os: string | null;
   readonly browser: string | null;
 }): AuthClientMetadata {
-  return {
+  return AuthClientMetadata.make({
     ...(record.label ? { label: record.label } : {}),
     ...(record.ipAddress ? { ipAddress: record.ipAddress } : {}),
     ...(record.userAgent ? { userAgent: record.userAgent } : {}),
     deviceType: record.deviceType,
     ...(record.os ? { os: record.os } : {}),
     ...(record.browser ? { browser: record.browser } : {}),
-  };
+  });
 }
 
 function toAuthClientSession(input: Omit<AuthClientSession, "current">): AuthClientSession {
-  return {
+  return AuthClientSession.make({
     ...input,
     current: false,
-  };
+  });
 }
 
 export const make = Effect.gen(function* () {
@@ -470,7 +468,9 @@ export const make = Effect.gen(function* () {
   const cookieName = resolveSessionCookieName({
     mode: serverConfig.mode,
     port: serverConfig.port,
-    devUrl: serverConfig.devUrl,
+    host: serverConfig.host,
+    instanceKey: serverConfig.stateDir,
+    development: serverConfig.devUrl !== undefined,
   });
 
   const emitUpsert = (clientSession: AuthClientSession) =>
@@ -487,7 +487,7 @@ export const make = Effect.gen(function* () {
 
   const loadActiveSession = (sessionId: AuthSessionId) =>
     Effect.gen(function* () {
-      const row = yield* authSessions.getById({ sessionId });
+      const row = yield* authSessions.getById(sessionId);
       if (Option.isNone(row) || row.value.revokedAt !== null) {
         return Option.none<AuthClientSession>();
       }
@@ -519,10 +519,12 @@ export const make = Effect.gen(function* () {
         wasDisconnected
           ? DateTime.now.pipe(
               Effect.flatMap((lastConnectedAt) =>
-                authSessions.setLastConnectedAt({
-                  sessionId,
-                  lastConnectedAt,
-                }),
+                authSessions.setLastConnectedAt(
+                  new AuthSessions.SetAuthSessionLastConnectedAtInput({
+                    sessionId,
+                    lastConnectedAt,
+                  }),
+                ),
               ),
             )
           : Effect.void,
@@ -580,7 +582,7 @@ export const make = Effect.gen(function* () {
       const expiresAt = DateTime.add(issuedAt, {
         milliseconds: Duration.toMillis(input?.ttl ?? DEFAULT_SESSION_TTL),
       });
-      const claims: SessionClaims = {
+      const claims = new SessionClaims({
         v: 1,
         kind: "session",
         sid: sessionId,
@@ -590,7 +592,7 @@ export const make = Effect.gen(function* () {
         ...(input?.proofKeyThumbprint ? { jkt: input.proofKeyThumbprint } : {}),
         iat: issuedAt.epochMilliseconds,
         exp: expiresAt.epochMilliseconds,
-      };
+      });
 
       const encodedPayload = yield* encodeClaims(claims).pipe(
         Effect.map(base64UrlEncode),
@@ -609,22 +611,24 @@ export const make = Effect.gen(function* () {
       const signature = signPayload(encodedPayload, signingSecret);
       const client = input?.client ?? createDefaultClientMetadata();
       yield* authSessions
-        .create({
-          sessionId,
-          subject: claims.sub,
-          scopes: claims.scopes,
-          method: claims.method,
-          client: {
-            label: client.label ?? null,
-            ipAddress: client.ipAddress ?? null,
-            userAgent: client.userAgent ?? null,
-            deviceType: client.deviceType,
-            os: client.os ?? null,
-            browser: client.browser ?? null,
-          },
-          issuedAt,
-          expiresAt,
-        })
+        .create(
+          new AuthSessions.CreateAuthSessionInput({
+            sessionId,
+            subject: claims.sub,
+            scopes: claims.scopes,
+            method: claims.method,
+            client: {
+              label: client.label ?? null,
+              ipAddress: client.ipAddress ?? null,
+              userAgent: client.userAgent ?? null,
+              deviceType: client.deviceType,
+              os: client.os ?? null,
+              browser: client.browser ?? null,
+            },
+            issuedAt,
+            expiresAt,
+          }),
+        )
         .pipe(Effect.mapError((cause) => new SessionCredentialIssueError({ sessionId, cause })));
       yield* emitUpsert(
         toAuthClientSession({
@@ -685,7 +689,7 @@ export const make = Effect.gen(function* () {
       }
 
       const row = yield* authSessions
-        .getById({ sessionId: claims.sid })
+        .getById(claims.sid)
         .pipe(
           Effect.mapError(
             (cause) => new SessionCredentialVerificationError({ sessionId: claims.sid, cause }),
@@ -722,13 +726,13 @@ export const make = Effect.gen(function* () {
     const expiresAt = DateTime.add(issuedAt, {
       milliseconds: Duration.toMillis(input?.ttl ?? DEFAULT_WEBSOCKET_TOKEN_TTL),
     });
-    const claims: WebSocketClaims = {
+    const claims = new WebSocketClaims({
       v: 1,
       kind: "websocket",
       sid: sessionId,
       iat: issuedAt.epochMilliseconds,
       exp: expiresAt.epochMilliseconds,
-    };
+    });
     const encodedPayload = yield* encodeWsClaims(claims).pipe(
       Effect.map(base64UrlEncode),
       Effect.mapError(
@@ -784,7 +788,7 @@ export const make = Effect.gen(function* () {
     }
 
     const row = yield* authSessions
-      .getById({ sessionId: claims.sid })
+      .getById(claims.sid)
       .pipe(
         Effect.mapError(
           (cause) => new WebSocketTokenVerificationError({ sessionId: claims.sid, cause }),
@@ -822,7 +826,7 @@ export const make = Effect.gen(function* () {
     function* () {
       const now = yield* DateTime.now;
       const connectedSessions = yield* Ref.get(connectedSessionsRef);
-      const rows = yield* authSessions.listActive({ now });
+      const rows = yield* authSessions.listActive(now);
 
       return rows.map((row) =>
         toAuthClientSession({
@@ -845,10 +849,12 @@ export const make = Effect.gen(function* () {
     function* (sessionId) {
       const revokedAt = yield* DateTime.now;
       const revoked = yield* authSessions
-        .revoke({
-          sessionId,
-          revokedAt,
-        })
+        .revoke(
+          new AuthSessions.RevokeAuthSessionInput({
+            sessionId,
+            revokedAt,
+          }),
+        )
         .pipe(Effect.mapError((cause) => new SessionRevocationError({ sessionId, cause })));
       if (revoked) {
         yield* Ref.update(connectedSessionsRef, (current) => {
@@ -867,10 +873,12 @@ export const make = Effect.gen(function* () {
   )(function* (sessionId) {
     const revokedAt = yield* DateTime.now;
     const revokedSessionIds = yield* authSessions
-      .revokeAllExcept({
-        currentSessionId: sessionId,
-        revokedAt,
-      })
+      .revokeAllExcept(
+        new AuthSessions.RevokeAuthSessionInput({
+          sessionId,
+          revokedAt,
+        }),
+      )
       .pipe(
         Effect.mapError(
           (cause) => new OtherSessionsRevocationError({ currentSessionId: sessionId, cause }),

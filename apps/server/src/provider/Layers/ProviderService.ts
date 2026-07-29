@@ -28,6 +28,7 @@ import { causeErrorTag } from "@t3tools/shared/observability";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Exit from "effect/Exit";
 import * as Option from "effect/Option";
 import * as PubSub from "effect/PubSub";
 import * as Ref from "effect/Ref";
@@ -55,7 +56,12 @@ import * as ProviderEventLoggers from "./ProviderEventLoggers.ts";
 import * as AnalyticsService from "../../telemetry/AnalyticsService.ts";
 import * as McpProviderSession from "../../mcp/McpProviderSession.ts";
 import * as McpSessionRegistry from "../../mcp/McpSessionRegistry.ts";
-const isModelSelection = Schema.is(ModelSelection);
+/**
+ * `runtimePayload` round-trips through a JSON column, so the persisted model
+ * selection always comes back as plain JSON. Decode it rather than testing
+ * the in-memory shape.
+ */
+const decodeModelSelectionExit = Schema.decodeUnknownExit(ModelSelection);
 
 /**
  * Hook for tests that want to override the canonical event logger pulled
@@ -147,7 +153,9 @@ function readPersistedModelSelection(
     return undefined;
   }
   const raw = "modelSelection" in runtimePayload ? runtimePayload.modelSelection : undefined;
-  return isModelSelection(raw) ? raw : undefined;
+  if (raw === undefined) return undefined;
+  const decoded = decodeModelSelectionExit(raw);
+  return Exit.isSuccess(decoded) ? decoded.value : undefined;
 }
 
 function readPersistedCwd(
@@ -679,6 +687,12 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
         "provider.kind": routed.adapter.provider,
         ...(input.modelSelection?.model ? { "provider.model": input.modelSelection.model } : {}),
       });
+      // A turn is the clearest sign a session is still alive. The MCP
+      // credential is minted once at session start and cannot be rotated into
+      // an already-spawned agent process, so we keep the existing token valid
+      // rather than issuing a new one: sessions that go a long time between
+      // browser tool calls used to lose the toolkit outright.
+      yield* McpSessionRegistry.touchActiveMcpThread(input.threadId);
       const turn = yield* routed.adapter.sendTurn(input);
       yield* directory.upsert({
         threadId: input.threadId,

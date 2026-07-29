@@ -1,7 +1,7 @@
 import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
-  type UploadChatImageAttachment,
+  UploadChatImageAttachment,
 } from "@t3tools/contracts";
 import { estimateBase64ByteSize } from "./base64";
 import { uuidv4 } from "./uuid";
@@ -15,13 +15,15 @@ export interface DraftComposerImageAttachment extends UploadChatImageAttachment 
 export function toUploadChatImageAttachments(
   attachments: ReadonlyArray<DraftComposerImageAttachment>,
 ): ReadonlyArray<UploadChatImageAttachment> {
-  return attachments.map((attachment) => ({
-    type: attachment.type,
-    name: attachment.name,
-    mimeType: attachment.mimeType,
-    sizeBytes: attachment.sizeBytes,
-    dataUrl: attachment.dataUrl,
-  }));
+  return attachments.map((attachment) =>
+    UploadChatImageAttachment.make({
+      type: attachment.type,
+      name: attachment.name,
+      mimeType: attachment.mimeType,
+      sizeBytes: attachment.sizeBytes,
+      dataUrl: attachment.dataUrl,
+    }),
+  );
 }
 
 const OWNED_PASTED_IMAGE_DIRECTORY = "t3-composer-paste";

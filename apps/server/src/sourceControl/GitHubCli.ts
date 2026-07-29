@@ -7,6 +7,7 @@ import * as Schema from "effect/Schema";
 
 import {
   TrimmedNonEmptyString,
+  SourceControlRepositoryCloneUrls,
   type SourceControlRepositoryVisibility,
   type VcsError,
 } from "@t3tools/contracts";
@@ -259,11 +260,11 @@ const decodeRawGitHubRepositoryCloneUrls = Schema.decodeEffect(
 function normalizeRepositoryCloneUrls(
   raw: Schema.Schema.Type<typeof RawGitHubRepositoryCloneUrlsSchema>,
 ): GitHubRepositoryCloneUrls {
-  return {
+  return SourceControlRepositoryCloneUrls.make({
     nameWithOwner: raw.nameWithOwner,
     url: raw.url,
     sshUrl: raw.sshUrl,
-  };
+  });
 }
 
 /**
@@ -286,21 +287,21 @@ function deriveRepositoryCloneUrlsFromCreateOutput(
       const segments = pathname.split("/").filter(Boolean);
       if (segments.length === 2) {
         const nameWithOwner = `${segments[0]}/${segments[1]}`;
-        return {
+        return SourceControlRepositoryCloneUrls.make({
           nameWithOwner,
           url: `${parsed.origin}/${nameWithOwner}`,
           sshUrl: `git@${parsed.host}:${nameWithOwner}.git`,
-        };
+        });
       }
     } catch {
       // Fall through to the input-derived defaults below.
     }
   }
-  return {
+  return SourceControlRepositoryCloneUrls.make({
     nameWithOwner: repository,
     url: `https://${fallbackHost}/${repository}`,
     sshUrl: `git@${fallbackHost}:${repository}.git`,
-  };
+  });
 }
 
 export const make = Effect.gen(function* () {

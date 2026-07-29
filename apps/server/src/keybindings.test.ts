@@ -1,4 +1,13 @@
-import { KeybindingCommand, KeybindingRule, KeybindingsConfig } from "@t3tools/contracts";
+import {
+  KeybindingCommand,
+  KeybindingRule,
+  KeybindingShortcut,
+  KeybindingsConfig,
+  KeybindingWhenAnd,
+  KeybindingWhenIdentifier,
+  KeybindingWhenNot,
+  ResolvedKeybindingRule,
+} from "@t3tools/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import { assertFailure } from "@effect/vitest/utils";
@@ -59,68 +68,81 @@ const readKeybindingsConfig = (configPath: string) =>
 it.layer(NodeServices.layer)("keybindings", (it) => {
   it.effect("parses shortcuts including plus key", () =>
     Effect.sync(() => {
-      assert.deepEqual(Keybindings.parseKeybindingShortcut("mod+j"), {
-        key: "j",
-        metaKey: false,
-        ctrlKey: false,
-        shiftKey: false,
-        altKey: false,
-        modKey: true,
-      });
-      assert.deepEqual(Keybindings.parseKeybindingShortcut("mod++"), {
-        key: "+",
-        metaKey: false,
-        ctrlKey: false,
-        shiftKey: false,
-        altKey: false,
-        modKey: true,
-      });
-    }),
-  );
-
-  it.effect("compiles valid rule with parsed when AST", () =>
-    Effect.sync(() => {
-      const compiled = Keybindings.compileResolvedKeybindingRule({
-        key: "mod+d",
-        command: "terminal.split",
-        when: "terminalOpen && !terminalFocus",
-      });
-
-      assert.deepEqual(compiled, {
-        command: "terminal.split",
-        shortcut: {
-          key: "d",
+      assert.deepEqual(
+        Keybindings.parseKeybindingShortcut("mod+j"),
+        KeybindingShortcut.make({
+          key: "j",
           metaKey: false,
           ctrlKey: false,
           shiftKey: false,
           altKey: false,
           modKey: true,
-        },
-        whenAst: {
-          type: "and",
-          left: { type: "identifier", name: "terminalOpen" },
-          right: {
-            type: "not",
-            node: { type: "identifier", name: "terminalFocus" },
-          },
-        },
-      });
-    }),
-  );
-
-  it.effect("encodes resolved plus-key shortcuts", () =>
-    Effect.gen(function* () {
-      const encoded = yield* encodeResolvedKeybindingFromConfig({
-        command: "terminal.toggle",
-        shortcut: {
+        }),
+      );
+      assert.deepEqual(
+        Keybindings.parseKeybindingShortcut("mod++"),
+        KeybindingShortcut.make({
           key: "+",
           metaKey: false,
           ctrlKey: false,
           shiftKey: false,
           altKey: false,
           modKey: true,
-        },
-      });
+        }),
+      );
+    }),
+  );
+
+  it.effect("compiles valid rule with parsed when AST", () =>
+    Effect.sync(() => {
+      const compiled = Keybindings.compileResolvedKeybindingRule(
+        KeybindingRule.make({
+          key: "mod+d",
+          command: "terminal.split",
+          when: "terminalOpen && !terminalFocus",
+        }),
+      );
+
+      assert.deepEqual(
+        compiled,
+        ResolvedKeybindingRule.make({
+          command: "terminal.split",
+          shortcut: KeybindingShortcut.make({
+            key: "d",
+            metaKey: false,
+            ctrlKey: false,
+            shiftKey: false,
+            altKey: false,
+            modKey: true,
+          }),
+          whenAst: KeybindingWhenAnd.make({
+            type: "and",
+            left: KeybindingWhenIdentifier.make({ type: "identifier", name: "terminalOpen" }),
+            right: KeybindingWhenNot.make({
+              type: "not",
+              node: KeybindingWhenIdentifier.make({ type: "identifier", name: "terminalFocus" }),
+            }),
+          }),
+        }),
+      );
+    }),
+  );
+
+  it.effect("encodes resolved plus-key shortcuts", () =>
+    Effect.gen(function* () {
+      const encoded = yield* encodeResolvedKeybindingFromConfig(
+        ResolvedKeybindingRule.make({
+          command: "terminal.toggle",
+          shortcut: KeybindingShortcut.make({
+            key: "+",
+            metaKey: false,
+            ctrlKey: false,
+            shiftKey: false,
+            altKey: false,
+            modKey: true,
+          }),
+        }),
+      );
 
       assert.equal(encoded.key, "mod++");
       assert.equal(encoded.command, "terminal.toggle");
@@ -275,8 +297,8 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
       Effect.gen(function* () {
         const { keybindingsConfigPath } = yield* ServerConfig.ServerConfig;
         yield* writeKeybindingsConfig(keybindingsConfigPath, [
-          { key: "mod+shift+t", command: "terminal.toggle" },
-          { key: "mod+shift+r", command: "script.run-tests.run" },
+          KeybindingRule.make({ key: "mod+shift+t", command: "terminal.toggle" }),
+          KeybindingRule.make({ key: "mod+shift+r", command: "script.run-tests.run" }),
         ]);
 
         yield* Effect.gen(function* () {
@@ -310,7 +332,7 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
     return Effect.gen(function* () {
       const { keybindingsConfigPath } = yield* ServerConfig.ServerConfig;
       yield* writeKeybindingsConfig(keybindingsConfigPath, [
-        { key: "mod+j", command: "script.custom-action.run" },
+        KeybindingRule.make({ key: "mod+j", command: "script.custom-action.run" }),
       ]);
 
       yield* Effect.gen(function* () {
@@ -341,7 +363,7 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
     Effect.gen(function* () {
       const { keybindingsConfigPath } = yield* ServerConfig.ServerConfig;
       yield* writeKeybindingsConfig(keybindingsConfigPath, [
-        { key: "mod+j", command: "terminal.toggle" },
+        KeybindingRule.make({ key: "mod+j", command: "terminal.toggle" }),
       ]);
 
       const resolved = yield* Effect.gen(function* () {
@@ -367,7 +389,7 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
     Effect.gen(function* () {
       const { keybindingsConfigPath } = yield* ServerConfig.ServerConfig;
       yield* writeKeybindingsConfig(keybindingsConfigPath, [
-        { key: "mod+r", command: "script.run-tests.run" },
+        KeybindingRule.make({ key: "mod+r", command: "script.run-tests.run" }),
       ]);
       yield* Effect.gen(function* () {
         const keybindings = yield* Keybindings.Keybindings;
@@ -390,8 +412,8 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
     Effect.gen(function* () {
       const { keybindingsConfigPath } = yield* ServerConfig.ServerConfig;
       yield* writeKeybindingsConfig(keybindingsConfigPath, [
-        { key: "mod+r", command: "script.run-tests.run" },
-        { key: "mod+shift+r", command: "script.run-tests.run" },
+        KeybindingRule.make({ key: "mod+r", command: "script.run-tests.run" }),
+        KeybindingRule.make({ key: "mod+shift+r", command: "script.run-tests.run" }),
       ]);
       yield* Effect.gen(function* () {
         const keybindings = yield* Keybindings.Keybindings;
@@ -415,8 +437,8 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
     Effect.gen(function* () {
       const { keybindingsConfigPath } = yield* ServerConfig.ServerConfig;
       yield* writeKeybindingsConfig(keybindingsConfigPath, [
-        { key: "mod+r", command: "script.run-tests.run" },
-        { key: "mod+alt+r", command: "script.run-tests.run" },
+        KeybindingRule.make({ key: "mod+r", command: "script.run-tests.run" }),
+        KeybindingRule.make({ key: "mod+alt+r", command: "script.run-tests.run" }),
       ]);
       yield* Effect.gen(function* () {
         const keybindings = yield* Keybindings.Keybindings;
@@ -437,8 +459,8 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
     Effect.gen(function* () {
       const { keybindingsConfigPath } = yield* ServerConfig.ServerConfig;
       yield* writeKeybindingsConfig(keybindingsConfigPath, [
-        { key: "mod+r", command: "script.run-tests.run" },
-        { key: "mod+shift+r", command: "script.run-tests.run" },
+        KeybindingRule.make({ key: "mod+r", command: "script.run-tests.run" }),
+        KeybindingRule.make({ key: "mod+shift+r", command: "script.run-tests.run" }),
       ]);
       yield* Effect.gen(function* () {
         const keybindings = yield* Keybindings.Keybindings;
@@ -509,7 +531,7 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
       const { keybindingsConfigPath } = yield* ServerConfig.ServerConfig;
       const { dirname } = yield* Path.Path;
       yield* writeKeybindingsConfig(keybindingsConfigPath, [
-        { key: "mod+j", command: "terminal.toggle" },
+        KeybindingRule.make({ key: "mod+j", command: "terminal.toggle" }),
       ]);
       yield* fs.chmod(dirname(keybindingsConfigPath), 0o500);
 
@@ -534,7 +556,7 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
     Effect.gen(function* () {
       const { keybindingsConfigPath } = yield* ServerConfig.ServerConfig;
       yield* writeKeybindingsConfig(keybindingsConfigPath, [
-        { key: "mod+j", command: "terminal.toggle" },
+        KeybindingRule.make({ key: "mod+j", command: "terminal.toggle" }),
       ]);
 
       const [first, second] = yield* Effect.gen(function* () {
@@ -553,7 +575,7 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
     Effect.gen(function* () {
       const { keybindingsConfigPath } = yield* ServerConfig.ServerConfig;
       yield* writeKeybindingsConfig(keybindingsConfigPath, [
-        { key: "mod+j", command: "terminal.toggle" },
+        KeybindingRule.make({ key: "mod+j", command: "terminal.toggle" }),
       ]);
 
       const loadedAfterUpsert = yield* Effect.gen(function* () {

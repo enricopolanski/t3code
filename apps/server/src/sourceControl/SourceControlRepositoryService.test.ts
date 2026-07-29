@@ -1,3 +1,9 @@
+import {
+  SourceControlCloneRepositoryResult,
+  SourceControlRepositoryCloneUrls,
+  SourceControlPublishRepositoryResult,
+  SourceControlRepositoryInfo,
+} from "@t3tools/contracts";
 import * as NodePath from "@effect/platform-node/NodePath";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
@@ -15,11 +21,13 @@ import type * as SourceControlProvider from "./SourceControlProvider.ts";
 import * as SourceControlProviderRegistry from "./SourceControlProviderRegistry.ts";
 import * as SourceControlRepositoryService from "./SourceControlRepositoryService.ts";
 
-const CLONE_URLS = {
+const CLONE_URLS = SourceControlRepositoryCloneUrls.make({
   nameWithOwner: "octocat/t3code",
   url: "https://github.com/octocat/t3code",
   sshUrl: "git@github.com:octocat/t3code.git",
-};
+});
+
+const REPOSITORY_INFO = SourceControlRepositoryInfo.make({ provider: "github", ...CLONE_URLS });
 
 function makeProvider(
   overrides: Partial<SourceControlProvider.SourceControlProvider["Service"]> = {},
@@ -112,7 +120,7 @@ it.effect("looks up repositories through the requested provider without search",
       cwd: "/workspace",
     });
 
-    assert.deepStrictEqual(result, { provider: "github", ...CLONE_URLS });
+    assert.deepStrictEqual(result, REPOSITORY_INFO);
     assert.deepStrictEqual(calls, [{ cwd: "/workspace", repository: "octocat/t3code" }]);
   }).pipe(Effect.provide(makeLayer({ provider })));
 });
@@ -168,11 +176,14 @@ it.effect("clones a looked-up repository into the requested destination", () =>
         protocol: "https",
       });
 
-      assert.deepStrictEqual(result, {
-        cwd: destinationPath,
-        remoteUrl: CLONE_URLS.url,
-        repository: { provider: "github", ...CLONE_URLS },
-      });
+      assert.deepStrictEqual(
+        result,
+        SourceControlCloneRepositoryResult.make({
+          cwd: destinationPath,
+          remoteUrl: CLONE_URLS.url,
+          repository: REPOSITORY_INFO,
+        }),
+      );
       assert.deepStrictEqual(cloneCalls, [
         {
           cwd: parent,
@@ -254,14 +265,17 @@ it.effect("publishes by creating the repository, adding a remote, and pushing up
       protocol: "ssh",
     });
 
-    assert.deepStrictEqual(result, {
-      repository: { provider: "github", ...CLONE_URLS },
-      remoteName: "origin",
-      remoteUrl: CLONE_URLS.sshUrl,
-      branch: "feature/remote-v1",
-      upstreamBranch: "origin/feature/remote-v1",
-      status: "pushed",
-    });
+    assert.deepStrictEqual(
+      result,
+      SourceControlPublishRepositoryResult.make({
+        repository: REPOSITORY_INFO,
+        remoteName: "origin",
+        remoteUrl: CLONE_URLS.sshUrl,
+        branch: "feature/remote-v1",
+        upstreamBranch: "origin/feature/remote-v1",
+        status: "pushed",
+      }),
+    );
     assert.deepStrictEqual(createCalls, [
       { cwd: "/workspace", repository: "octocat/t3code", visibility: "private" },
     ]);
@@ -345,13 +359,16 @@ it.effect("publish succeeds with status remote_added when the local repo has no 
       protocol: "ssh",
     });
 
-    assert.deepStrictEqual(result, {
-      repository: { provider: "github", ...CLONE_URLS },
-      remoteName: "origin",
-      remoteUrl: CLONE_URLS.sshUrl,
-      branch: "main",
-      status: "remote_added",
-    });
+    assert.deepStrictEqual(
+      result,
+      SourceControlPublishRepositoryResult.make({
+        repository: REPOSITORY_INFO,
+        remoteName: "origin",
+        remoteUrl: CLONE_URLS.sshUrl,
+        branch: "main",
+        status: "remote_added",
+      }),
+    );
     assert.strictEqual(pushCalls, 0);
   }).pipe(
     Effect.provide(

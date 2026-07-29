@@ -16,7 +16,7 @@ import type {
   RelayAgentActivityPublishProofPayload,
   RelayAgentActivityState,
 } from "@t3tools/contracts/relay";
-import { CommandId, ProviderInstanceId } from "@t3tools/contracts";
+import { CommandId, DispatchResult, ProviderInstanceId } from "@t3tools/contracts";
 import { RelayClientTracer } from "@t3tools/shared/relayTracing";
 import { RELAY_ACTIVITY_PUBLISH_TYP, verifyRelayJwt } from "@t3tools/shared/relayJwt";
 import { describe, expect, it } from "@effect/vitest";
@@ -472,7 +472,7 @@ describe.sequential("signRelayAgentActivityPublishProof", () => {
 
         const orchestrationEngine = {
           readEvents: () => Stream.empty,
-          dispatch: () => Effect.succeed({ sequence: 1 }),
+          dispatch: () => Effect.succeed(DispatchResult.make({ sequence: 1 })),
           streamDomainEvents: Stream.fromQueue(events),
           latestSequence: Effect.succeed(0),
         } satisfies OrchestrationEngineShape;
@@ -664,7 +664,7 @@ describe.sequential("signRelayAgentActivityPublishProof", () => {
           }),
           Layer.succeed(OrchestrationEngineService, {
             readEvents: () => Stream.empty,
-            dispatch: () => Effect.succeed({ sequence: 1 }),
+            dispatch: () => Effect.succeed(DispatchResult.make({ sequence: 1 })),
             streamDomainEvents: Stream.fromQueue(events),
             latestSequence: Effect.succeed(0),
           } satisfies OrchestrationEngineShape),

@@ -1,9 +1,10 @@
 import {
   CommandId,
   EventId,
+  type OrchestrationEvent,
+  OrchestrationEventMetadata,
   ProjectId,
   ThreadId,
-  type OrchestrationEvent,
 } from "@t3tools/contracts";
 import { expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
@@ -25,7 +26,7 @@ function makeEvent(input: {
     commandId: CommandId.make(`command-${input.sequence}`),
     causationEventId: null,
     correlationId: null,
-    metadata: {},
+    metadata: OrchestrationEventMetadata.make({}),
     payload: input.payload as never,
   } as OrchestrationEvent;
 }

@@ -65,7 +65,9 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("ProviderSessionDirectoryL
         assert.equal(updatedBinding.value.threadId, nextThreadId);
       }
 
-      const runtime = yield* runtimeRepository.getByThreadId({ threadId: nextThreadId });
+      const runtime = yield* runtimeRepository.getByThreadId(
+        new ProviderSessionRuntime.GetProviderSessionRuntimeInput({ threadId: nextThreadId }),
+      );
       assert.equal(Option.isSome(runtime), true);
       if (Option.isSome(runtime)) {
         assert.equal(runtime.value.threadId, nextThreadId);
@@ -106,7 +108,9 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("ProviderSessionDirectoryL
         },
       });
 
-      const runtime = yield* runtimeRepository.getByThreadId({ threadId });
+      const runtime = yield* runtimeRepository.getByThreadId(
+        new ProviderSessionRuntime.GetProviderSessionRuntimeInput({ threadId }),
+      );
       assert.equal(Option.isSome(runtime), true);
       if (Option.isSome(runtime)) {
         assert.equal(runtime.value.threadId, threadId);
@@ -130,37 +134,41 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("ProviderSessionDirectoryL
       const olderThreadId = ThreadId.make("thread-runtime-older");
       const newerThreadId = ThreadId.make("thread-runtime-newer");
 
-      yield* runtimeRepository.upsert({
-        threadId: newerThreadId,
-        providerName: "codex",
-        providerInstanceId: null,
-        adapterKey: "codex",
-        runtimeMode: "full-access",
-        status: "running",
-        lastSeenAt: "2026-04-14T12:05:00.000Z",
-        resumeCursor: {
-          opaque: "resume-newer",
-        },
-        runtimePayload: {
-          cwd: "/tmp/newer",
-        },
-      });
+      yield* runtimeRepository.upsert(
+        new ProviderSessionRuntime.ProviderSessionRuntime({
+          threadId: newerThreadId,
+          providerName: "codex",
+          providerInstanceId: null,
+          adapterKey: "codex",
+          runtimeMode: "full-access",
+          status: "running",
+          lastSeenAt: "2026-04-14T12:05:00.000Z",
+          resumeCursor: {
+            opaque: "resume-newer",
+          },
+          runtimePayload: {
+            cwd: "/tmp/newer",
+          },
+        }),
+      );
 
-      yield* runtimeRepository.upsert({
-        threadId: olderThreadId,
-        providerName: "claudeAgent",
-        providerInstanceId: null,
-        adapterKey: "claudeAgent",
-        runtimeMode: "approval-required",
-        status: "starting",
-        lastSeenAt: "2026-04-14T12:00:00.000Z",
-        resumeCursor: {
-          opaque: "resume-older",
-        },
-        runtimePayload: {
-          cwd: "/tmp/older",
-        },
-      });
+      yield* runtimeRepository.upsert(
+        new ProviderSessionRuntime.ProviderSessionRuntime({
+          threadId: olderThreadId,
+          providerName: "claudeAgent",
+          providerInstanceId: null,
+          adapterKey: "claudeAgent",
+          runtimeMode: "approval-required",
+          status: "starting",
+          lastSeenAt: "2026-04-14T12:00:00.000Z",
+          resumeCursor: {
+            opaque: "resume-older",
+          },
+          runtimePayload: {
+            cwd: "/tmp/older",
+          },
+        }),
+      );
 
       const bindings = yield* directory.listBindings();
 
@@ -202,24 +210,28 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("ProviderSessionDirectoryL
       const runtimeRepository = yield* ProviderSessionRuntime.ProviderSessionRuntimeRepository;
       const threadId = ThreadId.make("thread-provider-change");
 
-      yield* runtimeRepository.upsert({
-        threadId,
-        providerName: "claudeAgent",
-        providerInstanceId: null,
-        adapterKey: "claudeAgent",
-        runtimeMode: "full-access",
-        status: "running",
-        lastSeenAt: "2026-01-01T00:00:00.000Z",
-        resumeCursor: null,
-        runtimePayload: null,
-      });
+      yield* runtimeRepository.upsert(
+        new ProviderSessionRuntime.ProviderSessionRuntime({
+          threadId,
+          providerName: "claudeAgent",
+          providerInstanceId: null,
+          adapterKey: "claudeAgent",
+          runtimeMode: "full-access",
+          status: "running",
+          lastSeenAt: "2026-01-01T00:00:00.000Z",
+          resumeCursor: null,
+          runtimePayload: null,
+        }),
+      );
 
       yield* directory.upsert({
         provider: ProviderDriverKind.make("codex"),
         threadId,
       });
 
-      const runtime = yield* runtimeRepository.getByThreadId({ threadId });
+      const runtime = yield* runtimeRepository.getByThreadId(
+        new ProviderSessionRuntime.GetProviderSessionRuntimeInput({ threadId }),
+      );
       assert.equal(Option.isSome(runtime), true);
       if (Option.isSome(runtime)) {
         assert.equal(runtime.value.providerName, "codex");

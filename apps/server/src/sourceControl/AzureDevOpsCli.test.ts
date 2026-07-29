@@ -1,3 +1,4 @@
+import { SourceControlRepositoryCloneUrls } from "@t3tools/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it, afterEach, describe, expect, vi } from "@effect/vitest";
 import * as Effect from "effect/Effect";
@@ -213,11 +214,14 @@ describe("AzureDevOpsCli.layer", () => {
         repository: "repo",
       });
 
-      assert.deepStrictEqual(result, {
-        nameWithOwner: "project/repo",
-        url: "https://dev.azure.com/acme/project/_git/repo",
-        sshUrl: "git@ssh.dev.azure.com:v3/acme/project/repo",
-      });
+      assert.deepStrictEqual(
+        result,
+        SourceControlRepositoryCloneUrls.make({
+          nameWithOwner: "project/repo",
+          url: "https://dev.azure.com/acme/project/_git/repo",
+          sshUrl: "git@ssh.dev.azure.com:v3/acme/project/repo",
+        }),
+      );
     }).pipe(Effect.provide(layer)),
   );
 
@@ -247,11 +251,14 @@ describe("AzureDevOpsCli.layer", () => {
         visibility: "private",
       });
 
-      assert.deepStrictEqual(result, {
-        nameWithOwner: "project/repo",
-        url: "https://dev.azure.com/acme/project/_git/repo",
-        sshUrl: "git@ssh.dev.azure.com:v3/acme/project/repo",
-      });
+      assert.deepStrictEqual(
+        result,
+        SourceControlRepositoryCloneUrls.make({
+          nameWithOwner: "project/repo",
+          url: "https://dev.azure.com/acme/project/_git/repo",
+          sshUrl: "git@ssh.dev.azure.com:v3/acme/project/repo",
+        }),
+      );
       expect(mockRun).toHaveBeenCalledWith({
         operation: "AzureDevOpsCli.execute",
         command: "az",

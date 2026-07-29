@@ -9,6 +9,7 @@ import type * as DateTime from "effect/DateTime";
 
 import {
   TrimmedNonEmptyString,
+  SourceControlRepositoryCloneUrls,
   type SourceControlRepositoryVisibility,
   type VcsError,
 } from "@t3tools/contracts";
@@ -323,11 +324,11 @@ const decodeGitLabNamespace = Schema.decodeEffect(Schema.fromJsonString(RawGitLa
 function normalizeRepositoryCloneUrls(
   raw: Schema.Schema.Type<typeof RawGitLabRepositoryCloneUrlsSchema>,
 ): GitLabRepositoryCloneUrls {
-  return {
+  return SourceControlRepositoryCloneUrls.make({
     nameWithOwner: raw.path_with_namespace,
     url: raw.web_url,
     sshUrl: raw.ssh_url_to_repo,
-  };
+  });
 }
 
 function stateArgs(state: "open" | "closed" | "merged" | "all"): ReadonlyArray<string> {

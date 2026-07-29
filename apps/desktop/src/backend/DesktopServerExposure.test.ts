@@ -1,6 +1,11 @@
 import * as NodeFileSystem from "@effect/platform-node/NodeFileSystem";
 import * as NodeHttpClient from "@effect/platform-node/NodeHttpClient";
 import * as NodeServices from "@effect/platform-node/NodeServices";
+import {
+  AdvertisedEndpoint,
+  AdvertisedEndpointCompatibility,
+  AdvertisedEndpointProvider,
+} from "@t3tools/contracts";
 import { assert, describe, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -379,87 +384,87 @@ describe("DesktopServerExposure", () => {
 
         const endpoints = yield* serverExposure.getAdvertisedEndpoints;
         assert.deepEqual(endpoints, [
-          {
+          AdvertisedEndpoint.make({
             id: "desktop-loopback:3773",
             label: "This machine",
-            provider: {
+            provider: AdvertisedEndpointProvider.make({
               id: "desktop-core",
               label: "Desktop",
               kind: "core",
               isAddon: false,
-            },
+            }),
             httpBaseUrl: "http://127.0.0.1:3773/",
             wsBaseUrl: "ws://127.0.0.1:3773/",
             reachability: "loopback",
-            compatibility: {
+            compatibility: AdvertisedEndpointCompatibility.make({
               hostedHttpsApp: "mixed-content-blocked",
               desktopApp: "compatible",
-            },
+            }),
             source: "desktop-core",
             status: "available",
             description: "Loopback endpoint for this desktop app.",
-          },
-          {
+          }),
+          AdvertisedEndpoint.make({
             id: "desktop-lan:http://192.168.1.20:3773",
             label: "Local network",
-            provider: {
+            provider: AdvertisedEndpointProvider.make({
               id: "desktop-core",
               label: "Desktop",
               kind: "core",
               isAddon: false,
-            },
+            }),
             httpBaseUrl: "http://192.168.1.20:3773/",
             wsBaseUrl: "ws://192.168.1.20:3773/",
             reachability: "lan",
-            compatibility: {
+            compatibility: AdvertisedEndpointCompatibility.make({
               hostedHttpsApp: "mixed-content-blocked",
               desktopApp: "compatible",
-            },
+            }),
             source: "desktop-core",
             status: "available",
             isDefault: true,
             description: "Reachable from devices on the same network.",
-          },
-          {
+          }),
+          AdvertisedEndpoint.make({
             id: "manual:https://desktop.example.ts.net",
             label: "Custom HTTPS",
-            provider: {
+            provider: AdvertisedEndpointProvider.make({
               id: "manual",
               label: "Manual",
               kind: "manual",
               isAddon: false,
-            },
+            }),
             httpBaseUrl: "https://desktop.example.ts.net/",
             wsBaseUrl: "wss://desktop.example.ts.net/",
             reachability: "public",
-            compatibility: {
+            compatibility: AdvertisedEndpointCompatibility.make({
               hostedHttpsApp: "compatible",
               desktopApp: "compatible",
-            },
+            }),
             source: "user",
             status: "unknown",
             description: "User-configured HTTPS endpoint for this desktop backend.",
-          },
-          {
+          }),
+          AdvertisedEndpoint.make({
             id: "manual:http://desktop.example.test:3773",
             label: "Custom endpoint",
-            provider: {
+            provider: AdvertisedEndpointProvider.make({
               id: "manual",
               label: "Manual",
               kind: "manual",
               isAddon: false,
-            },
+            }),
             httpBaseUrl: "http://desktop.example.test:3773/",
             wsBaseUrl: "ws://desktop.example.test:3773/",
             reachability: "public",
-            compatibility: {
+            compatibility: AdvertisedEndpointCompatibility.make({
               hostedHttpsApp: "mixed-content-blocked",
               desktopApp: "compatible",
-            },
+            }),
             source: "user",
             status: "unknown",
             description: "User-configured endpoint for this desktop backend.",
-          },
+          }),
         ]);
       }),
       {

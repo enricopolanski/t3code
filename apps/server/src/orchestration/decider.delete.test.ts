@@ -2,11 +2,16 @@ import {
   CommandId,
   DEFAULT_PROVIDER_INTERACTION_MODE,
   EventId,
-  ProjectId,
-  ThreadId,
   type OrchestrationCommand,
   type OrchestrationEvent,
+  OrchestrationEventMetadata,
+  ProjectCreatedPayload,
+  ProjectDeleteCommand,
+  ProjectId,
   ProviderInstanceId,
+  ThreadCreatedPayload,
+  ThreadDeleteCommand,
+  ThreadId,
 } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -33,8 +38,8 @@ const seedReadModel = Effect.gen(function* () {
     commandId: asCommandId("cmd-project-create"),
     causationEventId: null,
     correlationId: asCommandId("cmd-project-create"),
-    metadata: {},
-    payload: {
+    metadata: OrchestrationEventMetadata.make({}),
+    payload: ProjectCreatedPayload.make({
       projectId: asProjectId("project-delete"),
       title: "Project Delete",
       workspaceRoot: "/tmp/project-delete",
@@ -42,7 +47,7 @@ const seedReadModel = Effect.gen(function* () {
       scripts: [],
       createdAt: now,
       updatedAt: now,
-    },
+    }),
   });
 
   const withFirstThread = yield* projectEvent(withProject, {
@@ -55,8 +60,8 @@ const seedReadModel = Effect.gen(function* () {
     commandId: asCommandId("cmd-thread-create-1"),
     causationEventId: null,
     correlationId: asCommandId("cmd-thread-create-1"),
-    metadata: {},
-    payload: {
+    metadata: OrchestrationEventMetadata.make({}),
+    payload: ThreadCreatedPayload.make({
       threadId: asThreadId("thread-delete-1"),
       projectId: asProjectId("project-delete"),
       title: "Thread Delete 1",
@@ -70,7 +75,7 @@ const seedReadModel = Effect.gen(function* () {
       worktreePath: null,
       createdAt: now,
       updatedAt: now,
-    },
+    }),
   });
 
   return yield* projectEvent(withFirstThread, {
@@ -83,8 +88,8 @@ const seedReadModel = Effect.gen(function* () {
     commandId: asCommandId("cmd-thread-create-2"),
     causationEventId: null,
     correlationId: asCommandId("cmd-thread-create-2"),
-    metadata: {},
-    payload: {
+    metadata: OrchestrationEventMetadata.make({}),
+    payload: ThreadCreatedPayload.make({
       threadId: asThreadId("thread-delete-2"),
       projectId: asProjectId("project-delete"),
       title: "Thread Delete 2",
@@ -98,7 +103,7 @@ const seedReadModel = Effect.gen(function* () {
       worktreePath: null,
       createdAt: now,
       updatedAt: now,
-    },
+    }),
   });
 });
 
@@ -142,11 +147,11 @@ it.layer(NodeServices.layer)("decider deletion flows", (it) => {
       const readModel = yield* seedReadModel;
       const error = yield* Effect.flip(
         decideOrchestrationCommand({
-          command: {
+          command: ProjectDeleteCommand.make({
             type: "project.delete",
             commandId: asCommandId("cmd-project-delete-no-force"),
             projectId: asProjectId("project-delete"),
-          },
+          }),
           readModel,
         }),
       );
@@ -157,12 +162,13 @@ it.layer(NodeServices.layer)("decider deletion flows", (it) => {
   it.effect("reuses thread.delete semantics when force-deleting a non-empty project", () =>
     Effect.gen(function* () {
       const readModel = yield* seedReadModel;
-      const projectDeleteCommand: Extract<OrchestrationCommand, { type: "project.delete" }> = {
-        type: "project.delete",
-        commandId: asCommandId("cmd-project-delete-force"),
-        projectId: asProjectId("project-delete"),
-        force: true,
-      };
+      const projectDeleteCommand: Extract<OrchestrationCommand, { type: "project.delete" }> =
+        ProjectDeleteCommand.make({
+          type: "project.delete",
+          commandId: asCommandId("cmd-project-delete-force"),
+          projectId: asProjectId("project-delete"),
+          force: true,
+        });
 
       const forcedResult = yield* decideOrchestrationCommand({
         command: projectDeleteCommand,
@@ -180,21 +186,21 @@ it.layer(NodeServices.layer)("decider deletion flows", (it) => {
       let nextSequence = readModel.snapshotSequence;
       const sequentialEvents: PlannedEvent[] = [];
       for (const nextCommand of [
-        {
+        ThreadDeleteCommand.make({
           type: "thread.delete",
           commandId: projectDeleteCommand.commandId,
           threadId: asThreadId("thread-delete-1"),
-        },
-        {
+        }),
+        ThreadDeleteCommand.make({
           type: "thread.delete",
           commandId: projectDeleteCommand.commandId,
           threadId: asThreadId("thread-delete-2"),
-        },
-        {
+        }),
+        ProjectDeleteCommand.make({
           type: "project.delete",
           commandId: projectDeleteCommand.commandId,
           projectId: asProjectId("project-delete"),
-        },
+        }),
       ] satisfies ReadonlyArray<OrchestrationCommand>) {
         const decided = yield* decideOrchestrationCommand({
           command: nextCommand,

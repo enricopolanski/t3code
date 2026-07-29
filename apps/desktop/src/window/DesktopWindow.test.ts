@@ -170,9 +170,7 @@ const desktopEnvironmentLayer = DesktopEnvironment.layer(environmentInput).pipe(
   ),
 );
 
-const desktopWindowBoundsEquivalence = Schema.toEquivalence(
-  DesktopAppSettings.DesktopWindowBoundsSchema,
-);
+const desktopWindowBoundsEquivalence = Schema.toEquivalence(DesktopAppSettings.DesktopWindowBounds);
 
 function makeTestLayer(input: {
   readonly window: Electron.BrowserWindow;
@@ -315,6 +313,7 @@ const makeSplashScenario = (createOutcomes: readonly (Electron.BrowserWindow | n
                 webPreferences: {
                   preload: null,
                   partition: null,
+                  backgroundThrottling: null,
                   sandbox: null,
                   contextIsolation: null,
                   nodeIntegration: null,
@@ -429,6 +428,7 @@ describe("DesktopWindow", () => {
         assert.isUndefined(createdWindowOptions[0]?.x);
         assert.isUndefined(createdWindowOptions[0]?.y);
         assert.isTrue(createdWindowOptions[0]?.disableAutoHideCursor);
+        assert.isFalse(createdWindowOptions[0]?.webPreferences?.backgroundThrottling);
         assert.deepEqual(fakeWindow.setAutoHideCursor.mock.calls, [[false]]);
         assert.deepEqual(fakeWindow.loadURL.mock.calls[0], ["t3code-dev://app/"]);
         assert.equal(fakeWindow.openDevTools.mock.calls.length, 1);
@@ -530,7 +530,9 @@ describe("DesktopWindow", () => {
 
         yield* TestClock.adjust(1);
         yield* Effect.promise(() => Promise.resolve());
-        assert.deepEqual(mainWindowBoundsUpdates, [{ x: 160, y: 100, width: 1360, height: 900 }]);
+        assert.deepEqual(mainWindowBoundsUpdates, [
+          new DesktopAppSettings.DesktopWindowBounds({ x: 160, y: 100, width: 1360, height: 900 }),
+        ]);
       }).pipe(Effect.provide(layer));
     }),
   );
@@ -564,7 +566,9 @@ describe("DesktopWindow", () => {
         close();
         yield* Effect.promise(() => Promise.resolve());
 
-        assert.deepEqual(mainWindowBoundsUpdates, [{ x: 220, y: 140, width: 1380, height: 920 }]);
+        assert.deepEqual(mainWindowBoundsUpdates, [
+          new DesktopAppSettings.DesktopWindowBounds({ x: 220, y: 140, width: 1380, height: 920 }),
+        ]);
         assert.deepEqual(mainWindowMaximizedUpdates, [true]);
         assert.equal(fakeWindow.getNormalBounds.mock.calls.length, 1);
         assert.equal(fakeWindow.getBounds.mock.calls.length, 0);
@@ -603,7 +607,9 @@ describe("DesktopWindow", () => {
         yield* TestClock.adjust(500);
         yield* Effect.promise(() => Promise.resolve());
 
-        assert.deepEqual(mainWindowBoundsUpdates, [{ x: 220, y: 140, width: 1380, height: 920 }]);
+        assert.deepEqual(mainWindowBoundsUpdates, [
+          new DesktopAppSettings.DesktopWindowBounds({ x: 220, y: 140, width: 1380, height: 920 }),
+        ]);
         assert.deepEqual(mainWindowMaximizedUpdates, [true]);
       }).pipe(Effect.provide(layer));
     }),
@@ -675,7 +681,9 @@ describe("DesktopWindow", () => {
         move();
         yield* TestClock.adjust(500);
         yield* Effect.promise(() => Promise.resolve());
-        assert.deepEqual(mainWindowBoundsUpdates, [{ x: 80, y: 60, width: 1280, height: 840 }]);
+        assert.deepEqual(mainWindowBoundsUpdates, [
+          new DesktopAppSettings.DesktopWindowBounds({ x: 80, y: 60, width: 1280, height: 840 }),
+        ]);
       }).pipe(Effect.provide(layer));
     }),
   );
@@ -709,7 +717,9 @@ describe("DesktopWindow", () => {
 
         yield* desktopWindow.flushMainWindowBounds;
 
-        assert.deepEqual(mainWindowBoundsUpdates, [{ x: 200, y: 130, width: 1400, height: 940 }]);
+        assert.deepEqual(mainWindowBoundsUpdates, [
+          new DesktopAppSettings.DesktopWindowBounds({ x: 200, y: 130, width: 1400, height: 940 }),
+        ]);
         assert.equal(fakeWindow.getBounds.mock.calls.length, 0);
         assert.equal(fakeWindow.getNormalBounds.mock.calls.length, 1);
       }).pipe(Effect.provide(layer));
@@ -745,7 +755,9 @@ describe("DesktopWindow", () => {
 
         yield* desktopWindow.flushMainWindowBounds;
 
-        assert.deepEqual(mainWindowBoundsUpdates, [{ x: 180, y: 120, width: 1440, height: 960 }]);
+        assert.deepEqual(mainWindowBoundsUpdates, [
+          new DesktopAppSettings.DesktopWindowBounds({ x: 180, y: 120, width: 1440, height: 960 }),
+        ]);
         assert.equal(fakeWindow.getBounds.mock.calls.length, 0);
         assert.equal(fakeWindow.getNormalBounds.mock.calls.length, 1);
       }).pipe(Effect.provide(layer));
@@ -846,12 +858,12 @@ describe("DesktopWindow", () => {
         assert.isTrue(yield* Deferred.isDone(flushCompleted));
 
         assert.deepEqual(mainWindowBoundsUpdates, [
-          {
+          new DesktopAppSettings.DesktopWindowBounds({
             x: 240,
             y: 160,
             width: 1410,
             height: 930,
-          },
+          }),
         ]);
       }).pipe(Effect.provide(layer));
     }),

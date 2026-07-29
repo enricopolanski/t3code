@@ -9,7 +9,7 @@
  * @module Preview
  */
 import { Schema } from "effect";
-import { ThreadId, TrimmedNonEmptyString } from "./baseSchemas.ts";
+import { NonNegativeInt, PositiveInt, ThreadId, TrimmedNonEmptyString } from "./baseSchemas.ts";
 
 const Url = TrimmedNonEmptyString.check(Schema.isMaxLength(2048));
 const Title = Schema.String.check(Schema.isMaxLength(512));
@@ -34,22 +34,24 @@ const viewportAreaFilter = Schema.makeFilter(
     `Viewport area must not exceed ${PREVIEW_VIEWPORT_MAX_AREA} pixels.`,
 );
 
-export const PreviewViewportSize = Schema.Struct({
-  width: PreviewViewportDimension,
-  height: PreviewViewportDimension,
-}).check(viewportAreaFilter);
-export type PreviewViewportSize = typeof PreviewViewportSize.Type;
+export class PreviewViewportSize extends Schema.Class<PreviewViewportSize>("PreviewViewportSize")(
+  Schema.Struct({
+    width: PreviewViewportDimension,
+    height: PreviewViewportDimension,
+  }).check(viewportAreaFilter),
+) {}
 
 /**
  * The page's measured viewport can be smaller than the minimum selectable
  * fixed size while fill mode follows a narrow panel. Keep measurement
  * validation separate from the stricter user-selectable size constraints.
  */
-export const PreviewRenderedViewportSize = Schema.Struct({
+export class PreviewRenderedViewportSize extends Schema.Class<PreviewRenderedViewportSize>(
+  "PreviewRenderedViewportSize",
+)({
   width: Schema.Int.check(Schema.isGreaterThan(0)),
   height: Schema.Int.check(Schema.isGreaterThan(0)),
-});
-export type PreviewRenderedViewportSize = typeof PreviewRenderedViewportSize.Type;
+}) {}
 
 export const PREVIEW_VIEWPORT_PRESET_IDS = [
   "iphone-se",
@@ -130,7 +132,9 @@ export const PreviewNavStatus = Schema.Union([
 ]);
 export type PreviewNavStatus = typeof PreviewNavStatus.Type;
 
-export const PreviewSessionSnapshot = Schema.Struct({
+export class PreviewSessionSnapshot extends Schema.Class<PreviewSessionSnapshot>(
+  "PreviewSessionSnapshot",
+)({
   threadId: TrimmedNonEmptyString,
   tabId: PreviewTabId,
   navStatus: PreviewNavStatus,
@@ -139,99 +143,104 @@ export const PreviewSessionSnapshot = Schema.Struct({
   /** Missing snapshots from older servers are treated as fill-panel mode. */
   viewport: Schema.optional(PreviewViewportSetting),
   updatedAt: Schema.String,
-});
-export type PreviewSessionSnapshot = typeof PreviewSessionSnapshot.Type;
+}) {}
 
-export const PreviewOpenInput = Schema.Struct({
+export class PreviewOpenInput extends Schema.Class<PreviewOpenInput>("PreviewOpenInput")({
   threadId: ThreadId,
   /** Omit to create an empty (Idle) tab the user can type into. */
   url: Schema.optional(Url),
-});
-export type PreviewOpenInput = typeof PreviewOpenInput.Type;
+}) {}
 
-export const PreviewNavigateInput = Schema.Struct({
+export class PreviewNavigateInput extends Schema.Class<PreviewNavigateInput>(
+  "PreviewNavigateInput",
+)({
   threadId: ThreadId,
   tabId: PreviewTabId,
   url: Url,
   resolvedTitle: Schema.optional(Title),
-});
-export type PreviewNavigateInput = typeof PreviewNavigateInput.Type;
+}) {}
 
-export const PreviewReportStatusInput = Schema.Struct({
+export class PreviewReportStatusInput extends Schema.Class<PreviewReportStatusInput>(
+  "PreviewReportStatusInput",
+)({
   threadId: ThreadId,
   tabId: PreviewTabId,
   navStatus: PreviewNavStatus,
   canGoBack: Schema.Boolean,
   canGoForward: Schema.Boolean,
-});
-export type PreviewReportStatusInput = typeof PreviewReportStatusInput.Type;
+}) {}
 
-export const PreviewRefreshInput = Schema.Struct({
+export class PreviewRefreshInput extends Schema.Class<PreviewRefreshInput>("PreviewRefreshInput")({
   threadId: ThreadId,
   tabId: PreviewTabId,
-});
-export type PreviewRefreshInput = typeof PreviewRefreshInput.Type;
+}) {}
 
-export const PreviewResizeInput = Schema.Struct({
+export class PreviewResizeInput extends Schema.Class<PreviewResizeInput>("PreviewResizeInput")({
   threadId: ThreadId,
   tabId: PreviewTabId,
   viewport: PreviewViewportSetting,
-});
-export type PreviewResizeInput = typeof PreviewResizeInput.Type;
+}) {}
 
-export const PreviewCloseInput = Schema.Struct({
+export class PreviewCloseInput extends Schema.Class<PreviewCloseInput>("PreviewCloseInput")({
   threadId: ThreadId,
   tabId: Schema.optional(PreviewTabId),
-});
-export type PreviewCloseInput = typeof PreviewCloseInput.Type;
+}) {}
 
-export const PreviewListInput = Schema.Struct({
+export class PreviewListInput extends Schema.Class<PreviewListInput>("PreviewListInput")({
   threadId: ThreadId,
-});
-export type PreviewListInput = typeof PreviewListInput.Type;
+}) {}
 
-export const PreviewListResult = Schema.Struct({
+export class PreviewListResult extends Schema.Class<PreviewListResult>("PreviewListResult")({
   sessions: Schema.Array(PreviewSessionSnapshot),
-});
-export type PreviewListResult = typeof PreviewListResult.Type;
+  /** Identifies the current server process so revision resets are safe. */
+  serverEpoch: TrimmedNonEmptyString,
+  /** Monotonic server state revision used to reject stale list responses. */
+  revision: NonNegativeInt,
+}) {}
 
 const PreviewEventBaseSchema = Schema.Struct({
   threadId: TrimmedNonEmptyString,
   tabId: PreviewTabId,
   createdAt: Schema.String,
+  /** Identifies the server process that emitted this event. */
+  serverEpoch: TrimmedNonEmptyString,
+  /** Monotonic server state revision shared with PreviewListResult. */
+  revision: PositiveInt,
 });
 
-const PreviewOpenedEvent = Schema.Struct({
+export class PreviewOpenedEvent extends Schema.Class<PreviewOpenedEvent>("PreviewOpenedEvent")({
   ...PreviewEventBaseSchema.fields,
   type: Schema.Literal("opened"),
   snapshot: PreviewSessionSnapshot,
-});
+}) {}
 
-const PreviewNavigatedEvent = Schema.Struct({
+export class PreviewNavigatedEvent extends Schema.Class<PreviewNavigatedEvent>(
+  "PreviewNavigatedEvent",
+)({
   ...PreviewEventBaseSchema.fields,
   type: Schema.Literal("navigated"),
   snapshot: PreviewSessionSnapshot,
-});
+}) {}
 
-const PreviewResizedEvent = Schema.Struct({
+export class PreviewResizedEvent extends Schema.Class<PreviewResizedEvent>("PreviewResizedEvent")({
   ...PreviewEventBaseSchema.fields,
   type: Schema.Literal("resized"),
   snapshot: PreviewSessionSnapshot,
-});
+}) {}
 
-const PreviewFailedEvent = Schema.Struct({
+export class PreviewFailedEvent extends Schema.Class<PreviewFailedEvent>("PreviewFailedEvent")({
   ...PreviewEventBaseSchema.fields,
   type: Schema.Literal("failed"),
   url: Url,
   title: Title,
   code: Schema.Int,
   description: Schema.String,
-});
+}) {}
 
-const PreviewClosedEvent = Schema.Struct({
+export class PreviewClosedEvent extends Schema.Class<PreviewClosedEvent>("PreviewClosedEvent")({
   ...PreviewEventBaseSchema.fields,
   type: Schema.Literal("closed"),
-});
+}) {}
 
 export const PreviewEvent = Schema.Union([
   PreviewOpenedEvent,
@@ -242,30 +251,34 @@ export const PreviewEvent = Schema.Union([
 ]);
 export type PreviewEvent = typeof PreviewEvent.Type;
 
+export class DiscoveredLocalServerTerminal extends Schema.Class<DiscoveredLocalServerTerminal>(
+  "DiscoveredLocalServerTerminal",
+)({
+  threadId: ThreadId,
+  terminalId: TrimmedNonEmptyString,
+}) {}
+
 /**
  * A localhost server detected by the port scanner. Used to populate the
  * "Local" recommendations in the empty-state of the preview panel.
  */
-export const DiscoveredLocalServer = Schema.Struct({
+export class DiscoveredLocalServer extends Schema.Class<DiscoveredLocalServer>(
+  "DiscoveredLocalServer",
+)({
   host: TrimmedNonEmptyString,
   port: Schema.Int.check(Schema.isGreaterThan(0)).check(Schema.isLessThan(65536)),
   url: Url,
   processName: Schema.NullOr(TrimmedNonEmptyString),
   pid: Schema.NullOr(Schema.Int.check(Schema.isGreaterThan(0))),
-  terminal: Schema.NullOr(
-    Schema.Struct({
-      threadId: ThreadId,
-      terminalId: TrimmedNonEmptyString,
-    }),
-  ),
-});
-export type DiscoveredLocalServer = typeof DiscoveredLocalServer.Type;
+  terminal: Schema.NullOr(DiscoveredLocalServerTerminal),
+}) {}
 
-export const DiscoveredLocalServerList = Schema.Struct({
+export class DiscoveredLocalServerList extends Schema.Class<DiscoveredLocalServerList>(
+  "DiscoveredLocalServerList",
+)({
   servers: Schema.Array(DiscoveredLocalServer),
   scannedAt: Schema.String,
-});
-export type DiscoveredLocalServerList = typeof DiscoveredLocalServerList.Type;
+}) {}
 
 export class PreviewSessionLookupError extends Schema.TaggedErrorClass<PreviewSessionLookupError>()(
   "PreviewSessionLookupError",

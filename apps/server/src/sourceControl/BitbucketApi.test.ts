@@ -1,3 +1,4 @@
+import { SourceControlProviderAuth, SourceControlRepositoryCloneUrls } from "@t3tools/contracts";
 import { assert, it, vi } from "@effect/vitest";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as ConfigProvider from "effect/ConfigProvider";
@@ -325,11 +326,14 @@ it.effect("reads repository clone URLs and default branch", () => {
     });
     const defaultBranch = yield* bitbucket.getDefaultBranch({ cwd: "/repo" });
 
-    assert.deepStrictEqual(cloneUrls, {
-      nameWithOwner: "pingdotgg/t3code",
-      url: "https://bitbucket.org/pingdotgg/t3code.git",
-      sshUrl: "git@bitbucket.org:pingdotgg/t3code.git",
-    });
+    assert.deepStrictEqual(
+      cloneUrls,
+      SourceControlRepositoryCloneUrls.make({
+        nameWithOwner: "pingdotgg/t3code",
+        url: "https://bitbucket.org/pingdotgg/t3code.git",
+        sshUrl: "git@bitbucket.org:pingdotgg/t3code.git",
+      }),
+    );
     assert.strictEqual(defaultBranch, "main");
   }).pipe(Effect.provide(layer));
 });
@@ -427,11 +431,14 @@ it.effect("creates repositories through the Bitbucket REST API", () => {
       visibility: "private",
     });
 
-    assert.deepStrictEqual(cloneUrls, {
-      nameWithOwner: "pingdotgg/t3code",
-      url: "https://bitbucket.org/pingdotgg/t3code.git",
-      sshUrl: "git@bitbucket.org:pingdotgg/t3code.git",
-    });
+    assert.deepStrictEqual(
+      cloneUrls,
+      SourceControlRepositoryCloneUrls.make({
+        nameWithOwner: "pingdotgg/t3code",
+        url: "https://bitbucket.org/pingdotgg/t3code.git",
+        sshUrl: "git@bitbucket.org:pingdotgg/t3code.git",
+      }),
+    );
 
     const request = execute.mock.calls[0]?.[0];
     assert.strictEqual(request?.url, "https://api.test.local/2.0/repositories/pingdotgg/t3code");
@@ -499,12 +506,15 @@ it.effect("reports auth status through the Bitbucket REST /user endpoint", () =>
     const bitbucket = yield* BitbucketApi.BitbucketApi;
     const auth = yield* bitbucket.probeAuth;
 
-    assert.deepStrictEqual(auth, {
-      status: "authenticated",
-      account: Option.some("bitbucket-user"),
-      host: Option.some("bitbucket.org"),
-      detail: Option.none(),
-    });
+    assert.deepStrictEqual(
+      auth,
+      SourceControlProviderAuth.make({
+        status: "authenticated",
+        account: Option.some("bitbucket-user"),
+        host: Option.some("bitbucket.org"),
+        detail: Option.none(),
+      }),
+    );
   }).pipe(Effect.provide(layer));
 });
 

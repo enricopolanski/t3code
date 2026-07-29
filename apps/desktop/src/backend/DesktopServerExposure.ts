@@ -3,9 +3,9 @@ import {
   type CreateAdvertisedEndpointInput,
 } from "@t3tools/shared/advertisedEndpoint";
 import {
+  AdvertisedEndpointProvider,
   DesktopServerExposureModeSchema,
   type AdvertisedEndpoint,
-  type AdvertisedEndpointProvider,
   type DesktopServerExposureMode,
   type DesktopServerExposureState,
 } from "@t3tools/contracts";
@@ -45,19 +45,20 @@ interface DesktopAdvertisedEndpointInput {
   readonly customHttpsEndpointUrls?: readonly string[];
 }
 
-const DESKTOP_CORE_ENDPOINT_PROVIDER: AdvertisedEndpointProvider = {
+const DESKTOP_CORE_ENDPOINT_PROVIDER: AdvertisedEndpointProvider = AdvertisedEndpointProvider.make({
   id: "desktop-core",
   label: "Desktop",
   kind: "core",
   isAddon: false,
-};
+});
 
-const DESKTOP_MANUAL_ENDPOINT_PROVIDER: AdvertisedEndpointProvider = {
-  id: "manual",
-  label: "Manual",
-  kind: "manual",
-  isAddon: false,
-};
+const DESKTOP_MANUAL_ENDPOINT_PROVIDER: AdvertisedEndpointProvider =
+  AdvertisedEndpointProvider.make({
+    id: "manual",
+    label: "Manual",
+    kind: "manual",
+    isAddon: false,
+  });
 
 const normalizeOptionalHost = (value: string | undefined): string | undefined => {
   const normalized = value?.trim();

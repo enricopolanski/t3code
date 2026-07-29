@@ -4,7 +4,7 @@ import type {
   ProjectId,
   ThreadId,
 } from "@t3tools/contracts";
-import { OrchestrationCommand } from "@t3tools/contracts";
+import { DispatchResult, OrchestrationCommand } from "@t3tools/contracts";
 import * as Cause from "effect/Cause";
 import * as Clock from "effect/Clock";
 import * as Crypto from "effect/Crypto";
@@ -30,7 +30,10 @@ import {
 } from "../../observability/Metrics.ts";
 import { toPersistenceSqlError } from "../../persistence/Errors.ts";
 import { OrchestrationEventStore } from "../../persistence/Services/OrchestrationEventStore.ts";
-import { OrchestrationCommandReceiptRepository } from "../../persistence/Services/OrchestrationCommandReceipts.ts";
+import {
+  OrchestrationCommandReceipt,
+  OrchestrationCommandReceiptRepository,
+} from "../../persistence/Services/OrchestrationCommandReceipts.ts";
 import {
   OrchestrationCommandInvariantError,
   OrchestrationCommandPreviouslyRejectedError,
@@ -52,7 +55,7 @@ const isOrchestrationCommandInvariantError = Schema.is(OrchestrationCommandInvar
 
 interface CommandEnvelope {
   command: OrchestrationCommand;
-  result: Deferred.Deferred<{ sequence: number }, OrchestrationDispatchError>;
+  result: Deferred.Deferred<DispatchResult, OrchestrationDispatchError>;
   startedAtMs: number;
 }
 
@@ -135,14 +138,14 @@ const makeOrchestrationEngine = Effect.gen(function* () {
           "orchestration.aggregate_id": aggregateRef.aggregateId,
         });
 
-        const existingReceipt = yield* commandReceiptRepository.getByCommandId({
-          commandId: envelope.command.commandId,
-        });
+        const existingReceipt = yield* commandReceiptRepository.getByCommandId(
+          envelope.command.commandId,
+        );
         if (Option.isSome(existingReceipt)) {
           if (existingReceipt.value.status === "accepted") {
-            return {
+            return DispatchResult.make({
               sequence: existingReceipt.value.resultSequence,
-            };
+            });
           }
           return yield* new OrchestrationCommandPreviouslyRejectedError({
             commandId: envelope.command.commandId,
@@ -187,15 +190,17 @@ const makeOrchestrationEngine = Effect.gen(function* () {
                 });
               }
 
-              yield* commandReceiptRepository.upsert({
-                commandId: envelope.command.commandId,
-                aggregateKind: lastSavedEvent.aggregateKind,
-                aggregateId: lastSavedEvent.aggregateId,
-                acceptedAt: lastSavedEvent.occurredAt,
-                resultSequence: lastSavedEvent.sequence,
-                status: "accepted",
-                error: null,
-              });
+              yield* commandReceiptRepository.upsert(
+                new OrchestrationCommandReceipt({
+                  commandId: envelope.command.commandId,
+                  aggregateKind: lastSavedEvent.aggregateKind,
+                  aggregateId: lastSavedEvent.aggregateId,
+                  acceptedAt: lastSavedEvent.occurredAt,
+                  resultSequence: lastSavedEvent.sequence,
+                  status: "accepted",
+                  error: null,
+                }),
+              );
 
               return {
                 committedEvents,
@@ -228,7 +233,7 @@ const makeOrchestrationEngine = Effect.gen(function* () {
             );
           }
         }
-        return { sequence: committedCommand.lastSequence };
+        return DispatchResult.make({ sequence: committedCommand.lastSequence });
       }).pipe(Effect.withSpan(`orchestration.command.${envelope.command.type}`)),
     ).pipe(
       Effect.flatMap((exit) =>
@@ -278,15 +283,17 @@ const makeOrchestrationEngine = Effect.gen(function* () {
 
             if (isOrchestrationCommandInvariantError(error)) {
               yield* commandReceiptRepository
-                .upsert({
-                  commandId: envelope.command.commandId,
-                  aggregateKind: aggregateRef.aggregateKind,
-                  aggregateId: aggregateRef.aggregateId,
-                  acceptedAt: yield* nowIso,
-                  resultSequence: commandReadModel.snapshotSequence,
-                  status: "rejected",
-                  error: error.message,
-                })
+                .upsert(
+                  new OrchestrationCommandReceipt({
+                    commandId: envelope.command.commandId,
+                    aggregateKind: aggregateRef.aggregateKind,
+                    aggregateId: aggregateRef.aggregateId,
+                    acceptedAt: yield* nowIso,
+                    resultSequence: commandReadModel.snapshotSequence,
+                    status: "rejected",
+                    error: error.message,
+                  }),
+                )
                 .pipe(Effect.catch(() => Effect.void));
             }
           }
@@ -311,7 +318,7 @@ const makeOrchestrationEngine = Effect.gen(function* () {
 
   const dispatch: OrchestrationEngineShape["dispatch"] = (command) =>
     Effect.gen(function* () {
-      const result = yield* Deferred.make<{ sequence: number }, OrchestrationDispatchError>();
+      const result = yield* Deferred.make<DispatchResult, OrchestrationDispatchError>();
       yield* Queue.offer(commandQueue, {
         command,
         result,

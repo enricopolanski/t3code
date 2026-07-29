@@ -1,7 +1,7 @@
-import type {
+import {
   AuthClientMetadata,
-  AuthClientMetadataDeviceType,
-  AuthClientPresentationMetadata,
+  type AuthClientMetadataDeviceType,
+  type AuthClientPresentationMetadata,
 } from "@t3tools/contracts";
 import type * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
 import * as NodeCrypto from "node:crypto";
@@ -28,11 +28,42 @@ const SESSION_COOKIE_NAME = "t3_session";
 export function resolveSessionCookieName(input: {
   readonly mode: "web" | "desktop";
   readonly port: number;
-  readonly devUrl: URL | undefined;
+  readonly host: string | undefined;
+  readonly instanceKey: string;
+  readonly development: boolean;
 }): string {
-  return input.devUrl === undefined && input.mode !== "desktop"
-    ? SESSION_COOKIE_NAME
-    : `${SESSION_COOKIE_NAME}_${input.port}`;
+  if (input.mode === "desktop") {
+    return `${SESSION_COOKIE_NAME}_${input.port}`;
+  }
+
+  if (!input.development && isRemoteReachableHost(input.host)) {
+    return SESSION_COOKIE_NAME;
+  }
+
+  // Cookies are scoped by host, not port. Loopback development servers need an
+  // instance-specific name or parallel agents overwrite each other's session,
+  // and a server that later reuses the port receives a token signed elsewhere.
+  const instanceHash = NodeCrypto.createHash("sha256")
+    .update(input.instanceKey)
+    .digest("hex")
+    .slice(0, 12);
+  return `${SESSION_COOKIE_NAME}_${input.port}_${instanceHash}`;
+}
+
+export function isRemoteReachableHost(host: string | undefined): boolean {
+  if (host === "0.0.0.0" || host === "::" || host === "[::]") {
+    return true;
+  }
+  if (!host || host.length === 0) {
+    return false;
+  }
+  return !(
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "::1" ||
+    host === "[::1]" ||
+    host.startsWith("127.")
+  );
 }
 
 export function base64UrlEncode(input: string | Uint8Array): string {
@@ -142,12 +173,12 @@ export function deriveAuthClientMetadata(input: {
   const ipAddress = readRemoteAddressFromSource(input.request.source);
   const os = input.presented?.os ?? inferOs(userAgent);
   const browser = inferBrowser(userAgent);
-  return {
+  return AuthClientMetadata.make({
     ...(input.presented?.label ? { label: input.presented.label } : {}),
     ...(ipAddress ? { ipAddress } : {}),
     ...(userAgent ? { userAgent } : {}),
     deviceType: input.presented?.deviceType ?? inferDeviceType(userAgent),
     ...(os ? { os } : {}),
     ...(browser ? { browser } : {}),
-  };
+  });
 }

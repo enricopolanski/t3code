@@ -88,11 +88,10 @@ export type ProviderInstanceId = typeof ProviderInstanceId.Type;
  * branch on driver behavior (icons, capabilities, presentation) without
  * having to look up the instance in the registry.
  */
-export const ProviderInstanceRef = Schema.Struct({
+export class ProviderInstanceRef extends Schema.Class<ProviderInstanceRef>("ProviderInstanceRef")({
   instanceId: ProviderInstanceId,
   driver: ProviderDriverKind,
-});
-export type ProviderInstanceRef = typeof ProviderInstanceRef.Type;
+}) {}
 
 export const ProviderInstanceEnvironmentVariableName = TrimmedNonEmptyString.check(
   Schema.isMaxLength(ENVIRONMENT_VARIABLE_NAME_MAX_CHARS),
@@ -101,13 +100,14 @@ export const ProviderInstanceEnvironmentVariableName = TrimmedNonEmptyString.che
 export type ProviderInstanceEnvironmentVariableName =
   typeof ProviderInstanceEnvironmentVariableName.Type;
 
-export const ProviderInstanceEnvironmentVariable = Schema.Struct({
+export class ProviderInstanceEnvironmentVariable extends Schema.Class<ProviderInstanceEnvironmentVariable>(
+  "ProviderInstanceEnvironmentVariable",
+)({
   name: ProviderInstanceEnvironmentVariableName,
   value: Schema.String.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
   sensitive: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   valueRedacted: Schema.optionalKey(Schema.Boolean),
-});
-export type ProviderInstanceEnvironmentVariable = typeof ProviderInstanceEnvironmentVariable.Type;
+}) {}
 
 export const ProviderInstanceEnvironment = Schema.Array(ProviderInstanceEnvironmentVariable);
 export type ProviderInstanceEnvironment = typeof ProviderInstanceEnvironment.Type;
@@ -121,15 +121,16 @@ export type ProviderInstanceEnvironment = typeof ProviderInstanceEnvironment.Typ
  * envelopes for unknown drivers are preserved verbatim so they round-trip
  * across version changes without data loss.
  */
-export const ProviderInstanceConfig = Schema.Struct({
+export class ProviderInstanceConfig extends Schema.Class<ProviderInstanceConfig>(
+  "ProviderInstanceConfig",
+)({
   driver: ProviderDriverKind,
   displayName: Schema.optional(TrimmedNonEmptyString),
   accentColor: Schema.optional(TrimmedNonEmptyString),
   environment: Schema.optionalKey(ProviderInstanceEnvironment),
   enabled: Schema.optionalKey(Schema.Boolean),
   config: Schema.optionalKey(Schema.Unknown),
-});
-export type ProviderInstanceConfig = typeof ProviderInstanceConfig.Type;
+}) {}
 
 /**
  * Map shape for `ServerSettings.providerInstances`. Keyed by

@@ -1,4 +1,10 @@
-import { EnvironmentId, ProjectId, ProviderInstanceId } from "@t3tools/contracts";
+import {
+  EnvironmentId,
+  ProjectId,
+  ProviderInstanceId,
+  RepositoryIdentity,
+  RepositoryIdentityLocator,
+} from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import {
@@ -19,14 +25,14 @@ import type { Project } from "./types";
 
 const primaryEnvironmentId = EnvironmentId.make("env-primary");
 const remoteEnvironmentId = EnvironmentId.make("env-remote");
-const repositoryIdentity = {
+const repositoryIdentity = RepositoryIdentity.make({
   canonicalKey: "github.com/example/shared-repo",
-  locator: {
-    source: "git-remote" as const,
+  locator: RepositoryIdentityLocator.make({
+    source: "git-remote",
     remoteName: "origin",
     remoteUrl: "https://github.com/example/shared-repo.git",
-  },
-};
+  }),
+});
 const defaultGroupingSettings = {
   sidebarProjectGroupingMode: "repository" as const,
   sidebarProjectGroupingOverrides: {},

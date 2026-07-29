@@ -1,3 +1,8 @@
+import {
+  AdvertisedEndpoint,
+  AdvertisedEndpointCompatibility,
+  AdvertisedEndpointProvider,
+} from "@t3tools/contracts";
 import { assert, describe, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -60,46 +65,46 @@ describe("tailscale endpoint provider", () => {
         statusJson: `{"Self":{"DNSName":"desktop.tail.ts.net."}}`,
       });
       assert.deepEqual(endpoints, [
-        {
+        AdvertisedEndpoint.make({
           id: "tailscale-ip:http://100.100.100.100:3773",
           label: "Tailscale IP",
-          provider: {
+          provider: AdvertisedEndpointProvider.make({
             id: "tailscale",
             label: "Tailscale",
             kind: "private-network",
             isAddon: true,
-          },
+          }),
           httpBaseUrl: "http://100.100.100.100:3773/",
           wsBaseUrl: "ws://100.100.100.100:3773/",
           reachability: "private-network",
-          compatibility: {
+          compatibility: AdvertisedEndpointCompatibility.make({
             hostedHttpsApp: "mixed-content-blocked",
             desktopApp: "compatible",
-          },
+          }),
           source: "desktop-addon",
           status: "available",
           description: "Reachable from devices on the same Tailnet.",
-        },
-        {
+        }),
+        AdvertisedEndpoint.make({
           id: "tailscale-magicdns:https://desktop.tail.ts.net/",
           label: "Tailscale HTTPS",
-          provider: {
+          provider: AdvertisedEndpointProvider.make({
             id: "tailscale",
             label: "Tailscale",
             kind: "private-network",
             isAddon: true,
-          },
+          }),
           httpBaseUrl: "https://desktop.tail.ts.net/",
           wsBaseUrl: "wss://desktop.tail.ts.net/",
           reachability: "private-network",
-          compatibility: {
+          compatibility: AdvertisedEndpointCompatibility.make({
             hostedHttpsApp: "requires-configuration",
             desktopApp: "compatible",
-          },
+          }),
           source: "desktop-addon",
           status: "unavailable",
           description: "MagicDNS hostname. Configure Tailscale Serve for HTTPS access.",
-        },
+        }),
       ]);
     }).pipe(Effect.provide(unusedTailscaleExternalServicesLayer)),
   );
@@ -135,26 +140,26 @@ describe("tailscale endpoint provider", () => {
           probe: () => Effect.succeed(true),
         });
         assert.deepEqual(endpoints, [
-          {
+          AdvertisedEndpoint.make({
             id: "tailscale-magicdns:https://desktop.tail.ts.net/",
             label: "Tailscale HTTPS",
-            provider: {
+            provider: AdvertisedEndpointProvider.make({
               id: "tailscale",
               label: "Tailscale",
               kind: "private-network",
               isAddon: true,
-            },
+            }),
             httpBaseUrl: "https://desktop.tail.ts.net/",
             wsBaseUrl: "wss://desktop.tail.ts.net/",
             reachability: "private-network",
-            compatibility: {
+            compatibility: AdvertisedEndpointCompatibility.make({
               hostedHttpsApp: "compatible",
               desktopApp: "compatible",
-            },
+            }),
             source: "desktop-addon",
             status: "available",
             description: "HTTPS endpoint served by Tailscale Serve.",
-          },
+          }),
         ]);
       }).pipe(Effect.provide(unusedTailscaleExternalServicesLayer)),
   );

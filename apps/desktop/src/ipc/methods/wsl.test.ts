@@ -1,4 +1,4 @@
-import { DesktopWslStateSchema } from "@t3tools/contracts";
+import { DesktopWslState, DesktopWslStateSchema } from "@t3tools/contracts";
 import { assert, describe, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -92,14 +92,17 @@ describe("WSL IPC", () => {
       yield* invokeSetWslDistro("Debian");
       const state = yield* invokeSetWslBackendEnabled(true);
 
-      assert.deepEqual(state, {
-        enabled: true,
-        distro: "Debian",
-        available: true,
-        wslOnly: false,
-        distros: [],
-        preflightError: null,
-      });
+      assert.deepEqual(
+        state,
+        DesktopWslState.make({
+          enabled: true,
+          distro: "Debian",
+          available: true,
+          wslOnly: false,
+          distros: [],
+          preflightError: null,
+        }),
+      );
       assert.deepEqual(relaunchReasons, []);
     }).pipe(Effect.provide(layer));
   });
@@ -128,14 +131,17 @@ describe("WSL IPC", () => {
       assert.deepEqual(relaunchReasons, []);
 
       const state = yield* invokeSetWslBackendEnabled(true);
-      assert.deepEqual(state, {
-        enabled: true,
-        distro: "Debian",
-        available: true,
-        wslOnly: true,
-        distros: [],
-        preflightError: null,
-      });
+      assert.deepEqual(
+        state,
+        DesktopWslState.make({
+          enabled: true,
+          distro: "Debian",
+          available: true,
+          wslOnly: true,
+          distros: [],
+          preflightError: null,
+        }),
+      );
       assert.deepEqual(relaunchReasons, ["wslBackendEnabled=true"]);
     }).pipe(Effect.provide(layer));
   });
@@ -162,14 +168,17 @@ describe("WSL IPC", () => {
     return Effect.gen(function* () {
       const state = yield* invokeSetWslBackendEnabled(true);
 
-      assert.deepEqual(state, {
-        enabled: true,
-        distro: null,
-        available: true,
-        wslOnly: true,
-        distros: [],
-        preflightError: null,
-      });
+      assert.deepEqual(
+        state,
+        DesktopWslState.make({
+          enabled: true,
+          distro: null,
+          available: true,
+          wslOnly: true,
+          distros: [],
+          preflightError: null,
+        }),
+      );
       assert.equal(reconcileCount, 0);
       assert.deepEqual(relaunchReasons, ["wslBackendEnabled=true"]);
     }).pipe(Effect.provide(layer));
@@ -228,14 +237,17 @@ describe("WSL IPC", () => {
       const appSettings = yield* DesktopAppSettings.DesktopAppSettings;
       const settings = yield* appSettings.get;
 
-      assert.deepEqual(state, {
-        enabled: false,
-        distro: null,
-        available: true,
-        wslOnly: false,
-        distros: [],
-        preflightError: null,
-      });
+      assert.deepEqual(
+        state,
+        DesktopWslState.make({
+          enabled: false,
+          distro: null,
+          available: true,
+          wslOnly: false,
+          distros: [],
+          preflightError: null,
+        }),
+      );
       assert.equal(settings.wslBackendEnabled, false);
       assert.equal(settings.wslOnly, false);
       assert.equal(reconcileCount, 0);

@@ -104,7 +104,7 @@ function normalizeFixtureEvent(rawEvent: Record<string, unknown>): ProviderRunti
         ...rawEvent,
         type: "turn.started",
         payload: isRecord(rawEvent.payload) ? rawEvent.payload : {},
-      } as ProviderRuntimeEvent;
+      } as unknown as ProviderRuntimeEvent;
     case "turn.completed":
       return {
         ...rawEvent,
@@ -114,7 +114,7 @@ function normalizeFixtureEvent(rawEvent: Record<string, unknown>): ProviderRunti
           : {
               state: normalizeTurnState(rawEvent.status),
             },
-      } as ProviderRuntimeEvent;
+      } as unknown as ProviderRuntimeEvent;
     case "message.delta":
       return {
         ...rawEvent,
@@ -123,7 +123,7 @@ function normalizeFixtureEvent(rawEvent: Record<string, unknown>): ProviderRunti
           streamKind: "assistant_text",
           delta: typeof rawEvent.delta === "string" ? rawEvent.delta : "",
         },
-      } as ProviderRuntimeEvent;
+      } as unknown as ProviderRuntimeEvent;
     case "message.completed":
       return {
         ...rawEvent,
@@ -132,7 +132,7 @@ function normalizeFixtureEvent(rawEvent: Record<string, unknown>): ProviderRunti
           itemType: "assistant_message",
           ...(typeof rawEvent.detail === "string" ? { detail: rawEvent.detail } : {}),
         },
-      } as ProviderRuntimeEvent;
+      } as unknown as ProviderRuntimeEvent;
     case "tool.started":
       return {
         ...rawEvent,
@@ -142,7 +142,7 @@ function normalizeFixtureEvent(rawEvent: Record<string, unknown>): ProviderRunti
           ...(typeof rawEvent.title === "string" ? { title: rawEvent.title } : {}),
           ...(typeof rawEvent.detail === "string" ? { detail: rawEvent.detail } : {}),
         },
-      } as ProviderRuntimeEvent;
+      } as unknown as ProviderRuntimeEvent;
     case "tool.completed":
       return {
         ...rawEvent,
@@ -153,7 +153,7 @@ function normalizeFixtureEvent(rawEvent: Record<string, unknown>): ProviderRunti
           ...(typeof rawEvent.title === "string" ? { title: rawEvent.title } : {}),
           ...(typeof rawEvent.detail === "string" ? { detail: rawEvent.detail } : {}),
         },
-      } as ProviderRuntimeEvent;
+      } as unknown as ProviderRuntimeEvent;
     case "approval.requested":
       return {
         ...rawEvent,
@@ -162,7 +162,7 @@ function normalizeFixtureEvent(rawEvent: Record<string, unknown>): ProviderRunti
           requestType: mapRequestType(rawEvent.requestKind),
           ...(typeof rawEvent.detail === "string" ? { detail: rawEvent.detail } : {}),
         },
-      } as ProviderRuntimeEvent;
+      } as unknown as ProviderRuntimeEvent;
     case "approval.resolved":
       return {
         ...rawEvent,
@@ -171,9 +171,9 @@ function normalizeFixtureEvent(rawEvent: Record<string, unknown>): ProviderRunti
           requestType: mapRequestType(rawEvent.requestKind),
           ...(typeof rawEvent.decision === "string" ? { decision: rawEvent.decision } : {}),
         },
-      } as ProviderRuntimeEvent;
+      } as unknown as ProviderRuntimeEvent;
     default:
-      return rawEvent as ProviderRuntimeEvent;
+      return rawEvent as unknown as ProviderRuntimeEvent;
   }
 }
 

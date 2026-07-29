@@ -11,14 +11,13 @@
  * @module ServerSettings
  */
 import {
-  DEFAULT_GIT_TEXT_GENERATION_MODEL,
-  DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER,
+  DEFAULT_TEXT_GENERATION_MODEL,
+  DEFAULT_TEXT_GENERATION_MODEL_BY_PROVIDER,
   DEFAULT_MODEL_BY_PROVIDER,
   DEFAULT_SERVER_SETTINGS,
-  isProviderDriverKind,
   type ModelSelection,
-  type ProviderInstanceConfig,
-  type ProviderInstanceEnvironmentVariable,
+  ProviderInstanceConfig,
+  ProviderInstanceEnvironmentVariable,
   ProviderDriverKind,
   ProviderInstanceId,
   ServerSettings,
@@ -47,12 +46,18 @@ import { writeFileStringAtomically } from "./atomicWrite.ts";
 import * as ServerConfig from "./config.ts";
 import { type DeepPartial, deepMerge } from "@t3tools/shared/Struct";
 import { fromJsonStringPretty, fromLenientJson } from "@t3tools/shared/schemaJson";
-import { applyServerSettingsPatch } from "@t3tools/shared/serverSettings";
+import {
+  applyServerSettingsPatch,
+  isModelSelectionProviderEnabled,
+} from "@t3tools/shared/serverSettings";
 import * as ServerSecretStore from "./auth/ServerSecretStore.ts";
 
+export { resolveSourceControlWriterModelSelection } from "@t3tools/shared/serverSettings";
+
 const encodeServerSettings = Schema.encodeEffect(ServerSettings);
-const encodeServerSettingsJson = Schema.encodeUnknownEffect(fromJsonStringPretty(ServerSettings));
 const decodeServerSettings = Schema.decodeUnknownEffect(ServerSettings);
+/** Serializes the default-stripped (already encoded) settings record. */
+const encodeSparseSettingsJson = Schema.encodeUnknownEffect(fromJsonStringPretty(Schema.Unknown));
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -84,13 +89,13 @@ function redactProviderEnvironmentVariable(
 ): ProviderInstanceEnvironmentVariable {
   if (!variable.sensitive) {
     const { valueRedacted: _omit, ...rest } = variable;
-    return rest;
+    return ProviderInstanceEnvironmentVariable.make(rest);
   }
-  return {
+  return ProviderInstanceEnvironmentVariable.make({
     ...variable,
     value: "",
     ...(variable.value.length > 0 || variable.valueRedacted ? { valueRedacted: true } : {}),
-  };
+  });
 }
 
 export function redactServerSettingsForClient(settings: ServerSettings): ServerSettings {
@@ -98,14 +103,14 @@ export function redactServerSettingsForClient(settings: ServerSettings): ServerS
     Object.entries(settings.providerInstances).map(([instanceId, instance]) => [
       instanceId,
       instance.environment
-        ? {
+        ? ProviderInstanceConfig.make({
             ...instance,
             environment: instance.environment.map(redactProviderEnvironmentVariable),
-          }
+          })
         : instance,
     ]),
   );
-  return { ...settings, providerInstances };
+  return ServerSettings.make({ ...settings, providerInstances });
 }
 
 export class ServerSettingsService extends Context.Service<
@@ -136,24 +141,29 @@ export class ServerSettingsService extends Context.Service<
 const makeTest = (overrides: DeepPartial<ServerSettings> = {}) =>
   Effect.gen(function* () {
     const { automaticGitFetchInterval, ...overridesForMerge } = overrides;
-    const merged = deepMerge(DEFAULT_SERVER_SETTINGS, overridesForMerge);
-    const initialSettings = yield* normalizeServerSettings({
-      ...merged,
-      ...(automaticGitFetchInterval !== undefined
-        ? { automaticGitFetchInterval: automaticGitFetchInterval as Duration.Duration }
-        : {}),
-    });
+    // Spread first: `deepMerge` needs a plain object, and a `Schema.Class`
+    // instance does not satisfy its `Record<string, unknown>` constraint.
+    const merged = deepMerge({ ...DEFAULT_SERVER_SETTINGS }, overridesForMerge);
+    const initialSettings = yield* normalizeServerSettings(
+      ServerSettings.make({
+        ...merged,
+        ...(automaticGitFetchInterval !== undefined
+          ? { automaticGitFetchInterval: automaticGitFetchInterval as Duration.Duration }
+          : {}),
+      }),
+    );
     const currentSettingsRef = yield* Ref.make<ServerSettings>(initialSettings);
 
     return {
       start: Effect.void,
       ready: Effect.void,
-      getSettings: Ref.get(currentSettingsRef),
+      getSettings: Ref.get(currentSettingsRef).pipe(Effect.map(resolveTextGenerationProvider)),
       updateSettings: (patch) =>
         Ref.get(currentSettingsRef).pipe(
           Effect.map((currentSettings) => applyServerSettingsPatch(currentSettings, patch)),
           Effect.flatMap(normalizeServerSettings),
           Effect.tap((nextSettings) => Ref.set(currentSettingsRef, nextSettings)),
+          Effect.map(resolveTextGenerationProvider),
         ),
       streamChanges: Stream.empty,
     } satisfies ServerSettingsService["Service"];
@@ -165,35 +175,10 @@ export const layerTest = (overrides: DeepPartial<ServerSettings> = {}) =>
 const ServerSettingsJson = fromLenientJson(ServerSettings);
 const decodeServerSettingsJsonExit = Schema.decodeUnknownExit(ServerSettingsJson);
 
-type LegacyProviderSettings = ServerSettings["providers"][keyof ServerSettings["providers"]];
-
-const getLegacyProviderSettings = (
-  settings: ServerSettings,
-  provider: ProviderDriverKind,
-): LegacyProviderSettings | undefined =>
-  (settings.providers as Record<string, LegacyProviderSettings | undefined>)[provider];
-
-/**
- * Ensure the `textGenerationModelSelection` points to an enabled provider.
- * If the selected provider is disabled, fall back to the first enabled
- * provider with its default model.  This is applied at read-time so the
- * persisted preference is preserved for when a provider is re-enabled.
- */
 function resolveTextGenerationProvider(settings: ServerSettings): ServerSettings {
-  const selection = settings.textGenerationModelSelection;
-  const instanceConfig = settings.providerInstances[selection.instanceId];
-  if (instanceConfig !== undefined) {
-    return (instanceConfig.enabled ?? true) ? settings : fallbackTextGenerationProvider(settings);
-  }
-
-  if (
-    isProviderDriverKind(selection.instanceId) &&
-    getLegacyProviderSettings(settings, selection.instanceId)?.enabled
-  ) {
-    return settings;
-  }
-
-  return fallbackTextGenerationProvider(settings);
+  return isModelSelectionProviderEnabled(settings, settings.textGenerationModelSelection)
+    ? settings
+    : fallbackTextGenerationProvider(settings);
 }
 
 function fallbackTextGenerationProvider(settings: ServerSettings): ServerSettings {
@@ -203,21 +188,22 @@ function fallbackTextGenerationProvider(settings: ServerSettings): ServerSetting
     return settings;
   }
 
-  return {
+  return ServerSettings.make({
     ...settings,
     textGenerationModelSelection: {
       instanceId: ProviderInstanceId.make(fallback),
       model:
-        DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER[fallback] ??
+        DEFAULT_TEXT_GENERATION_MODEL_BY_PROVIDER[fallback] ??
         DEFAULT_MODEL_BY_PROVIDER[fallback] ??
-        DEFAULT_GIT_TEXT_GENERATION_MODEL,
+        DEFAULT_TEXT_GENERATION_MODEL,
     } satisfies ModelSelection,
-  };
+  });
 }
 
 // Values under these keys are compared as a whole — never stripped field-by-field.
 const ATOMIC_SETTINGS_KEYS: ReadonlySet<string> = new Set([
   "automaticGitFetchInterval",
+  "sourceControlWriterModelSelection",
   "textGenerationModelSelection",
 ]);
 
@@ -347,20 +333,22 @@ const make = Effect.gen(function* () {
                   }),
               ),
             );
-          environment.push({
-            ...variable,
-            value: Option.isSome(secret) ? textDecoder.decode(secret.value) : "",
-          });
+          environment.push(
+            ProviderInstanceEnvironmentVariable.make({
+              ...variable,
+              value: Option.isSome(secret) ? textDecoder.decode(secret.value) : "",
+            }),
+          );
         }
-        providerInstances[instanceId] = {
+        providerInstances[instanceId] = ProviderInstanceConfig.make({
           ...instance,
           environment,
-        } satisfies ProviderInstanceConfig;
+        });
       }
-      return {
+      return ServerSettings.make({
         ...settings,
         providerInstances: providerInstances as ServerSettings["providerInstances"],
-      };
+      });
     });
 
   const persistProviderEnvironmentSecrets = (
@@ -410,7 +398,13 @@ const make = Effect.gen(function* () {
                     }),
                 ),
               );
-              environment.push({ ...variable, value: "", valueRedacted: true });
+              environment.push(
+                ProviderInstanceEnvironmentVariable.make({
+                  ...variable,
+                  value: "",
+                  valueRedacted: true,
+                }),
+              );
             } else {
               yield* secretStore.remove(secretName).pipe(
                 Effect.mapError(
@@ -425,17 +419,17 @@ const make = Effect.gen(function* () {
                 ),
               );
               const { valueRedacted: _omit, ...rest } = variable;
-              environment.push(rest);
+              environment.push(ProviderInstanceEnvironmentVariable.make(rest));
             }
             continue;
           }
 
           environment.push(redactProviderEnvironmentVariable(variable));
         }
-        providerInstances[instanceId] = {
+        providerInstances[instanceId] = ProviderInstanceConfig.make({
           ...instance,
           environment,
-        } satisfies ProviderInstanceConfig;
+        });
       }
 
       for (const [instanceId, instance] of Object.entries(current.providerInstances)) {
@@ -458,16 +452,21 @@ const make = Effect.gen(function* () {
         }
       }
 
-      return {
+      return ServerSettings.make({
         ...next,
         providerInstances: providerInstances as ServerSettings["providerInstances"],
-      };
+      });
     });
 
   const writeSettingsAtomically = Effect.fnUntraced(
     function* (settings: ServerSettings) {
-      const sparseSettingsJson = yield* encodeServerSettingsJson(
-        stripDefaultServerSettings(settings, DEFAULT_SERVER_SETTINGS) ?? {},
+      // Strip on the *encoded* form: the sparse remainder is not a complete
+      // `ServerSettings`, so it can no longer be fed back through the class
+      // codec.
+      const encoded = yield* encodeServerSettings(settings);
+      const encodedDefaults = yield* encodeServerSettings(DEFAULT_SERVER_SETTINGS);
+      const sparseSettingsJson = yield* encodeSparseSettingsJson(
+        stripDefaultServerSettings(encoded, encodedDefaults) ?? {},
       );
 
       return yield* writeFileStringAtomically({

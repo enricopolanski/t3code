@@ -1,4 +1,4 @@
-import { DesktopWslStateSchema, type DesktopWslState } from "@t3tools/contracts";
+import { DesktopWslState, DesktopWslStateSchema } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
@@ -26,7 +26,7 @@ const readWslState: Effect.Effect<
   // non-WSL host would spawn wsl.exe and hit the timeout for nothing.
   const distros = available ? yield* wslEnvironment.listDistros : [];
   const preflightError = yield* wslBackend.lastPreflightError;
-  return {
+  return DesktopWslState.make({
     enabled: settings.wslBackendEnabled,
     distro: settings.wslDistro,
     available,
@@ -35,7 +35,7 @@ const readWslState: Effect.Effect<
     // Only the dual-mode secondary records this; a wsl-only failure surfaces via
     // a dialog + Windows fallback, so it stays null there.
     preflightError: settings.wslOnly ? null : Option.getOrNull(preflightError),
-  };
+  });
 });
 
 export const getWslState = makeIpcMethod({

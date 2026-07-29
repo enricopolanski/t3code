@@ -1,3 +1,4 @@
+import { ChangeRequest } from "@t3tools/contracts";
 import { assert, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -35,19 +36,22 @@ it.effect("maps Bitbucket PR summaries into provider-neutral change requests", (
       reference: "42",
     });
 
-    assert.deepStrictEqual(changeRequest, {
-      provider: "bitbucket",
-      number: 42,
-      title: "Add Bitbucket provider",
-      url: "https://bitbucket.org/pingdotgg/t3code/pull-requests/42",
-      baseRefName: "main",
-      headRefName: "feature/source-control",
-      state: "open",
-      updatedAt: Option.none(),
-      isCrossRepository: true,
-      headRepositoryNameWithOwner: "fork/t3code",
-      headRepositoryOwnerLogin: "fork",
-    });
+    assert.deepStrictEqual(
+      changeRequest,
+      ChangeRequest.make({
+        provider: "bitbucket",
+        number: 42,
+        title: "Add Bitbucket provider",
+        url: "https://bitbucket.org/pingdotgg/t3code/pull-requests/42",
+        baseRefName: "main",
+        headRefName: "feature/source-control",
+        state: "open",
+        updatedAt: Option.none(),
+        isCrossRepository: true,
+        headRepositoryNameWithOwner: "fork/t3code",
+        headRepositoryOwnerLogin: "fork",
+      }),
+    );
   }),
 );
 

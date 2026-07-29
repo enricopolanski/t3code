@@ -1,10 +1,10 @@
-import type {
-  VcsRef,
-  SourceControlProviderInfo,
+import {
+  type VcsRef,
+  type SourceControlProviderInfo,
   VcsStatusLocalResult,
   VcsStatusRemoteResult,
   VcsStatusResult,
-  VcsStatusStreamEvent,
+  type VcsStatusStreamEvent,
 } from "@t3tools/contracts";
 import * as Arr from "effect/Array";
 import * as Result from "effect/Result";
@@ -213,26 +213,26 @@ export function detectSourceControlProviderFromGitRemoteUrl(
   return detectSourceControlProviderFromRemoteUrl(remoteUrl);
 }
 
-const EMPTY_GIT_STATUS_REMOTE: VcsStatusRemoteResult = {
+const EMPTY_GIT_STATUS_REMOTE = VcsStatusRemoteResult.make({
   hasUpstream: false,
   aheadCount: 0,
   behindCount: 0,
   aheadOfDefaultCount: 0,
   pr: null,
-};
+});
 
 export function mergeGitStatusParts(
   local: VcsStatusLocalResult,
   remote: VcsStatusRemoteResult | null,
 ): VcsStatusResult {
-  return {
+  return VcsStatusResult.make({
     ...local,
     ...(remote ?? EMPTY_GIT_STATUS_REMOTE),
-  };
+  });
 }
 
 function toRemoteStatusPart(status: VcsStatusResult): VcsStatusRemoteResult {
-  return {
+  return VcsStatusRemoteResult.make({
     hasUpstream: status.hasUpstream,
     aheadCount: status.aheadCount,
     behindCount: status.behindCount,
@@ -240,11 +240,11 @@ function toRemoteStatusPart(status: VcsStatusResult): VcsStatusRemoteResult {
       ? {}
       : { aheadOfDefaultCount: status.aheadOfDefaultCount }),
     pr: status.pr,
-  };
+  });
 }
 
 function toLocalStatusPart(status: VcsStatusResult): VcsStatusLocalResult {
-  return {
+  return VcsStatusLocalResult.make({
     isRepo: status.isRepo,
     ...(status.sourceControlProvider
       ? { sourceControlProvider: status.sourceControlProvider }
@@ -254,7 +254,7 @@ function toLocalStatusPart(status: VcsStatusResult): VcsStatusLocalResult {
     refName: status.refName,
     hasWorkingTreeChanges: status.hasWorkingTreeChanges,
     workingTree: status.workingTree,
-  };
+  });
 }
 
 export function applyGitStatusStreamEvent(
@@ -269,14 +269,14 @@ export function applyGitStatusStreamEvent(
     case "remoteUpdated":
       if (current === null) {
         return mergeGitStatusParts(
-          {
+          VcsStatusLocalResult.make({
             isRepo: true,
             hasPrimaryRemote: false,
             isDefaultRef: false,
             refName: null,
             hasWorkingTreeChanges: false,
             workingTree: { files: [], insertions: 0, deletions: 0 },
-          },
+          }),
           event.remote,
         );
       }

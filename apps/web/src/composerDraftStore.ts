@@ -495,6 +495,13 @@ interface ComposerDraftStoreState {
     attachments: PersistedComposerImageAttachment[],
   ) => void;
   clearComposerContent: (threadRef: ComposerThreadTarget) => void;
+  /**
+   * Clears only the prompt text and image attachments, preserving terminal /
+   * element contexts, preview annotations, and review comments. Used by the
+   * prompt stash, which can only round-trip text + images: clearing the
+   * session-bound contexts would destroy state nothing can restore.
+   */
+  clearComposerPromptAndImages: (threadRef: ComposerThreadTarget) => void;
 }
 
 export interface EffectiveComposerModelState {
@@ -738,7 +745,7 @@ function coerceProviderOptionSelections(
       const optionValue = record.value;
       if (typeof id !== "string" || id.length === 0) continue;
       if (typeof optionValue === "string" || typeof optionValue === "boolean") {
-        out.push({ id, value: optionValue });
+        out.push(ProviderOptionSelection.make({ id, value: optionValue }));
       }
     }
     return out.length > 0 ? out : undefined;
@@ -748,7 +755,7 @@ function coerceProviderOptionSelections(
     const out: ProviderOptionSelection[] = [];
     for (const [id, raw] of Object.entries(record)) {
       if (typeof raw === "string" || typeof raw === "boolean") {
-        out.push({ id, value: raw });
+        out.push(ProviderOptionSelection.make({ id, value: raw }));
       }
     }
     return out.length > 0 ? out : undefined;
@@ -781,13 +788,15 @@ function normalizeProviderModelOptions(
   if (provider === "codex" && legacy) {
     const codexExtras: ProviderOptionSelection[] = [];
     if (typeof legacy.effort === "string" && legacy.effort.length > 0) {
-      codexExtras.push({ id: "reasoningEffort", value: legacy.effort });
+      codexExtras.push(
+        ProviderOptionSelection.make({ id: "reasoningEffort", value: legacy.effort }),
+      );
     }
     const fastMode =
       legacy.codexFastMode === true ||
       (typeof legacy.serviceTier === "string" && legacy.serviceTier === "fast");
     if (fastMode) {
-      codexExtras.push({ id: "fastMode", value: true });
+      codexExtras.push(ProviderOptionSelection.make({ id: "fastMode", value: true }));
     }
     if (codexExtras.length > 0) {
       const existing = result.codex ?? [];
@@ -2091,7 +2100,7 @@ function hydratePersistedComposerImageAttachment(
   }
 }
 
-function hydrateImagesFromPersisted(
+export function hydrateImagesFromPersisted(
   attachments: ReadonlyArray<PersistedComposerImageAttachment>,
 ): ComposerImageAttachment[] {
   return attachments.flatMap((attachment) => {
@@ -3337,6 +3346,35 @@ const composerDraftStore = create<ComposerDraftStoreState>()(
               elementContexts: [],
               previewAnnotations: [],
               reviewComments: [],
+            };
+            const nextDraftsByThreadKey = { ...state.draftsByThreadKey };
+            if (shouldRemoveDraft(nextDraft)) {
+              delete nextDraftsByThreadKey[threadKey];
+            } else {
+              nextDraftsByThreadKey[threadKey] = nextDraft;
+            }
+            return { draftsByThreadKey: nextDraftsByThreadKey };
+          });
+        },
+        clearComposerPromptAndImages: (threadRef) => {
+          const threadKey = resolveComposerDraftKey(get(), threadRef) ?? "";
+          if (threadKey.length === 0) {
+            return;
+          }
+          set((state) => {
+            const current = state.draftsByThreadKey[threadKey];
+            if (!current) {
+              return state;
+            }
+            for (const image of current.images) {
+              revokeObjectPreviewUrl(image.previewUrl);
+            }
+            const nextDraft: ComposerThreadDraftState = {
+              ...current,
+              prompt: ensureInlineTerminalContextPlaceholders("", current.terminalContexts.length),
+              images: [],
+              nonPersistedImageIds: [],
+              persistedAttachments: [],
             };
             const nextDraftsByThreadKey = { ...state.draftsByThreadKey };
             if (shouldRemoveDraft(nextDraft)) {

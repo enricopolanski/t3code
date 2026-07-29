@@ -3,9 +3,18 @@ import {
   DEFAULT_PROVIDER_INTERACTION_MODE,
   EventId,
   MessageId,
+  OrchestrationEventMetadata,
+  ProjectCreateCommand,
+  ProjectCreatedPayload,
   ProjectId,
-  ThreadId,
+  ProjectMetaUpdateCommand,
+  ProjectScript,
   ProviderInstanceId,
+  ThreadCreatedPayload,
+  ThreadId,
+  ThreadInteractionModeSetCommand,
+  ThreadRuntimeModeSetCommand,
+  ThreadTurnStartCommand,
 } from "@t3tools/contracts";
 import { createModelSelection } from "@t3tools/shared/model";
 import { expect, it } from "@effect/vitest";
@@ -25,14 +34,14 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
       const readModel = createEmptyReadModel(now);
 
       const result = yield* decideOrchestrationCommand({
-        command: {
+        command: ProjectCreateCommand.make({
           type: "project.create",
           commandId: CommandId.make("cmd-project-create-scripts"),
           projectId: asProjectId("project-scripts"),
           title: "Scripts",
           workspaceRoot: "/tmp/scripts",
           createdAt: now,
-        },
+        }),
         readModel,
       });
 
@@ -56,8 +65,8 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
         commandId: CommandId.make("cmd-project-create-scripts"),
         causationEventId: null,
         correlationId: CommandId.make("cmd-project-create-scripts"),
-        metadata: {},
-        payload: {
+        metadata: OrchestrationEventMetadata.make({}),
+        payload: ProjectCreatedPayload.make({
           projectId: asProjectId("project-scripts"),
           title: "Scripts",
           workspaceRoot: "/tmp/scripts",
@@ -65,26 +74,26 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
           scripts: [],
           createdAt: now,
           updatedAt: now,
-        },
+        }),
       });
 
       const scripts = [
-        {
+        ProjectScript.make({
           id: "lint",
           name: "Lint",
           command: "bun run lint",
           icon: "lint",
           runOnWorktreeCreate: false,
-        },
+        }),
       ] as const;
 
       const result = yield* decideOrchestrationCommand({
-        command: {
+        command: ProjectMetaUpdateCommand.make({
           type: "project.meta.update",
           commandId: CommandId.make("cmd-project-update-scripts"),
           projectId: asProjectId("project-scripts"),
           scripts: Array.from(scripts),
-        },
+        }),
         readModel,
       });
 
@@ -108,8 +117,8 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
         commandId: CommandId.make("cmd-project-create"),
         causationEventId: null,
         correlationId: CommandId.make("cmd-project-create"),
-        metadata: {},
-        payload: {
+        metadata: OrchestrationEventMetadata.make({}),
+        payload: ProjectCreatedPayload.make({
           projectId: asProjectId("project-existing"),
           title: "Project",
           workspaceRoot: "/tmp/project",
@@ -117,19 +126,19 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
           scripts: [],
           createdAt: now,
           updatedAt: now,
-        },
+        }),
       });
 
       const failure = yield* Effect.flip(
         decideOrchestrationCommand({
-          command: {
+          command: ProjectCreateCommand.make({
             type: "project.create",
             commandId: CommandId.make("cmd-project-create-duplicate-root"),
             projectId: asProjectId("project-duplicate-root"),
             title: "Duplicate Project",
             workspaceRoot: "/tmp/project/",
             createdAt: now,
-          },
+          }),
           readModel,
         }),
       );
@@ -154,8 +163,8 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
         commandId: CommandId.make("cmd-project-create-first"),
         causationEventId: null,
         correlationId: CommandId.make("cmd-project-create-first"),
-        metadata: {},
-        payload: {
+        metadata: OrchestrationEventMetadata.make({}),
+        payload: ProjectCreatedPayload.make({
           projectId: asProjectId("project-first"),
           title: "First",
           workspaceRoot: "/tmp/project-first",
@@ -163,7 +172,7 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
           scripts: [],
           createdAt: now,
           updatedAt: now,
-        },
+        }),
       });
       const readModel = yield* projectEvent(withFirstProject, {
         sequence: 2,
@@ -175,8 +184,8 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
         commandId: CommandId.make("cmd-project-create-second"),
         causationEventId: null,
         correlationId: CommandId.make("cmd-project-create-second"),
-        metadata: {},
-        payload: {
+        metadata: OrchestrationEventMetadata.make({}),
+        payload: ProjectCreatedPayload.make({
           projectId: asProjectId("project-second"),
           title: "Second",
           workspaceRoot: "/tmp/project-second",
@@ -184,17 +193,17 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
           scripts: [],
           createdAt: now,
           updatedAt: now,
-        },
+        }),
       });
 
       const failure = yield* Effect.flip(
         decideOrchestrationCommand({
-          command: {
+          command: ProjectMetaUpdateCommand.make({
             type: "project.meta.update",
             commandId: CommandId.make("cmd-project-update-duplicate-root"),
             projectId: asProjectId("project-second"),
             workspaceRoot: "/tmp/project-first",
-          },
+          }),
           readModel,
         }),
       );
@@ -219,8 +228,8 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
         commandId: CommandId.make("cmd-project-create"),
         causationEventId: null,
         correlationId: CommandId.make("cmd-project-create"),
-        metadata: {},
-        payload: {
+        metadata: OrchestrationEventMetadata.make({}),
+        payload: ProjectCreatedPayload.make({
           projectId: asProjectId("project-1"),
           title: "Project",
           workspaceRoot: "/tmp/project",
@@ -228,7 +237,7 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
           scripts: [],
           createdAt: now,
           updatedAt: now,
-        },
+        }),
       });
       const readModel = yield* projectEvent(withProject, {
         sequence: 2,
@@ -240,8 +249,8 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
         commandId: CommandId.make("cmd-thread-create"),
         causationEventId: null,
         correlationId: CommandId.make("cmd-thread-create"),
-        metadata: {},
-        payload: {
+        metadata: OrchestrationEventMetadata.make({}),
+        payload: ThreadCreatedPayload.make({
           threadId: ThreadId.make("thread-1"),
           projectId: asProjectId("project-1"),
           title: "Thread",
@@ -255,11 +264,11 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
           worktreePath: null,
           createdAt: now,
           updatedAt: now,
-        },
+        }),
       });
 
       const result = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadTurnStartCommand.make({
           type: "thread.turn.start",
           commandId: CommandId.make("cmd-turn-start"),
           threadId: ThreadId.make("thread-1"),
@@ -276,7 +285,7 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
           interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
           runtimeMode: "approval-required",
           createdAt: now,
-        },
+        }),
         readModel,
       });
 
@@ -316,7 +325,7 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
         commandId: CommandId.make("cmd-project-create"),
         causationEventId: null,
         correlationId: CommandId.make("cmd-project-create"),
-        metadata: {},
+        metadata: OrchestrationEventMetadata.make({}),
         payload: {
           projectId: asProjectId("project-1"),
           title: "Project",
@@ -337,7 +346,7 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
         commandId: CommandId.make("cmd-thread-create"),
         causationEventId: null,
         correlationId: CommandId.make("cmd-thread-create"),
-        metadata: {},
+        metadata: OrchestrationEventMetadata.make({}),
         payload: {
           threadId: ThreadId.make("thread-1"),
           projectId: asProjectId("project-1"),
@@ -356,13 +365,13 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
       });
 
       const result = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadRuntimeModeSetCommand.make({
           type: "thread.runtime-mode.set",
           commandId: CommandId.make("cmd-runtime-mode-set"),
           threadId: ThreadId.make("thread-1"),
           runtimeMode: "approval-required",
           createdAt: now,
-        },
+        }),
         readModel,
       });
 
@@ -394,7 +403,7 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
         commandId: CommandId.make("cmd-project-create"),
         causationEventId: null,
         correlationId: CommandId.make("cmd-project-create"),
-        metadata: {},
+        metadata: OrchestrationEventMetadata.make({}),
         payload: {
           projectId: asProjectId("project-1"),
           title: "Project",
@@ -415,7 +424,7 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
         commandId: CommandId.make("cmd-thread-create"),
         causationEventId: null,
         correlationId: CommandId.make("cmd-thread-create"),
-        metadata: {},
+        metadata: OrchestrationEventMetadata.make({}),
         payload: {
           threadId: ThreadId.make("thread-1"),
           projectId: asProjectId("project-1"),
@@ -434,13 +443,13 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
       });
 
       const result = yield* decideOrchestrationCommand({
-        command: {
+        command: ThreadInteractionModeSetCommand.make({
           type: "thread.interaction-mode.set",
           commandId: CommandId.make("cmd-interaction-mode-set"),
           threadId: ThreadId.make("thread-1"),
           interactionMode: "plan",
           createdAt: now,
-        },
+        }),
         readModel,
       });
 

@@ -1,4 +1,15 @@
-import { ServerSettings, type ServerSettingsPatch } from "@t3tools/contracts";
+import {
+  isProviderDriverKind,
+  isProviderAvailable,
+  type ModelSelection,
+  type ProviderDriverKind,
+  type ServerProvider,
+  ObservabilitySettings,
+  ProviderOptionSelection,
+  ServerSettings,
+  SourceControlWritingStyleSettings,
+  type ServerSettingsPatch,
+} from "@t3tools/contracts";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import { deepMerge } from "./Struct.ts";
@@ -7,6 +18,47 @@ import { createModelSelection } from "./model.ts";
 
 const ServerSettingsJson = fromLenientJson(ServerSettings);
 const decodeServerSettingsJson = Schema.decodeUnknownOption(ServerSettingsJson);
+
+type LegacyProviderSettings = ServerSettings["providers"][keyof ServerSettings["providers"]];
+
+const getLegacyProviderSettings = (
+  settings: ServerSettings,
+  provider: ProviderDriverKind,
+): LegacyProviderSettings | undefined =>
+  (settings.providers as Record<string, LegacyProviderSettings | undefined>)[provider];
+
+export function isModelSelectionProviderEnabled(
+  settings: ServerSettings,
+  selection: ModelSelection,
+): boolean {
+  const instanceConfig = settings.providerInstances[selection.instanceId];
+  if (instanceConfig !== undefined) {
+    return instanceConfig.enabled ?? true;
+  }
+
+  return (
+    isProviderDriverKind(selection.instanceId) &&
+    getLegacyProviderSettings(settings, selection.instanceId)?.enabled === true
+  );
+}
+
+export function resolveSourceControlWriterModelSelection(
+  settings: ServerSettings,
+  providers?: ReadonlyArray<ServerProvider>,
+): ModelSelection {
+  const selection = settings.sourceControlWriterModelSelection;
+  if (!selection || !isModelSelectionProviderEnabled(settings, selection)) {
+    return settings.textGenerationModelSelection;
+  }
+  if (providers === undefined) {
+    return selection;
+  }
+
+  const provider = providers.find((candidate) => candidate.instanceId === selection.instanceId);
+  return provider?.enabled === true && isProviderAvailable(provider)
+    ? selection
+    : settings.textGenerationModelSelection;
+}
 
 export interface PersistedServerObservabilitySettings {
   readonly otlpTracesUrl: string | undefined;
@@ -63,28 +115,43 @@ function mergeModelSelectionOptionsById(input: {
   for (const selection of input.patch) {
     merged.set(selection.id, selection.value);
   }
-  return [...merged.entries()].map(([id, value]) => ({ id, value }));
+  return [...merged.entries()].map(([id, value]) => ProviderOptionSelection.make({ id, value }));
 }
 
 /**
- * Applies a server settings patch while treating textGenerationModelSelection as
- * replace-on-provider/model updates. This prevents stale nested options from
- * surviving a reset patch that intentionally omits options.
+ * `deepMerge` flattens the `ProviderOptionSelection` instances inside a model
+ * selection, so rebuild them before handing the result to `ServerSettings`.
  */
+function rebuildModelSelection(selection: ModelSelection): ModelSelection {
+  return createModelSelection(selection.instanceId, selection.model, selection.options);
+}
+
 export function applyServerSettingsPatch(
   current: ServerSettings,
   patch: ServerSettingsPatch,
 ): ServerSettings {
   const selectionPatch = patch.textGenerationModelSelection;
   const { automaticGitFetchInterval, ...patchForMerge } = patch;
-  const next = deepMerge(current, patchForMerge);
-  const nextWithReplacements = {
+  // Spread first: `deepMerge` needs a plain object, and a `Schema.Class`
+  // instance does not satisfy its `Record<string, unknown>` constraint.
+  const next = deepMerge({ ...current }, patchForMerge);
+  const nextWithReplacements = ServerSettings.make({
     ...next,
+    // `deepMerge` returns plain objects, so nested `Schema.Class` fields have
+    // to be reconstructed or the settings fail to encode.
+    observability: ObservabilitySettings.make({ ...next.observability }),
+    textGenerationModelSelection: rebuildModelSelection(next.textGenerationModelSelection),
+    sourceControlWritingStyle: SourceControlWritingStyleSettings.make({
+      ...next.sourceControlWritingStyle,
+    }),
     ...(patch.providerInstances !== undefined
       ? { providerInstances: patch.providerInstances }
       : {}),
+    ...(patch.sourceControlWriterModelSelection !== undefined
+      ? { sourceControlWriterModelSelection: patch.sourceControlWriterModelSelection }
+      : {}),
     ...(automaticGitFetchInterval !== undefined ? { automaticGitFetchInterval } : {}),
-  };
+  });
   if (!selectionPatch) {
     return nextWithReplacements;
   }
@@ -98,8 +165,8 @@ export function applyServerSettingsPatch(
         patch: selectionPatch.options,
       });
 
-  return {
+  return ServerSettings.make({
     ...nextWithReplacements,
     textGenerationModelSelection: createModelSelection(instanceId, model, options),
-  };
+  });
 }

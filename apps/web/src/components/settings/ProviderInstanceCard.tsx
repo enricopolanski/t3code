@@ -15,8 +15,8 @@ import * as Result from "effect/Result";
 import { useState, type ReactNode } from "react";
 import {
   isProviderDriverKind,
-  type ProviderInstanceConfig,
-  type ProviderInstanceEnvironmentVariable,
+  ProviderInstanceConfig,
+  ProviderInstanceEnvironmentVariable,
   type ProviderInstanceId,
   type ProviderDriverKind,
   type ServerProvider,
@@ -177,7 +177,7 @@ function ProviderEnvironmentSection(props: {
         continue;
       }
       const { id: _id, ...rest } = row;
-      published.push({ ...rest, name });
+      published.push(ProviderInstanceEnvironmentVariable.make({ ...rest, name }));
     }
     props.onChange(published);
   };
@@ -457,13 +457,13 @@ export function ProviderInstanceCard({
     const { displayName: _omit, ...rest } = instance;
     onUpdate(
       trimmed.length > 0
-        ? ({ ...rest, displayName: trimmed } as ProviderInstanceConfig)
-        : (rest as ProviderInstanceConfig),
+        ? ProviderInstanceConfig.make({ ...rest, displayName: trimmed })
+        : ProviderInstanceConfig.make(rest),
     );
   };
 
   const updateEnabled = (value: boolean) => {
-    onUpdate({ ...instance, enabled: value });
+    onUpdate(ProviderInstanceConfig.make({ ...instance, enabled: value }));
   };
 
   const updateAccentColor = (value: string) => {
@@ -471,8 +471,8 @@ export function ProviderInstanceCard({
     const { accentColor: _omit, ...rest } = instance;
     onUpdate(
       normalized
-        ? ({ ...rest, accentColor: normalized } as ProviderInstanceConfig)
-        : (rest as ProviderInstanceConfig),
+        ? ProviderInstanceConfig.make({ ...rest, accentColor: normalized })
+        : ProviderInstanceConfig.make(rest),
     );
   };
 
@@ -480,15 +480,15 @@ export function ProviderInstanceCard({
     const { config: _omit, ...rest } = instance;
     onUpdate(
       nextConfig !== undefined
-        ? ({ ...rest, config: nextConfig } as ProviderInstanceConfig)
-        : (rest as ProviderInstanceConfig),
+        ? ProviderInstanceConfig.make({ ...rest, config: nextConfig })
+        : ProviderInstanceConfig.make(rest),
     );
   };
 
   const updateCustomModels = (next: ReadonlyArray<string>) => {
     const nextConfig = nextConfigBlobWithValue(instance.config, "customModels", [...next]);
     const { config: _omit, ...rest } = instance;
-    onUpdate({ ...rest, config: nextConfig } as ProviderInstanceConfig);
+    onUpdate(ProviderInstanceConfig.make({ ...rest, config: nextConfig }));
   };
 
   const updateEnvironment = (environment: ReadonlyArray<ProviderInstanceEnvironmentVariable>) => {
@@ -496,8 +496,8 @@ export function ProviderInstanceCard({
     const { environment: _omit, ...rest } = instance;
     onUpdate(
       cleaned.length > 0
-        ? ({ ...rest, environment: cleaned } as ProviderInstanceConfig)
-        : (rest as ProviderInstanceConfig),
+        ? ProviderInstanceConfig.make({ ...rest, environment: cleaned })
+        : ProviderInstanceConfig.make(rest),
     );
   };
 

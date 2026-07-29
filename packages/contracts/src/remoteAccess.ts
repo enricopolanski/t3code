@@ -38,21 +38,23 @@ export const AdvertisedEndpointSource = Schema.Literals([
 ]);
 export type AdvertisedEndpointSource = typeof AdvertisedEndpointSource.Type;
 
-export const AdvertisedEndpointProvider = Schema.Struct({
+export class AdvertisedEndpointProvider extends Schema.Class<AdvertisedEndpointProvider>(
+  "AdvertisedEndpointProvider",
+)({
   id: TrimmedNonEmptyString,
   label: TrimmedNonEmptyString,
   kind: AdvertisedEndpointProviderKind,
   isAddon: Schema.Boolean,
-});
-export type AdvertisedEndpointProvider = typeof AdvertisedEndpointProvider.Type;
+}) {}
 
-export const AdvertisedEndpointCompatibility = Schema.Struct({
+export class AdvertisedEndpointCompatibility extends Schema.Class<AdvertisedEndpointCompatibility>(
+  "AdvertisedEndpointCompatibility",
+)({
   hostedHttpsApp: AdvertisedEndpointHostedHttpsCompatibility,
   desktopApp: Schema.Literals(["compatible", "unknown"]),
-});
-export type AdvertisedEndpointCompatibility = typeof AdvertisedEndpointCompatibility.Type;
+}) {}
 
-export const AdvertisedEndpoint = Schema.Struct({
+export class AdvertisedEndpoint extends Schema.Class<AdvertisedEndpoint>("AdvertisedEndpoint")({
   id: TrimmedNonEmptyString,
   label: TrimmedNonEmptyString,
   provider: AdvertisedEndpointProvider,
@@ -64,5 +66,4 @@ export const AdvertisedEndpoint = Schema.Struct({
   status: AdvertisedEndpointStatus,
   isDefault: Schema.optional(Schema.Boolean),
   description: Schema.optional(TrimmedNonEmptyString),
-});
-export type AdvertisedEndpoint = typeof AdvertisedEndpoint.Type;
+}) {}

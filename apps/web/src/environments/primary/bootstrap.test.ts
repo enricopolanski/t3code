@@ -1,4 +1,9 @@
-import { EnvironmentId, type ExecutionEnvironmentDescriptor } from "@t3tools/contracts";
+import {
+  EnvironmentId,
+  ExecutionEnvironmentCapabilities,
+  ExecutionEnvironmentDescriptor,
+  ExecutionEnvironmentPlatform,
+} from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
@@ -15,18 +20,18 @@ import {
 } from ".";
 import { installEnvironmentHttpTest } from "../../../test/environmentHttpTest";
 
-const BASE_ENVIRONMENT = {
+const BASE_ENVIRONMENT = ExecutionEnvironmentDescriptor.make({
   environmentId: EnvironmentId.make("environment-local"),
   label: "Local environment",
-  platform: {
+  platform: ExecutionEnvironmentPlatform.make({
     os: "darwin",
     arch: "arm64",
-  },
+  }),
   serverVersion: "0.0.0-test",
-  capabilities: {
+  capabilities: ExecutionEnvironmentCapabilities.make({
     repositoryIdentity: true,
-  },
-} satisfies ExecutionEnvironmentDescriptor;
+  }),
+});
 
 let disposeHttpTest: (() => Promise<void>) | undefined;
 
@@ -80,18 +85,20 @@ describe("environmentBootstrap", () => {
       },
       desktopBridge: undefined,
     });
-    writePrimaryEnvironmentDescriptor({
-      environmentId: EnvironmentId.make("environment-local"),
-      label: "Bootstrapped environment",
-      platform: {
-        os: "darwin",
-        arch: "arm64",
-      },
-      serverVersion: "0.0.0-test",
-      capabilities: {
-        repositoryIdentity: true,
-      },
-    });
+    writePrimaryEnvironmentDescriptor(
+      ExecutionEnvironmentDescriptor.make({
+        environmentId: EnvironmentId.make("environment-local"),
+        label: "Bootstrapped environment",
+        platform: ExecutionEnvironmentPlatform.make({
+          os: "darwin",
+          arch: "arm64",
+        }),
+        serverVersion: "0.0.0-test",
+        capabilities: ExecutionEnvironmentCapabilities.make({
+          repositoryIdentity: true,
+        }),
+      }),
+    );
 
     expect(getPrimaryKnownEnvironment()).toEqual({
       id: "environment-local",

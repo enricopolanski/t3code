@@ -4,7 +4,7 @@ import {
   MessageId,
   TurnId,
   type OrchestrationCheckpointSummary,
-  type ReviewDiffPreviewSource,
+  ReviewDiffPreviewSource,
 } from "@t3tools/contracts";
 
 import {
@@ -63,7 +63,7 @@ describe("buildReviewSectionItems", () => {
       }),
     ];
     const gitSections: ReviewDiffPreviewSource[] = [
-      {
+      ReviewDiffPreviewSource.make({
         id: "working-tree",
         kind: "working-tree",
         title: "Dirty worktree",
@@ -72,8 +72,8 @@ describe("buildReviewSectionItems", () => {
         diff: "diff --git a/a.ts b/a.ts",
         diffHash: "hash-dirty",
         truncated: false,
-      },
-      {
+      }),
+      ReviewDiffPreviewSource.make({
         id: "branch-range",
         kind: "branch-range",
         title: "Against main",
@@ -82,7 +82,7 @@ describe("buildReviewSectionItems", () => {
         diff: "diff --git a/a.ts b/a.ts",
         diffHash: "hash-base",
         truncated: false,
-      },
+      }),
     ];
 
     const loadedTurnId = getReviewSectionIdForCheckpoint(checkpoints[0]);

@@ -12,51 +12,53 @@ export const VcsFreshnessSource = Schema.Literals([
 ]);
 export type VcsFreshnessSource = typeof VcsFreshnessSource.Type;
 
-export const VcsFreshness = Schema.Struct({
+export class VcsFreshness extends Schema.Class<VcsFreshness>("VcsFreshness")({
   source: VcsFreshnessSource,
   observedAt: Schema.DateTimeUtc,
   expiresAt: Schema.Option(Schema.DateTimeUtc),
-});
-export type VcsFreshness = typeof VcsFreshness.Type;
+}) {}
 
-export const VcsDriverCapabilities = Schema.Struct({
+export class VcsDriverCapabilities extends Schema.Class<VcsDriverCapabilities>(
+  "VcsDriverCapabilities",
+)({
   kind: VcsDriverKind,
   supportsWorktrees: Schema.Boolean,
   supportsBookmarks: Schema.Boolean,
   supportsAtomicSnapshot: Schema.Boolean,
   supportsPushDefaultRemote: Schema.Boolean,
   ignoreClassifier: Schema.Literals(["native", "git-compatible-fallback"]),
-});
-export type VcsDriverCapabilities = typeof VcsDriverCapabilities.Type;
+}) {}
 
-export const VcsRepositoryIdentity = Schema.Struct({
+export class VcsRepositoryIdentity extends Schema.Class<VcsRepositoryIdentity>(
+  "VcsRepositoryIdentity",
+)({
   kind: VcsDriverKind,
   rootPath: TrimmedNonEmptyString,
   metadataPath: Schema.NullOr(TrimmedNonEmptyString),
   freshness: VcsFreshness,
-});
-export type VcsRepositoryIdentity = typeof VcsRepositoryIdentity.Type;
+}) {}
 
-export const VcsListWorkspaceFilesResult = Schema.Struct({
+export class VcsListWorkspaceFilesResult extends Schema.Class<VcsListWorkspaceFilesResult>(
+  "VcsListWorkspaceFilesResult",
+)({
   paths: Schema.Array(TrimmedNonEmptyString),
   truncated: Schema.Boolean,
   freshness: VcsFreshness,
-});
-export type VcsListWorkspaceFilesResult = typeof VcsListWorkspaceFilesResult.Type;
+}) {}
 
-export const VcsRemote = Schema.Struct({
+export class VcsRemote extends Schema.Class<VcsRemote>("VcsRemote")({
   name: TrimmedNonEmptyString,
   url: TrimmedNonEmptyString,
   pushUrl: Schema.Option(TrimmedNonEmptyString),
   isPrimary: Schema.Boolean,
-});
-export type VcsRemote = typeof VcsRemote.Type;
+}) {}
 
-export const VcsListRemotesResult = Schema.Struct({
+export class VcsListRemotesResult extends Schema.Class<VcsListRemotesResult>(
+  "VcsListRemotesResult",
+)({
   remotes: Schema.Array(VcsRemote),
   freshness: VcsFreshness,
-});
-export type VcsListRemotesResult = typeof VcsListRemotesResult.Type;
+}) {}
 
 export interface VcsProcessErrorContext {
   readonly operation: string;

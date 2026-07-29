@@ -18,16 +18,17 @@ import {
   RelayCloudMintCredentialProofPayload,
   RelayCloudMintCredentialRequest,
   RelayEnvironmentHealthResponseProofPayload,
-  type RelayEnvironmentHealthResponse as RelayEnvironmentHealthResponseShape,
+  RelayEnvironmentHealthResponse as RelayEnvironmentHealthResponseShape,
   RelayEnvironmentConfigRequest,
   RelayEnvironmentLinkChallengeResponse,
   RelayEnvironmentLinkResponse,
   RelayEnvironmentMintResponseProofPayload,
-  type RelayEnvironmentMintResponse as RelayEnvironmentMintResponseShape,
+  RelayEnvironmentMintResponse as RelayEnvironmentMintResponseShape,
   RelayEnvironmentLinkProof,
   RelayEnvironmentLinkProofPayload,
   RelayLinkProofRequest,
   RelayManagedEndpointOrigin,
+  RelayOkResponse,
 } from "@t3tools/contracts/relay";
 import { withRelayClientTracing } from "@t3tools/shared/relayTracing";
 import {
@@ -68,7 +69,11 @@ import {
   RELAY_URL_SECRET,
 } from "./config.ts";
 import { relayUrlConfig } from "./publicConfig.ts";
-import { readCliDesiredLinkMode, setCliDesiredCloudLink } from "./CliState.ts";
+import {
+  readCliDesiredCloudLink,
+  readCliDesiredLinkMode,
+  setCliDesiredCloudLink,
+} from "./CliState.ts";
 import * as CliTokenManager from "./CliTokenManager.ts";
 import { getOrCreateEnvironmentKeyPairFromSecretStore } from "./environmentKeys.ts";
 import { traceRelayRequest } from "./traceRelayRequest.ts";
@@ -479,7 +484,7 @@ const applyCloudRelayConfig = Effect.fn("environment.cloud.applyRelayConfig")(fu
   } else {
     yield* dependencies.secrets.remove(CLOUD_ENDPOINT_RUNTIME_CONFIG);
   }
-  return { ok, endpointRuntimeStatus } satisfies EnvironmentCloudRelayConfigResult;
+  return EnvironmentCloudRelayConfigResult.make({ ok, endpointRuntimeStatus });
 });
 
 const cloudRelayConfigHandler = Effect.fn("environment.cloud.relayConfig")(
@@ -622,6 +627,72 @@ export const reconcileDesiredCloudLink = Effect.fn("environment.cloud.reconcileD
   },
 );
 
+// Cloudflare bills per provisioned tunnel, so an environment that goes offline
+// must not leave its tunnel behind. Releasing deletes only the tunnel — the
+// relay keeps the link and its hostname reservation, and the next startup's
+// link reconcile provisions a replacement tunnel under the same URL.
+export const releaseManagedTunnelOnShutdown = Effect.fn(
+  "environment.cloud.releaseManagedTunnelOnShutdown",
+)(function* () {
+  const dependencies = yield* cloudHttpDependencies;
+  // Only a managed link stores a runtime config; publish-only links have no
+  // tunnel to release.
+  const runtimeConfig = yield* dependencies.secrets.get(CLOUD_ENDPOINT_RUNTIME_CONFIG);
+  if (Option.isNone(runtimeConfig)) {
+    return false;
+  }
+  // Only CLI-desired managed links release on shutdown, because the startup
+  // reconcile that provisions the replacement tunnel only runs for them. A
+  // link installed by a web/mobile client comes back after a restart by
+  // reapplying the stored connector token — it has no boot-time re-provision
+  // path — so its tunnel must survive the restart. (Unlink still deletes it.)
+  if (!(yield* readCliDesiredCloudLink) || (yield* readCliDesiredLinkMode) !== "managed") {
+    return false;
+  }
+  const token = yield* dependencies.cliTokenManager.getExisting;
+  if (Option.isNone(token)) {
+    return false;
+  }
+  // The link belongs to the relay it was installed against, so target the
+  // persisted URL: T3CODE_RELAY_URL may have changed since the link was made.
+  const relayUrl = yield* dependencies.secrets.get(RELAY_URL_SECRET);
+  if (Option.isNone(relayUrl)) {
+    return false;
+  }
+  const environmentId = yield* dependencies.environment.getEnvironmentId;
+  // Stop the local connector before the relay deletes the tunnel it serves.
+  yield* dependencies.endpointRuntime.applyConfig(null);
+  const response = yield* HttpClientRequest.delete(
+    `${bytesToString(relayUrl.value)}/v1/client/environment-links/${encodeURIComponent(environmentId)}/tunnel`,
+  ).pipe(
+    HttpClientRequest.bearerToken(token.value.accessToken),
+    dependencies.httpClient.execute,
+    Effect.flatMap(HttpClientResponse.filterStatusOk),
+    Effect.flatMap(HttpClientResponse.schemaBodyJson(RelayOkResponse)),
+    withRelayClientTracing,
+  );
+  // ok:false means the relay skipped deletion because a concurrent provision
+  // owns the recorded tunnel now — leave the stored config alone.
+  if (!response.ok) {
+    return false;
+  }
+  // The connector token died with the tunnel. Drop the stored config so the
+  // next start waits for the link reconcile instead of respawning the relay
+  // client with a dead token. Kept when the release request fails: the tunnel
+  // still exists, so the stored token keeps working across the restart.
+  // Only dropped while it is still the config this shutdown released — a fast
+  // restart may already have reconciled and stored a fresh config for its
+  // replacement tunnel, and that one must survive this finalizer.
+  const storedConfig = yield* dependencies.secrets.get(CLOUD_ENDPOINT_RUNTIME_CONFIG);
+  if (
+    Option.isSome(storedConfig) &&
+    bytesToString(storedConfig.value) === bytesToString(runtimeConfig.value)
+  ) {
+    yield* dependencies.secrets.remove(CLOUD_ENDPOINT_RUNTIME_CONFIG);
+  }
+  return true;
+});
+
 const readCloudLinkState = Effect.fn("environment.cloud.readLinkState")(function* (
   dependencies: CloudHttpDependencies,
 ) {
@@ -636,7 +707,7 @@ const readCloudLinkState = Effect.fn("environment.cloud.readLinkState")(function
       ],
       { concurrency: 5 },
     );
-  return {
+  return EnvironmentCloudLinkStateResult.make({
     linked: Option.isSome(cloudUserId),
     cloudUserId: Option.isSome(cloudUserId) ? bytesToString(cloudUserId.value) : null,
     relayUrl: Option.isSome(relayUrl) ? bytesToString(relayUrl.value) : null,
@@ -647,7 +718,7 @@ const readCloudLinkState = Effect.fn("environment.cloud.readLinkState")(function
     publishAgentActivity: Option.isSome(publishAgentActivity)
       ? bytesToString(publishAgentActivity.value) === "true"
       : false,
-  } satisfies EnvironmentCloudLinkStateResult;
+  });
 });
 
 const cloudLinkStateHandler = Effect.fn("environment.cloud.linkState")(
@@ -678,7 +749,7 @@ const cloudUnlinkHandler = Effect.fn("environment.cloud.unlink")(
       { concurrency: 7 },
     );
     yield* setCliDesiredCloudLink(false);
-    return { ok: true, endpointRuntimeStatus } satisfies EnvironmentCloudRelayConfigResult;
+    return EnvironmentCloudRelayConfigResult.make({ ok: true, endpointRuntimeStatus });
   },
   Effect.catchIf(
     ServerSecretStore.isSecretStoreError,
@@ -773,7 +844,7 @@ const cloudEnvironmentHealthHandler = Effect.fn("environment.cloud.health")(
     const keyPair = yield* getOrCreateEnvironmentKeyPairFromSecretStore(dependencies.secrets);
     const descriptor = yield* dependencies.environment.getDescriptor;
     const responseExpiresAt = DateTime.add(now, { minutes: 5 });
-    const responsePayload = {
+    const responsePayload = RelayEnvironmentHealthResponseProofPayload.make({
       iss: `t3-env:${environmentId}`,
       aud: normalizeRelayIssuer(relayIssuer),
       sub: environmentId,
@@ -785,11 +856,12 @@ const cloudEnvironmentHealthHandler = Effect.fn("environment.cloud.health")(
       status: "online",
       descriptor,
       checkedAt: DateTime.formatIso(now),
-    } satisfies RelayEnvironmentHealthResponseProofPayload;
+    });
     const responseProof = yield* signRelayJwt({
       privateKey: keyPair.privateKey,
       typ: RELAY_HEALTH_RESPONSE_TYP,
-      payload: responsePayload,
+      // `Schema.Class` instances carry a prototype; jose only wants the fields.
+      payload: { ...responsePayload },
     }).pipe(
       Effect.mapError(
         (cause) =>
@@ -798,13 +870,13 @@ const cloudEnvironmentHealthHandler = Effect.fn("environment.cloud.health")(
           }),
       ),
     );
-    const response = {
+    const response = RelayEnvironmentHealthResponseShape.make({
       environmentId,
       status: "online",
       descriptor,
       checkedAt: responsePayload.checkedAt,
       proof: responseProof,
-    } satisfies RelayEnvironmentHealthResponseShape;
+    });
 
     yield* appendCloudCredentialResponseHeaders;
     return response;
@@ -897,7 +969,7 @@ const cloudMintCredentialHandler = Effect.fn("environment.cloud.mintCredential")
       label: "T3 Connect connect",
       proofKeyThumbprint: proof.clientProofKeyThumbprint,
     });
-    const responsePayload = {
+    const responsePayload = RelayEnvironmentMintResponseProofPayload.make({
       iss: `t3-env:${environmentId}`,
       aud: normalizeRelayIssuer(relayIssuer),
       sub: environmentId,
@@ -908,11 +980,12 @@ const cloudMintCredentialHandler = Effect.fn("environment.cloud.mintCredential")
       clientProofKeyThumbprint: proof.clientProofKeyThumbprint,
       requestNonce: proof.nonce,
       credential: issued.credential,
-    } satisfies RelayEnvironmentMintResponseProofPayload;
+    });
     const responseProof = yield* signRelayJwt({
       privateKey: keyPair.privateKey,
       typ: RELAY_MINT_RESPONSE_TYP,
-      payload: responsePayload,
+      // `Schema.Class` instances carry a prototype; jose only wants the fields.
+      payload: { ...responsePayload },
     }).pipe(
       Effect.mapError(
         (cause) =>
@@ -921,11 +994,11 @@ const cloudMintCredentialHandler = Effect.fn("environment.cloud.mintCredential")
           }),
       ),
     );
-    const response = {
+    const response = RelayEnvironmentMintResponseShape.make({
       credential: issued.credential,
       expiresAt: DateTime.formatIso(issued.expiresAt),
       proof: responseProof,
-    } satisfies RelayEnvironmentMintResponseShape;
+    });
 
     yield* appendCloudCredentialResponseHeaders;
     return response;

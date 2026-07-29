@@ -3,11 +3,7 @@
 import { Radio as RadioPrimitive } from "@base-ui/react/radio";
 import { CheckIcon } from "lucide-react";
 import { useMemo, useState } from "react";
-import {
-  ProviderInstanceId,
-  ProviderDriverKind,
-  type ProviderInstanceConfig,
-} from "@t3tools/contracts";
+import { ProviderInstanceId, ProviderDriverKind, ProviderInstanceConfig } from "@t3tools/contracts";
 
 import { usePrimarySettings, useUpdatePrimarySettings } from "../../hooks/useSettings";
 import { cn } from "../../lib/utils";
@@ -187,13 +183,13 @@ export function AddProviderInstanceDialog({ open, onOpenChange }: AddProviderIns
     const hasConfig = Object.keys(config).length > 0;
     const normalizedAccentColor = normalizeProviderAccentColor(accentColor);
 
-    const nextInstance: ProviderInstanceConfig = {
+    const nextInstance = ProviderInstanceConfig.make({
       driver,
       enabled: true,
       ...(label.trim().length > 0 ? { displayName: label.trim() } : {}),
       ...(normalizedAccentColor ? { accentColor: normalizedAccentColor } : {}),
       ...(hasConfig ? { config } : {}),
-    };
+    });
     // `ProviderInstanceId.make` revalidates the slug; we've already checked
     // it via `validateInstanceId`, but going through the brand constructor
     // keeps the type boundary honest and guards against any future drift in

@@ -1,6 +1,6 @@
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import { SourceControlProviderError, type ChangeRequest } from "@t3tools/contracts";
+import { SourceControlProviderError, ChangeRequest } from "@t3tools/contracts";
 
 import * as AzureDevOpsCli from "./AzureDevOpsCli.ts";
 import * as SourceControlProvider from "./SourceControlProvider.ts";
@@ -59,7 +59,7 @@ function toChangeRequest(summary: {
   readonly state: "open" | "closed" | "merged";
   readonly updatedAt: ChangeRequest["updatedAt"];
 }): ChangeRequest {
-  return {
+  return ChangeRequest.make({
     provider: "azure-devops",
     number: summary.number,
     title: summary.title,
@@ -69,7 +69,7 @@ function toChangeRequest(summary: {
     state: summary.state,
     updatedAt: summary.updatedAt,
     isCrossRepository: false,
-  };
+  });
 }
 
 export const make = Effect.gen(function* () {

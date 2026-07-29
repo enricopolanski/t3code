@@ -18,16 +18,16 @@ export const AssetResource = Schema.Union([
 ]);
 export type AssetResource = typeof AssetResource.Type;
 
-export const AssetCreateUrlInput = Schema.Struct({
+export class AssetCreateUrlInput extends Schema.Class<AssetCreateUrlInput>("AssetCreateUrlInput")({
   resource: AssetResource,
-});
-export type AssetCreateUrlInput = typeof AssetCreateUrlInput.Type;
+}) {}
 
-export const AssetCreateUrlResult = Schema.Struct({
+export class AssetCreateUrlResult extends Schema.Class<AssetCreateUrlResult>(
+  "AssetCreateUrlResult",
+)({
   relativeUrl: TrimmedNonEmptyString.check(Schema.isMaxLength(4096)),
   expiresAt: Schema.Number,
-});
-export type AssetCreateUrlResult = typeof AssetCreateUrlResult.Type;
+}) {}
 
 export class AssetWorkspaceContextNotFoundError extends Schema.TaggedErrorClass<AssetWorkspaceContextNotFoundError>()(
   "AssetWorkspaceContextNotFoundError",

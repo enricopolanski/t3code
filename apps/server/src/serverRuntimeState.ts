@@ -8,15 +8,16 @@ import { writeFileStringAtomically } from "./atomicWrite.ts";
 import type * as ServerConfig from "./config.ts";
 import { formatHostForUrl, isWildcardHost } from "./startupAccess.ts";
 
-export const PersistedServerRuntimeState = Schema.Struct({
+export class PersistedServerRuntimeState extends Schema.Class<PersistedServerRuntimeState>(
+  "PersistedServerRuntimeState",
+)({
   version: Schema.Literal(1),
   pid: Schema.Int,
   host: Schema.optional(Schema.String),
   port: Schema.Int,
   origin: Schema.String,
   startedAt: Schema.String,
-});
-export type PersistedServerRuntimeState = typeof PersistedServerRuntimeState.Type;
+}) {}
 
 export class ServerRuntimeStateError extends Schema.TaggedErrorClass<ServerRuntimeStateError>()(
   "ServerRuntimeStateError",
@@ -48,14 +49,18 @@ export const makePersistedServerRuntimeState = (input: {
   readonly config: Pick<ServerConfig.ServerConfig["Service"], "host">;
   readonly port: number;
 }): Effect.Effect<PersistedServerRuntimeState> =>
-  Effect.map(DateTime.now, (now) => ({
-    version: 1,
-    pid: process.pid,
-    ...(input.config.host ? { host: input.config.host } : {}),
-    port: input.port,
-    origin: runtimeOriginForConfig(input.config, input.port),
-    startedAt: DateTime.formatIso(now),
-  }));
+  Effect.map(
+    DateTime.now,
+    (now) =>
+      new PersistedServerRuntimeState({
+        version: 1,
+        pid: process.pid,
+        ...(input.config.host ? { host: input.config.host } : {}),
+        port: input.port,
+        origin: runtimeOriginForConfig(input.config, input.port),
+        startedAt: DateTime.formatIso(now),
+      }),
+  );
 
 export const persistServerRuntimeState = (input: {
   readonly path: string;

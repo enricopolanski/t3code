@@ -1,4 +1,5 @@
-import type {
+import {
+  RelayAgentActivityAggregateRow,
   RelayAgentActivityAggregateState,
   RelayLiveActivityRegistrationRequest,
 } from "@t3tools/contracts/relay";
@@ -12,13 +13,13 @@ import * as RelayDb from "../db.ts";
 import { relayLiveActivities } from "../persistence/schema.ts";
 import * as LiveActivities from "./LiveActivities.ts";
 
-const aggregate: RelayAgentActivityAggregateState = {
+const aggregate = RelayAgentActivityAggregateState.make({
   title: "T3 Code",
   subtitle: "Agent work in progress",
   activeCount: 1,
   updatedAt: "2026-05-25T00:00:00.000Z",
   activities: [
-    {
+    RelayAgentActivityAggregateRow.make({
       environmentId:
         "env" as RelayAgentActivityAggregateState["activities"][number]["environmentId"],
       threadId: "thread" as RelayAgentActivityAggregateState["activities"][number]["threadId"],
@@ -29,19 +30,19 @@ const aggregate: RelayAgentActivityAggregateState = {
       status: "Working",
       updatedAt: "2026-05-25T00:00:00.000Z",
       deepLink: "/threads/env/thread",
-    },
+    }),
   ],
-};
+});
 
 describe("LiveActivities", () => {
   it.effect(
     "claims Live Activity push tokens globally before upserting the current user device",
     () => {
-      const registration: RelayLiveActivityRegistrationRequest = {
+      const registration = RelayLiveActivityRegistrationRequest.make({
         deviceId: "device-1" as RelayLiveActivityRegistrationRequest["deviceId"],
         activityPushToken:
           "activity-push-token" as RelayLiveActivityRegistrationRequest["activityPushToken"],
-      };
+      });
       const calls: Array<string> = [];
       const updateSets: Array<Record<string, unknown>> = [];
       const updateConditions: Array<SQL> = [];
@@ -251,11 +252,11 @@ describe("LiveActivities", () => {
 
   it.effect("preserves correlation context and causes for persistence failures", () => {
     const cause = new Error("database unavailable");
-    const registration: RelayLiveActivityRegistrationRequest = {
+    const registration = RelayLiveActivityRegistrationRequest.make({
       deviceId: "device-1" as RelayLiveActivityRegistrationRequest["deviceId"],
       activityPushToken:
         "activity-push-token" as RelayLiveActivityRegistrationRequest["activityPushToken"],
-    };
+    });
     const fakeDb = {
       update: () => ({
         set: () => ({ where: () => Effect.fail(cause) }),

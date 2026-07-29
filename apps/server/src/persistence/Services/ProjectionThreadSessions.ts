@@ -14,14 +14,23 @@ import {
   ThreadId,
   TurnId,
 } from "@t3tools/contracts";
+import * as SqlClient from "effect/unstable/sql/SqlClient";
+import * as SqlSchema from "effect/unstable/sql/SqlSchema";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import * as Context from "effect/Context";
-import type * as Effect from "effect/Effect";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
 
-import type { ProjectionRepositoryError } from "../Errors.ts";
+import {
+  type ProjectionRepositoryError,
+  toPersistenceDecodeError,
+  toPersistenceSqlError,
+} from "../Errors.ts";
 
-export const ProjectionThreadSession = Schema.Struct({
+export class ProjectionThreadSession extends Schema.Class<ProjectionThreadSession>(
+  "ProjectionThreadSession",
+)({
   threadId: ThreadId,
   status: OrchestrationSessionStatus,
   providerName: Schema.NullOr(Schema.String),
@@ -30,49 +39,143 @@ export const ProjectionThreadSession = Schema.Struct({
   activeTurnId: Schema.NullOr(TurnId),
   lastError: Schema.NullOr(Schema.String),
   updatedAt: IsoDateTime,
-});
-export type ProjectionThreadSession = typeof ProjectionThreadSession.Type;
+}) {}
 
-export const GetProjectionThreadSessionInput = Schema.Struct({
-  threadId: ThreadId,
-});
-export type GetProjectionThreadSessionInput = typeof GetProjectionThreadSessionInput.Type;
-
-export const DeleteProjectionThreadSessionInput = Schema.Struct({
-  threadId: ThreadId,
-});
-export type DeleteProjectionThreadSessionInput = typeof DeleteProjectionThreadSessionInput.Type;
-
-/**
- * ProjectionThreadSessionRepositoryShape - Service API for projected thread sessions.
- */
-export interface ProjectionThreadSessionRepositoryShape {
-  /**
-   * Insert or replace a projected thread-session row.
-   *
-   * Upserts by `threadId`.
-   */
-  readonly upsert: (row: ProjectionThreadSession) => Effect.Effect<void, ProjectionRepositoryError>;
-
-  /**
-   * Read projected thread-session state by thread id.
-   */
-  readonly getByThreadId: (
-    input: GetProjectionThreadSessionInput,
-  ) => Effect.Effect<Option.Option<ProjectionThreadSession>, ProjectionRepositoryError>;
-
-  /**
-   * Delete projected thread-session state by thread id.
-   */
-  readonly deleteByThreadId: (
-    input: DeleteProjectionThreadSessionInput,
-  ) => Effect.Effect<void, ProjectionRepositoryError>;
+function toPersistenceSqlOrDecodeError(sqlOperation: string, decodeOperation: string) {
+  return (cause: unknown): ProjectionRepositoryError =>
+    Schema.isSchemaError(cause)
+      ? toPersistenceDecodeError(decodeOperation)(cause)
+      : toPersistenceSqlError(sqlOperation)(cause);
 }
 
 /**
- * ProjectionThreadSessionRepository - Service tag for thread-session persistence.
+ * ProjectionThreadSessionRepository - Service and SQLite-backed layer for thread-session
+ * persistence.
  */
-export class ProjectionThreadSessionRepository extends Context.Service<
-  ProjectionThreadSessionRepository,
-  ProjectionThreadSessionRepositoryShape
->()("t3/persistence/Services/ProjectionThreadSessions/ProjectionThreadSessionRepository") {}
+export class ProjectionThreadSessionRepository extends Context.Service<ProjectionThreadSessionRepository>()(
+  "t3/persistence/Services/ProjectionThreadSessions/ProjectionThreadSessionRepository",
+  {
+    make: Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+
+      const upsertProjectionThreadSessionRow = SqlSchema.void({
+        Request: ProjectionThreadSession,
+        execute: (row) =>
+          sql`
+            INSERT INTO projection_thread_sessions (
+              thread_id,
+              status,
+              provider_name,
+              provider_instance_id,
+              runtime_mode,
+              active_turn_id,
+              last_error,
+              updated_at
+            )
+            VALUES (
+              ${row.threadId},
+              ${row.status},
+              ${row.providerName},
+              ${row.providerInstanceId},
+              ${row.runtimeMode},
+              ${row.activeTurnId},
+              ${row.lastError},
+              ${row.updatedAt}
+            )
+            ON CONFLICT (thread_id)
+            DO UPDATE SET
+              status = excluded.status,
+              provider_name = excluded.provider_name,
+              provider_instance_id = excluded.provider_instance_id,
+              runtime_mode = excluded.runtime_mode,
+              active_turn_id = excluded.active_turn_id,
+              last_error = excluded.last_error,
+              updated_at = excluded.updated_at
+          `,
+      });
+
+      const getProjectionThreadSessionRow = SqlSchema.findOneOption({
+        Request: ThreadId,
+        Result: ProjectionThreadSession,
+        execute: (threadId) =>
+          sql`
+            SELECT
+              thread_id AS "threadId",
+              status,
+              provider_name AS "providerName",
+              provider_instance_id AS "providerInstanceId",
+              runtime_mode AS "runtimeMode",
+              active_turn_id AS "activeTurnId",
+              last_error AS "lastError",
+              updated_at AS "updatedAt"
+            FROM projection_thread_sessions
+            WHERE thread_id = ${threadId}
+          `,
+      });
+
+      const deleteProjectionThreadSessionRow = SqlSchema.void({
+        Request: ThreadId,
+        execute: (threadId) =>
+          sql`
+            DELETE FROM projection_thread_sessions
+            WHERE thread_id = ${threadId}
+          `,
+      });
+
+      /**
+       * Insert or replace a projected thread-session row.
+       *
+       * Upserts by `threadId`.
+       */
+      const upsert = (
+        row: ProjectionThreadSession,
+      ): Effect.Effect<void, ProjectionRepositoryError> =>
+        upsertProjectionThreadSessionRow(row).pipe(
+          Effect.mapError(
+            toPersistenceSqlOrDecodeError(
+              "ProjectionThreadSessionRepository.upsert:query",
+              "ProjectionThreadSessionRepository.upsert:encodeRequest",
+            ),
+          ),
+        );
+
+      /**
+       * Read projected thread-session state by thread id.
+       */
+      const getByThreadId = (
+        threadId: ThreadId,
+      ): Effect.Effect<Option.Option<ProjectionThreadSession>, ProjectionRepositoryError> =>
+        getProjectionThreadSessionRow(threadId).pipe(
+          Effect.mapError(
+            toPersistenceSqlOrDecodeError(
+              "ProjectionThreadSessionRepository.getByThreadId:query",
+              "ProjectionThreadSessionRepository.getByThreadId:decodeRow",
+            ),
+          ),
+        );
+
+      /**
+       * Delete projected thread-session state by thread id.
+       */
+      const deleteByThreadId = (
+        threadId: ThreadId,
+      ): Effect.Effect<void, ProjectionRepositoryError> =>
+        deleteProjectionThreadSessionRow(threadId).pipe(
+          Effect.mapError(
+            toPersistenceSqlOrDecodeError(
+              "ProjectionThreadSessionRepository.deleteByThreadId:query",
+              "ProjectionThreadSessionRepository.deleteByThreadId:encodeRequest",
+            ),
+          ),
+        );
+
+      return {
+        upsert,
+        getByThreadId,
+        deleteByThreadId,
+      };
+    }),
+  },
+) {
+  static readonly layer = Layer.effect(this)(this.make);
+}

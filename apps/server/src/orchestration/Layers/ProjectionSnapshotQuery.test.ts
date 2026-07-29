@@ -6,6 +6,19 @@ import {
   ThreadId,
   TurnId,
   ProviderInstanceId,
+  OrchestrationCheckpointFile,
+  OrchestrationCheckpointSummary,
+  OrchestrationLatestTurn,
+  OrchestrationMessage,
+  OrchestrationProject,
+  OrchestrationProjectShell,
+  OrchestrationProposedPlan,
+  OrchestrationSession,
+  OrchestrationThread,
+  OrchestrationThreadActivity,
+  OrchestrationThreadShell,
+  ProjectScript,
+  SourceProposedPlanReference,
 } from "@t3tools/contracts";
 import { assert, it } from "@effect/vitest";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -257,7 +270,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
       assert.equal(snapshot.snapshotSequence, 5);
       assert.equal(snapshot.updatedAt, "2026-02-24T00:00:09.000Z");
       assert.deepEqual(snapshot.projects, [
-        {
+        OrchestrationProject.make({
           id: asProjectId("project-1"),
           title: "Project 1",
           workspaceRoot: "/tmp/project-1",
@@ -267,21 +280,21 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             model: "gpt-5-codex",
           },
           scripts: [
-            {
+            ProjectScript.make({
               id: "script-1",
               name: "Build",
               command: "bun run build",
               icon: "build",
               runOnWorktreeCreate: false,
-            },
+            }),
           ],
           createdAt: "2026-02-24T00:00:00.000Z",
           updatedAt: "2026-02-24T00:00:01.000Z",
           deletedAt: null,
-        },
+        }),
       ]);
       assert.deepEqual(snapshot.threads, [
-        {
+        OrchestrationThread.make({
           id: ThreadId.make("thread-1"),
           projectId: asProjectId("project-1"),
           title: "Thread 1",
@@ -293,18 +306,18 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           runtimeMode: "full-access",
           branch: null,
           worktreePath: null,
-          latestTurn: {
+          latestTurn: OrchestrationLatestTurn.make({
             turnId: asTurnId("turn-1"),
             state: "completed",
             requestedAt: "2026-02-24T00:00:08.000Z",
             startedAt: "2026-02-24T00:00:08.000Z",
             completedAt: "2026-02-24T00:00:08.000Z",
             assistantMessageId: asMessageId("message-1"),
-            sourceProposedPlan: {
+            sourceProposedPlan: SourceProposedPlanReference.make({
               threadId: ThreadId.make("thread-1"),
               planId: "plan-1",
-            },
-          },
+            }),
+          }),
           createdAt: "2026-02-24T00:00:02.000Z",
           updatedAt: "2026-02-24T00:00:03.000Z",
           archivedAt: null,
@@ -314,7 +327,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           snoozedAt: null,
           deletedAt: null,
           messages: [
-            {
+            OrchestrationMessage.make({
               id: asMessageId("message-1"),
               role: "assistant",
               text: "hello from projection",
@@ -322,10 +335,10 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
               streaming: false,
               createdAt: "2026-02-24T00:00:04.000Z",
               updatedAt: "2026-02-24T00:00:05.000Z",
-            },
+            }),
           ],
           proposedPlans: [
-            {
+            OrchestrationProposedPlan.make({
               id: "plan-1",
               turnId: asTurnId("turn-1"),
               planMarkdown: "# Ship it",
@@ -333,10 +346,10 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
               implementationThreadId: ThreadId.make("thread-2"),
               createdAt: "2026-02-24T00:00:05.000Z",
               updatedAt: "2026-02-24T00:00:05.500Z",
-            },
+            }),
           ],
           activities: [
-            {
+            OrchestrationThreadActivity.make({
               id: asEventId("activity-1"),
               tone: "info",
               kind: "runtime.note",
@@ -344,20 +357,27 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
               payload: { stage: "start" },
               turnId: asTurnId("turn-1"),
               createdAt: "2026-02-24T00:00:06.000Z",
-            },
+            }),
           ],
           checkpoints: [
-            {
+            OrchestrationCheckpointSummary.make({
               turnId: asTurnId("turn-1"),
               checkpointTurnCount: 1,
               checkpointRef: asCheckpointRef("checkpoint-1"),
               status: "ready",
-              files: [{ path: "README.md", kind: "modified", additions: 2, deletions: 1 }],
+              files: [
+                OrchestrationCheckpointFile.make({
+                  path: "README.md",
+                  kind: "modified",
+                  additions: 2,
+                  deletions: 1,
+                }),
+              ],
               assistantMessageId: asMessageId("message-1"),
               completedAt: "2026-02-24T00:00:08.000Z",
-            },
+            }),
           ],
-          session: {
+          session: OrchestrationSession.make({
             threadId: ThreadId.make("thread-1"),
             status: "running",
             providerName: "codex",
@@ -365,14 +385,14 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             activeTurnId: asTurnId("turn-1"),
             lastError: null,
             updatedAt: "2026-02-24T00:00:07.000Z",
-          },
-        },
+          }),
+        }),
       ]);
 
       const shellSnapshot = yield* snapshotQuery.getShellSnapshot();
       assert.equal(shellSnapshot.snapshotSequence, 5);
       assert.deepEqual(shellSnapshot.projects, [
-        {
+        OrchestrationProjectShell.make({
           id: asProjectId("project-1"),
           title: "Project 1",
           workspaceRoot: "/tmp/project-1",
@@ -382,20 +402,20 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             model: "gpt-5-codex",
           },
           scripts: [
-            {
+            ProjectScript.make({
               id: "script-1",
               name: "Build",
               command: "bun run build",
               icon: "build",
               runOnWorktreeCreate: false,
-            },
+            }),
           ],
           createdAt: "2026-02-24T00:00:00.000Z",
           updatedAt: "2026-02-24T00:00:01.000Z",
-        },
+        }),
       ]);
       assert.deepEqual(shellSnapshot.threads, [
-        {
+        OrchestrationThreadShell.make({
           id: ThreadId.make("thread-1"),
           projectId: asProjectId("project-1"),
           title: "Thread 1",
@@ -407,18 +427,18 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           runtimeMode: "full-access",
           branch: null,
           worktreePath: null,
-          latestTurn: {
+          latestTurn: OrchestrationLatestTurn.make({
             turnId: asTurnId("turn-1"),
             state: "completed",
             requestedAt: "2026-02-24T00:00:08.000Z",
             startedAt: "2026-02-24T00:00:08.000Z",
             completedAt: "2026-02-24T00:00:08.000Z",
             assistantMessageId: asMessageId("message-1"),
-            sourceProposedPlan: {
+            sourceProposedPlan: SourceProposedPlanReference.make({
               threadId: ThreadId.make("thread-1"),
               planId: "plan-1",
-            },
-          },
+            }),
+          }),
           createdAt: "2026-02-24T00:00:02.000Z",
           updatedAt: "2026-02-24T00:00:03.000Z",
           archivedAt: null,
@@ -426,7 +446,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           settledAt: null,
           snoozedUntil: null,
           snoozedAt: null,
-          session: {
+          session: OrchestrationSession.make({
             threadId: ThreadId.make("thread-1"),
             status: "running",
             providerName: "codex",
@@ -434,12 +454,12 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             activeTurnId: asTurnId("turn-1"),
             lastError: null,
             updatedAt: "2026-02-24T00:00:07.000Z",
-          },
+          }),
           latestUserMessageAt: "2026-02-24T00:00:04.000Z",
           hasPendingApprovals: true,
           hasPendingUserInput: false,
           hasActionableProposedPlan: false,
-        },
+        }),
       ]);
 
       const threadDetail = yield* snapshotQuery.getThreadDetailById(ThreadId.make("thread-1"));
@@ -1094,7 +1114,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
       }
 
       assert.deepEqual(snapshot.threads[0]?.activities ?? [], [
-        {
+        OrchestrationThreadActivity.make({
           id: asEventId("activity-unsequenced"),
           tone: "info",
           kind: "runtime.note",
@@ -1102,8 +1122,8 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           payload: { source: "unsequenced" },
           turnId: null,
           createdAt: "2026-04-01T00:00:06.000Z",
-        },
-        {
+        }),
+        OrchestrationThreadActivity.make({
           id: asEventId("activity-sequence-1"),
           tone: "info",
           kind: "runtime.note",
@@ -1112,8 +1132,8 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           turnId: null,
           sequence: 1,
           createdAt: "2026-04-01T00:00:05.000Z",
-        },
-        {
+        }),
+        OrchestrationThreadActivity.make({
           id: asEventId("activity-sequence-2"),
           tone: "info",
           kind: "runtime.note",
@@ -1122,7 +1142,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           turnId: null,
           sequence: 2,
           createdAt: "2026-04-01T00:00:04.000Z",
-        },
+        }),
       ]);
     }),
   );

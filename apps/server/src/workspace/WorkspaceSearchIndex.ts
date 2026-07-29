@@ -6,7 +6,7 @@ import * as LayerMap from "effect/LayerMap";
 import * as Schedule from "effect/Schedule";
 import * as Schema from "effect/Schema";
 
-import type {
+import {
   ProjectEntry,
   ProjectListEntriesResult,
   ProjectSearchEntriesResult,
@@ -123,10 +123,10 @@ function toProjectEntry(item: MixedItem): ProjectEntry | null {
     return null;
   }
 
-  return {
+  return ProjectEntry.make({
     path: normalizedPath,
     kind: item.type,
-  };
+  });
 }
 
 function mapMixedSearchResult(
@@ -293,10 +293,10 @@ export const make = Effect.fn("WorkspaceSearchIndex.make")(function* (cwd: strin
         left.path.localeCompare(right.path),
       );
       const entries = sortedEntries.slice(0, WORKSPACE_INDEX_MAX_ENTRIES);
-      return {
+      return ProjectListEntriesResult.make({
         entries,
         truncated: mapped.truncated || entries.length < sortedEntries.length,
-      };
+      });
     },
   );
 
@@ -304,7 +304,7 @@ export const make = Effect.fn("WorkspaceSearchIndex.make")(function* (cwd: strin
     "WorkspaceSearchIndex.search",
   )(function* (query, limit) {
     const result = yield* runMixedSearch(query, Math.max(1, limit + 1));
-    return mapMixedSearchResult(result, limit);
+    return ProjectSearchEntriesResult.make(mapMixedSearchResult(result, limit));
   });
 
   return WorkspaceSearchIndex.of({ list, refresh, search });

@@ -1,8 +1,10 @@
 import {
   EnvironmentAuthInvalidError,
-  type AuthBrowserSessionResult,
+  AuthBrowserSessionResult,
   type AuthCreatePairingCredentialInput,
-  type AuthSessionState,
+  AuthPairingCredentialResult,
+  AuthSessionState,
+  ServerAuthDescriptor,
   type DesktopBridge,
 } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
@@ -21,39 +23,42 @@ type TestWindow = {
   desktopBridge?: DesktopBridge;
 };
 
-const LOOPBACK_AUTH = {
+const LOOPBACK_AUTH = ServerAuthDescriptor.make({
   policy: "loopback-browser",
   bootstrapMethods: ["one-time-token"],
   sessionMethods: ["browser-session-cookie"],
   sessionCookieName: "t3_session",
-} as const;
+});
 
-const DESKTOP_AUTH = {
+const DESKTOP_AUTH = ServerAuthDescriptor.make({
   policy: "desktop-managed-local",
   bootstrapMethods: ["desktop-bootstrap"],
   sessionMethods: ["browser-session-cookie"],
   sessionCookieName: "t3_session",
-} as const;
+});
 
 const SESSION_EXPIRES_AT = DateTime.makeUnsafe("2026-04-05T00:00:00.000Z");
-const unauthenticatedSession = (auth: AuthSessionState["auth"]): AuthSessionState => ({
-  authenticated: false,
-  auth,
-});
+const unauthenticatedSession = (auth: AuthSessionState["auth"]): AuthSessionState =>
+  AuthSessionState.make({
+    authenticated: false,
+    auth,
+  });
 
-const authenticatedSession = (auth: AuthSessionState["auth"]): AuthSessionState => ({
-  authenticated: true,
-  auth,
-  sessionMethod: "browser-session-cookie",
-  expiresAt: SESSION_EXPIRES_AT,
-});
+const authenticatedSession = (auth: AuthSessionState["auth"]): AuthSessionState =>
+  AuthSessionState.make({
+    authenticated: true,
+    auth,
+    sessionMethod: "browser-session-cookie",
+    expiresAt: SESSION_EXPIRES_AT,
+  });
 
-const browserSession = (scopes: AuthBrowserSessionResult["scopes"]): AuthBrowserSessionResult => ({
-  authenticated: true,
-  scopes,
-  sessionMethod: "browser-session-cookie",
-  expiresAt: SESSION_EXPIRES_AT,
-});
+const browserSession = (scopes: AuthBrowserSessionResult["scopes"]): AuthBrowserSessionResult =>
+  AuthBrowserSessionResult.make({
+    authenticated: true,
+    scopes,
+    sessionMethod: "browser-session-cookie",
+    expiresAt: SESSION_EXPIRES_AT,
+  });
 
 function installTestBrowser(url: string) {
   const testWindow: TestWindow = {
@@ -452,12 +457,14 @@ describe("resolveInitialServerAuthGateState", () => {
   it("creates a pairing credential from the authenticated auth endpoint", async () => {
     const testApi = await installAuthApi({
       pairingCredential: (payload) =>
-        Effect.succeed({
-          id: "pairing-link-1",
-          credential: "pairing-token",
-          ...(payload.label === undefined ? {} : { label: payload.label }),
-          expiresAt: SESSION_EXPIRES_AT,
-        }),
+        Effect.succeed(
+          AuthPairingCredentialResult.make({
+            id: "pairing-link-1",
+            credential: "pairing-token",
+            ...(payload.label === undefined ? {} : { label: payload.label }),
+            expiresAt: SESSION_EXPIRES_AT,
+          }),
+        ),
     });
     const { createServerPairingCredential } = await import("./environments/primary");
 

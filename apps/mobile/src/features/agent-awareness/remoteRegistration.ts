@@ -8,7 +8,7 @@ import type { EnvironmentId } from "@t3tools/contracts";
 import {
   type RelayDeviceRegistrationRequest,
   type RelayAgentActivitySnapshotResponse,
-  type RelayLiveActivityRegistrationRequest,
+  RelayLiveActivityRegistrationRequest,
 } from "@t3tools/contracts/relay";
 import { findErrorTraceId } from "@t3tools/client-runtime/errors";
 import { ManagedRelay } from "@t3tools/client-runtime/relay";
@@ -972,10 +972,12 @@ function registerLiveActivityPushTokenValue(input: {
           cause,
         }),
     });
-    const registered = yield* registerLiveActivityWithRelay({
-      deviceId,
-      activityPushToken: input.activityPushToken,
-    });
+    const registered = yield* registerLiveActivityWithRelay(
+      RelayLiveActivityRegistrationRequest.make({
+        deviceId,
+        activityPushToken: input.activityPushToken,
+      }),
+    );
     if (registered) {
       registeredActivityPushTokens.set(input.activityPushToken, Date.now());
       logRegistrationDebug("live activity push token registered", {

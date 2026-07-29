@@ -13,9 +13,19 @@ import * as Order from "effect/Order";
 import * as Path from "effect/Path";
 import * as Ref from "effect/Ref";
 import {
-  GitActionProgressEvent,
+  GitActionFailedEvent,
+  GitActionFinishedEvent,
+  GitActionHookFinishedEvent,
+  GitActionHookOutputEvent,
+  GitActionHookStartedEvent,
+  GitActionPhaseStartedEvent,
+  type GitActionProgressEvent,
+  GitActionStartedEvent,
   GitActionProgressPhase,
   GitCommandError,
+  GitRunStackedActionToast,
+  GitRunStackedActionToastRunAction,
+  VcsStatusChangeRequest,
   GitPreparePullRequestThreadInput,
   GitPreparePullRequestThreadResult,
   GitPullRequestRefInput,
@@ -28,6 +38,7 @@ import {
   type VcsStatusRemoteResult,
   VcsStatusResult,
   ModelSelection,
+  type SourceControlWritingStyleSettings,
 } from "@t3tools/contracts";
 import {
   detectSourceControlProviderFromGitRemoteUrl,
@@ -44,12 +55,19 @@ import {
 
 import { GitManagerError, GitPullRequestMaterializationError } from "@t3tools/contracts";
 import * as TextGeneration from "../textGeneration/TextGeneration.ts";
+import {
+  conventionalCommitsTextGenerationPolicy,
+  customTextGenerationPolicy,
+  repositoryConventionsTextGenerationPolicy,
+} from "../textGeneration/TextGenerationPresets.ts";
 import * as ProjectSetupScriptRunner from "../project/ProjectSetupScriptRunner.ts";
+import * as ProviderRegistry from "../provider/Services/ProviderRegistry.ts";
 import { extractBranchNameFromRemoteRef } from "./remoteRefs.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import type { GitManagerServiceError } from "@t3tools/contracts";
 import * as GitVcsDriver from "../vcs/GitVcsDriver.ts";
 import * as SourceControlProviderRegistry from "../sourceControl/SourceControlProviderRegistry.ts";
+import { detectPrTemplate } from "../sourceControl/PrTemplateDetection.ts";
 import type { ChangeRequest } from "@t3tools/contracts";
 
 export interface GitActionProgressReporter {
@@ -59,6 +77,11 @@ export interface GitActionProgressReporter {
 export interface GitRunStackedActionOptions {
   readonly actionId?: string;
   readonly progressReporter?: GitActionProgressReporter;
+}
+
+interface SourceControlTextGenerationSettings {
+  readonly modelSelection: ModelSelection;
+  readonly style: SourceControlWritingStyleSettings;
 }
 
 export class GitManager extends Context.Service<
@@ -102,6 +125,35 @@ const PR_LOOKUP_CACHE_CAPACITY = 2_048;
 type StripProgressContext<T> = T extends any ? Omit<T, "actionId" | "cwd" | "action"> : never;
 type GitActionProgressPayload = StripProgressContext<GitActionProgressEvent>;
 type GitActionProgressEmitter = (event: GitActionProgressPayload) => Effect.Effect<void, never>;
+
+/**
+ * The progress payloads are assembled field-by-field, so rebuild the concrete
+ * event class before publishing — the RPC stream encodes these.
+ */
+function makeGitActionProgressEvent(
+  fields: GitActionProgressPayload & {
+    readonly actionId: string;
+    readonly cwd: string;
+    readonly action: GitStackedAction;
+  },
+): GitActionProgressEvent {
+  switch (fields.kind) {
+    case "action_started":
+      return GitActionStartedEvent.make(fields);
+    case "phase_started":
+      return GitActionPhaseStartedEvent.make(fields);
+    case "hook_started":
+      return GitActionHookStartedEvent.make(fields);
+    case "hook_output":
+      return GitActionHookOutputEvent.make(fields);
+    case "hook_finished":
+      return GitActionHookFinishedEvent.make(fields);
+    case "action_finished":
+      return GitActionFinishedEvent.make(fields);
+    case "action_failed":
+      return GitActionFailedEvent.make(fields);
+  }
+}
 
 function isNotGitRepositoryError(error: GitCommandError): boolean {
   return error.message.toLowerCase().includes("not a git repository");
@@ -497,22 +549,15 @@ function appendUnique(values: string[], next: string | null | undefined): void {
   values.push(trimmed);
 }
 
-function toStatusPr(pr: PullRequestInfo): {
-  number: number;
-  title: string;
-  url: string;
-  baseRef: string;
-  headRef: string;
-  state: "open" | "closed" | "merged";
-} {
-  return {
+function toStatusPr(pr: PullRequestInfo): VcsStatusChangeRequest {
+  return VcsStatusChangeRequest.make({
     number: pr.number,
     title: pr.title,
     url: pr.url,
     baseRef: pr.baseRefName,
     headRef: pr.headRefName,
     state: pr.state,
-  };
+  });
 }
 
 function normalizePullRequestReference(reference: string): string {
@@ -565,11 +610,58 @@ export const make = Effect.gen(function* () {
   const gitCore = yield* GitVcsDriver.GitVcsDriver;
   const sourceControlProviders = yield* SourceControlProviderRegistry.SourceControlProviderRegistry;
   const textGeneration = yield* TextGeneration.TextGeneration;
+  const providerRegistry = yield* ProviderRegistry.ProviderRegistry;
   const projectSetupScriptRunner = yield* ProjectSetupScriptRunner.ProjectSetupScriptRunner;
   const crypto = yield* Crypto.Crypto;
 
   const sourceControlProvider = (cwd: string) => sourceControlProviders.resolve({ cwd });
   const serverSettingsService = yield* ServerSettings.ServerSettingsService;
+
+  const readRecentCommitSubjects = (cwd: string) =>
+    gitCore
+      .execute({
+        operation: "GitManager.readRecentCommitSubjects",
+        cwd,
+        args: ["log", "-n", "20", "--no-merges", "--pretty=format:%s"],
+      })
+      .pipe(
+        Effect.map((result) =>
+          result.stdout
+            .split("\n")
+            .map((line) => line.trim())
+            .filter((line) => line.length > 0),
+        ),
+        Effect.orElseSucceed(() => []),
+      );
+
+  const resolveStylePolicy = (cwd: string, style: SourceControlWritingStyleSettings) =>
+    Effect.gen(function* () {
+      switch (style.mode) {
+        case "conventional_commits":
+          return conventionalCommitsTextGenerationPolicy;
+        case "custom":
+          return customTextGenerationPolicy(
+            style.customInstructions
+              ? {
+                  commitInstructions: style.customInstructions,
+                  changeRequestInstructions: style.customInstructions,
+                }
+              : {},
+          );
+        case "repo_conventions": {
+          const subjects = yield* readRecentCommitSubjects(cwd);
+          if (subjects.length === 0) {
+            return repositoryConventionsTextGenerationPolicy;
+          }
+          const examples = ["Recent commit subjects from this repository:", ...subjects].join("\n");
+          return {
+            ...repositoryConventionsTextGenerationPolicy,
+            commitInstructions: `${repositoryConventionsTextGenerationPolicy.commitInstructions}\n\n${examples}`,
+            changeRequestInstructions: `${repositoryConventionsTextGenerationPolicy.changeRequestInstructions}\n\n${examples}`,
+          };
+        }
+      }
+    });
   const randomUUIDv4 = (cwd: string) =>
     crypto.randomUUIDv4.pipe(
       Effect.mapError(
@@ -595,12 +687,14 @@ export const make = Effect.gen(function* () {
         const reporter = options?.progressReporter;
         const emit = (event: GitActionProgressPayload) =>
           reporter
-            ? reporter.publish({
-                actionId,
-                cwd: input.cwd,
-                action: input.action,
-                ...event,
-              } as GitActionProgressEvent)
+            ? reporter.publish(
+                makeGitActionProgressEvent({
+                  actionId,
+                  cwd: input.cwd,
+                  action: input.action,
+                  ...event,
+                }),
+              )
             : Effect.void;
 
         return {
@@ -1239,7 +1333,7 @@ export const make = Effect.gen(function* () {
         ? {
             kind: "run_action" as const,
             label: "Push",
-            action: { kind: "push" as const },
+            action: GitRunStackedActionToastRunAction.make({ kind: "push" }),
           }
         : (result.action === "push" ||
               result.action === "create_pr" ||
@@ -1260,16 +1354,16 @@ export const make = Effect.gen(function* () {
             ? {
                 kind: "run_action" as const,
                 label: `Create ${terms.shortLabel}`,
-                action: { kind: "create_pr" as const },
+                action: GitRunStackedActionToastRunAction.make({ kind: "create_pr" }),
               }
             : {
                 kind: "none" as const,
               };
 
-    return {
+    return GitRunStackedActionToast.make({
       ...summary,
       cta,
-    };
+    });
   });
 
   const resolveBaseBranch = Effect.fn("resolveBaseBranch")(function* (
@@ -1330,7 +1424,7 @@ export const make = Effect.gen(function* () {
       /** When true, also produce a semantic feature branch name. */
       includeBranch?: boolean;
       filePaths?: readonly string[];
-      modelSelection: ModelSelection;
+      settings: SourceControlTextGenerationSettings;
     }) {
       const context = yield* gitCore.prepareCommitContext(input.cwd, input.filePaths);
       if (!context) {
@@ -1349,6 +1443,8 @@ export const make = Effect.gen(function* () {
         };
       }
 
+      const policy = yield* resolveStylePolicy(input.cwd, input.settings.style);
+
       const generated = yield* textGeneration
         .generateCommitMessage({
           cwd: input.cwd,
@@ -1356,7 +1452,8 @@ export const make = Effect.gen(function* () {
           stagedSummary: limitContext(context.stagedSummary, 8_000),
           stagedPatch: limitContext(context.stagedPatch, 50_000),
           ...(input.includeBranch ? { includeBranch: true } : {}),
-          modelSelection: input.modelSelection,
+          ...(policy ? { policy } : {}),
+          modelSelection: input.settings.modelSelection,
         })
         .pipe(Effect.map((result) => sanitizeCommitMessage(result)));
 
@@ -1370,7 +1467,7 @@ export const make = Effect.gen(function* () {
   );
 
   const runCommitStep = Effect.fn("runCommitStep")(function* (
-    modelSelection: ModelSelection,
+    settings: SourceControlTextGenerationSettings,
     cwd: string,
     action: "commit" | "commit_push" | "commit_push_pr",
     branch: string | null,
@@ -1382,12 +1479,14 @@ export const make = Effect.gen(function* () {
   ) {
     const emit = (event: GitActionProgressPayload) =>
       progressReporter && actionId
-        ? progressReporter.publish({
-            actionId,
-            cwd,
-            action,
-            ...event,
-          } as GitActionProgressEvent)
+        ? progressReporter.publish(
+            makeGitActionProgressEvent({
+              actionId,
+              cwd,
+              action,
+              ...event,
+            }),
+          )
         : Effect.void;
 
     let suggestion: CommitAndBranchSuggestion | null | undefined = preResolvedSuggestion;
@@ -1405,7 +1504,7 @@ export const make = Effect.gen(function* () {
         branch,
         ...(commitMessage ? { commitMessage } : {}),
         ...(filePaths ? { filePaths } : {}),
-        modelSelection,
+        settings,
       });
     }
     if (!suggestion) {
@@ -1483,7 +1582,7 @@ export const make = Effect.gen(function* () {
   });
 
   const runPrStep = Effect.fn("runPrStep")(function* (
-    modelSelection: ModelSelection,
+    settings: SourceControlTextGenerationSettings,
     cwd: string,
     fallbackBranch: string | null,
     emit: GitActionProgressEmitter,
@@ -1532,6 +1631,11 @@ export const make = Effect.gen(function* () {
     });
     const baseRangeRef = yield* resolveBaseRangeRef(cwd, baseBranch);
     const rangeContext = yield* gitCore.readRangeContext(cwd, baseRangeRef);
+    const policy = yield* resolveStylePolicy(cwd, settings.style);
+    const changeRequestTemplate =
+      settings.style.followChangeRequestTemplates && provider.kind === "github"
+        ? Option.getOrUndefined(yield* detectPrTemplate(cwd, baseRangeRef, gitCore.execute))
+        : undefined;
 
     const generated = yield* textGeneration.generatePrContent({
       cwd,
@@ -1540,7 +1644,9 @@ export const make = Effect.gen(function* () {
       commitSummary: limitContext(rangeContext.commitSummary, 20_000),
       diffSummary: limitContext(rangeContext.diffSummary, 20_000),
       diffPatch: limitContext(rangeContext.diffPatch, 60_000),
-      modelSelection,
+      ...(changeRequestTemplate ? { changeRequestTemplate } : {}),
+      ...(policy ? { policy } : {}),
+      modelSelection: settings.modelSelection,
     });
 
     const bodyFile = path.join(
@@ -1820,7 +1926,7 @@ export const make = Effect.gen(function* () {
   });
 
   const runFeatureBranchStep = Effect.fn("runFeatureBranchStep")(function* (
-    modelSelection: ModelSelection,
+    settings: SourceControlTextGenerationSettings,
     cwd: string,
     branch: string | null,
     commitMessage?: string,
@@ -1832,7 +1938,7 @@ export const make = Effect.gen(function* () {
       ...(commitMessage ? { commitMessage } : {}),
       ...(filePaths ? { filePaths } : {}),
       includeBranch: true,
-      modelSelection,
+      settings,
     });
     if (!suggestion) {
       return yield* new GitManagerError({
@@ -1921,8 +2027,23 @@ export const make = Effect.gen(function* () {
         let commitMessageForStep = input.commitMessage;
         let preResolvedCommitSuggestion: CommitAndBranchSuggestion | undefined = undefined;
 
-        const modelSelection = yield* serverSettingsService.getSettings.pipe(
-          Effect.map((settings) => settings.textGenerationModelSelection),
+        const textGenerationSettings = yield* serverSettingsService.getSettings.pipe(
+          Effect.flatMap((settings) =>
+            settings.sourceControlWriterModelSelection === null
+              ? Effect.succeed({
+                  modelSelection: settings.textGenerationModelSelection,
+                  style: settings.sourceControlWritingStyle,
+                })
+              : providerRegistry.getProviders.pipe(
+                  Effect.map((providers) => ({
+                    modelSelection: ServerSettings.resolveSourceControlWriterModelSelection(
+                      settings,
+                      providers,
+                    ),
+                    style: settings.sourceControlWritingStyle,
+                  })),
+                ),
+          ),
           Effect.mapError(
             (cause) =>
               new GitManagerError({
@@ -1942,7 +2063,7 @@ export const make = Effect.gen(function* () {
             label: "Preparing feature branch...",
           });
           const result = yield* runFeatureBranchStep(
-            modelSelection,
+            textGenerationSettings,
             input.cwd,
             initialStatus.branch,
             input.commitMessage,
@@ -1968,7 +2089,7 @@ export const make = Effect.gen(function* () {
           ? yield* Ref.set(currentPhase, Option.some("commit")).pipe(
               Effect.flatMap(() =>
                 runCommitStep(
-                  modelSelection,
+                  textGenerationSettings,
                   input.cwd,
                   commitAction,
                   currentBranch,
@@ -2005,7 +2126,7 @@ export const make = Effect.gen(function* () {
               .pipe(
                 Effect.tap(() => Ref.set(currentPhase, Option.some("pr"))),
                 Effect.flatMap(() =>
-                  runPrStep(modelSelection, input.cwd, currentBranch, progress.emit),
+                  runPrStep(textGenerationSettings, input.cwd, currentBranch, progress.emit),
                 ),
               )
           : { status: "skipped_not_requested" as const };

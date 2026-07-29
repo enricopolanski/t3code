@@ -2,7 +2,12 @@ import { assert, describe, expect, it, vi } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
-import { VcsRepositoryDetectionError } from "@t3tools/contracts";
+import {
+  VcsListRefsResult,
+  VcsRepositoryDetectionError,
+  VcsStatusLocalResult,
+  VcsStatusResult,
+} from "@t3tools/contracts";
 
 import * as GitManager from "./GitManager.ts";
 import * as GitWorkflowService from "./GitWorkflowService.ts";
@@ -29,18 +34,21 @@ describe("GitWorkflowService", () => {
       const workflow = yield* GitWorkflowService.GitWorkflowService;
       const status = yield* workflow.localStatus({ cwd: "/not-a-repo" });
 
-      assert.deepStrictEqual(status, {
-        isRepo: false,
-        hasPrimaryRemote: false,
-        isDefaultRef: false,
-        refName: null,
-        hasWorkingTreeChanges: false,
-        workingTree: {
-          files: [],
-          insertions: 0,
-          deletions: 0,
-        },
-      });
+      assert.deepStrictEqual(
+        status,
+        VcsStatusLocalResult.make({
+          isRepo: false,
+          hasPrimaryRemote: false,
+          isDefaultRef: false,
+          refName: null,
+          hasWorkingTreeChanges: false,
+          workingTree: {
+            files: [],
+            insertions: 0,
+            deletions: 0,
+          },
+        }),
+      );
     }).pipe(
       Effect.provide(
         makeLayer({
@@ -55,23 +63,26 @@ describe("GitWorkflowService", () => {
       const workflow = yield* GitWorkflowService.GitWorkflowService;
       const status = yield* workflow.status({ cwd: "/not-a-repo" });
 
-      assert.deepStrictEqual(status, {
-        isRepo: false,
-        hasPrimaryRemote: false,
-        isDefaultRef: false,
-        refName: null,
-        hasWorkingTreeChanges: false,
-        workingTree: {
-          files: [],
-          insertions: 0,
-          deletions: 0,
-        },
-        hasUpstream: false,
-        aheadCount: 0,
-        behindCount: 0,
-        aheadOfDefaultCount: 0,
-        pr: null,
-      });
+      assert.deepStrictEqual(
+        status,
+        VcsStatusResult.make({
+          isRepo: false,
+          hasPrimaryRemote: false,
+          isDefaultRef: false,
+          refName: null,
+          hasWorkingTreeChanges: false,
+          workingTree: {
+            files: [],
+            insertions: 0,
+            deletions: 0,
+          },
+          hasUpstream: false,
+          aheadCount: 0,
+          behindCount: 0,
+          aheadOfDefaultCount: 0,
+          pr: null,
+        }),
+      );
     }).pipe(
       Effect.provide(
         makeLayer({
@@ -119,13 +130,16 @@ describe("GitWorkflowService", () => {
       const workflow = yield* GitWorkflowService.GitWorkflowService;
       const refs = yield* workflow.listRefs({ cwd: "/not-a-repo" });
 
-      assert.deepStrictEqual(refs, {
-        refs: [],
-        isRepo: false,
-        hasPrimaryRemote: false,
-        nextCursor: null,
-        totalCount: 0,
-      });
+      assert.deepStrictEqual(
+        refs,
+        VcsListRefsResult.make({
+          refs: [],
+          isRepo: false,
+          hasPrimaryRemote: false,
+          nextCursor: null,
+          totalCount: 0,
+        }),
+      );
     }).pipe(
       Effect.provide(
         makeLayer({

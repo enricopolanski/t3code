@@ -43,6 +43,8 @@ import {
   RelayLinkProofRequest,
 } from "./relay.ts";
 
+// HttpApi header and path-param schemas stay `Schema.Struct`s: the client
+// cannot encode a `Schema.Class` instance into a header or a URL segment.
 const OptionalBearerHeaders = Schema.Struct({
   authorization: Schema.optionalKey(Schema.String),
   dpop: Schema.optionalKey(Schema.String),
@@ -331,13 +333,16 @@ const EnvironmentHttpCloudErrors = [
   EnvironmentScopeRequiredError,
 ] as const;
 
-export const EnvironmentCloudRelayConfigResult = Schema.Struct({
+export class EnvironmentCloudRelayConfigResult extends Schema.Class<EnvironmentCloudRelayConfigResult>(
+  "EnvironmentCloudRelayConfigResult",
+)({
   ok: Schema.Boolean,
   endpointRuntimeStatus: Schema.Unknown,
-});
-export type EnvironmentCloudRelayConfigResult = typeof EnvironmentCloudRelayConfigResult.Type;
+}) {}
 
-export const EnvironmentCloudLinkStateResult = Schema.Struct({
+export class EnvironmentCloudLinkStateResult extends Schema.Class<EnvironmentCloudLinkStateResult>(
+  "EnvironmentCloudLinkStateResult",
+)({
   linked: Schema.Boolean,
   cloudUserId: Schema.NullOr(Schema.String),
   relayUrl: Schema.NullOr(Schema.String),
@@ -348,28 +353,31 @@ export const EnvironmentCloudLinkStateResult = Schema.Struct({
   // Optional so newer clients tolerate older environment servers.
   managedTunnelActive: Schema.optional(Schema.Boolean),
   publishAgentActivity: Schema.Boolean,
-});
-export type EnvironmentCloudLinkStateResult = typeof EnvironmentCloudLinkStateResult.Type;
+}) {}
 
-export const EnvironmentCloudPreferencesRequest = Schema.Struct({
+export class EnvironmentCloudPreferencesRequest extends Schema.Class<EnvironmentCloudPreferencesRequest>(
+  "EnvironmentCloudPreferencesRequest",
+)({
   publishAgentActivity: Schema.Boolean,
-});
-export type EnvironmentCloudPreferencesRequest = typeof EnvironmentCloudPreferencesRequest.Type;
+}) {}
 
-export const AuthPairingLinkRevokeResult = Schema.Struct({
+export class AuthPairingLinkRevokeResult extends Schema.Class<AuthPairingLinkRevokeResult>(
+  "AuthPairingLinkRevokeResult",
+)({
   revoked: Schema.Boolean,
-});
-export type AuthPairingLinkRevokeResult = typeof AuthPairingLinkRevokeResult.Type;
+}) {}
 
-export const AuthClientSessionRevokeResult = Schema.Struct({
+export class AuthClientSessionRevokeResult extends Schema.Class<AuthClientSessionRevokeResult>(
+  "AuthClientSessionRevokeResult",
+)({
   revoked: Schema.Boolean,
-});
-export type AuthClientSessionRevokeResult = typeof AuthClientSessionRevokeResult.Type;
+}) {}
 
-export const AuthOtherClientSessionsRevokeResult = Schema.Struct({
+export class AuthOtherClientSessionsRevokeResult extends Schema.Class<AuthOtherClientSessionsRevokeResult>(
+  "AuthOtherClientSessionsRevokeResult",
+)({
   revokedCount: Schema.Number,
-});
-export type AuthOtherClientSessionsRevokeResult = typeof AuthOtherClientSessionsRevokeResult.Type;
+}) {}
 
 export class EnvironmentMetadataHttpApi extends HttpApiGroup.make("metadata").add(
   HttpApiEndpoint.get("descriptor", "/.well-known/t3/environment", {

@@ -24,12 +24,10 @@ import * as Stream from "effect/Stream";
 
 import * as CheckpointStore from "../src/checkpointing/CheckpointStore.ts";
 import { TextGeneration, type TextGenerationShape } from "../src/textGeneration/TextGeneration.ts";
-import { OrchestrationCommandReceiptRepositoryLive } from "../src/persistence/Layers/OrchestrationCommandReceipts.ts";
-import { OrchestrationEventStoreLive } from "../src/persistence/Layers/OrchestrationEventStore.ts";
-import { ProjectionCheckpointRepositoryLive } from "../src/persistence/Layers/ProjectionCheckpoints.ts";
-import { ProjectionPendingApprovalRepositoryLive } from "../src/persistence/Layers/ProjectionPendingApprovals.ts";
 import { ProviderSessionRuntimeRepositoryLive } from "../src/persistence/Layers/ProviderSessionRuntime.ts";
 import { makeSqlitePersistenceLive } from "../src/persistence/Layers/Sqlite.ts";
+import { OrchestrationCommandReceiptRepository } from "../src/persistence/Services/OrchestrationCommandReceipts.ts";
+import { OrchestrationEventStore } from "../src/persistence/Services/OrchestrationEventStore.ts";
 import { ProjectionCheckpointRepository } from "../src/persistence/Services/ProjectionCheckpoints.ts";
 import { ProjectionPendingApprovalRepository } from "../src/persistence/Services/ProjectionPendingApprovals.ts";
 import { makeAdapterRegistryMock } from "../src/provider/testUtils/providerAdapterRegistryMock.ts";
@@ -259,8 +257,8 @@ export const makeOrchestrationIntegrationHarness = (
     const persistenceLayer = makeSqlitePersistenceLive(dbPath);
     const orchestrationLayer = OrchestrationEngineLive.pipe(
       Layer.provide(OrchestrationProjectionPipelineLive),
-      Layer.provide(OrchestrationEventStoreLive),
-      Layer.provide(OrchestrationCommandReceiptRepositoryLive),
+      Layer.provide(OrchestrationEventStore.layer),
+      Layer.provide(OrchestrationCommandReceiptRepository.layer),
     );
     const providerSessionDirectoryLayer = ProviderSessionDirectoryLive.pipe(
       Layer.provide(ProviderSessionRuntimeRepositoryLive),
@@ -300,8 +298,8 @@ export const makeOrchestrationIntegrationHarness = (
     const runtimeServicesLayer = Layer.mergeAll(
       projectionSnapshotQueryLayer,
       orchestrationLayer.pipe(Layer.provide(projectionSnapshotQueryLayer)),
-      ProjectionCheckpointRepositoryLive,
-      ProjectionPendingApprovalRepositoryLive,
+      ProjectionCheckpointRepository.layer,
+      ProjectionPendingApprovalRepository.layer,
       checkpointStoreLayer,
       providerLayer,
       RuntimeReceiptBusTest,
@@ -459,20 +457,18 @@ export const makeOrchestrationIntegrationHarness = (
       timeoutMs,
     ) =>
       waitFor(
-        pendingApprovalRepository
-          .getByRequestId({ requestId: ApprovalRequestId.make(requestId) })
-          .pipe(
-            Effect.map((row) =>
-              Option.match(row, {
-                onNone: () => null,
-                onSome: (value) => ({
-                  status: value.status,
-                  decision: value.decision,
-                  resolvedAt: value.resolvedAt,
-                }),
+        pendingApprovalRepository.getByRequestId(ApprovalRequestId.make(requestId)).pipe(
+          Effect.map((row) =>
+            Option.match(row, {
+              onNone: () => null,
+              onSome: (value) => ({
+                status: value.status,
+                decision: value.decision,
+                resolvedAt: value.resolvedAt,
               }),
-            ),
+            }),
           ),
+        ),
         (
           row,
         ): row is {

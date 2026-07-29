@@ -5,6 +5,7 @@ import {
   type ServerProviderModel,
   type ServerProviderSlashCommand,
 } from "@t3tools/contracts";
+import { ServerProviderAuth } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -808,7 +809,7 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
         installed: false,
         version: null,
         status: "warning",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: "Claude is disabled in T3 Code settings.",
       },
     });
@@ -834,7 +835,7 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
         installed: !isCommandMissingCause(error),
         version: null,
         status: "error",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: isCommandMissingCause(error)
           ? "Claude Agent CLI (`claude`) is not installed or not on PATH."
           : "Failed to execute Claude Agent CLI health check.",
@@ -852,7 +853,7 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
         installed: true,
         version: null,
         status: "error",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message:
           "Claude Agent CLI is installed but failed to run. Timed out while running command.",
       },
@@ -876,7 +877,7 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
         installed: true,
         version: parsedVersion,
         status: "error",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: "Claude Agent CLI is installed but failed to run.",
       },
     });
@@ -916,7 +917,7 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
         installed: true,
         version: parsedVersion,
         status: "warning",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: "Could not verify Claude authentication status from initialization result.",
       },
     });
@@ -971,7 +972,7 @@ export const makePendingClaudeProvider = (
           installed: false,
           version: null,
           status: "warning",
-          auth: { status: "unknown" },
+          auth: ServerProviderAuth.make({ status: "unknown" }),
           message: "Claude is disabled in T3 Code settings.",
         },
       });
@@ -986,7 +987,7 @@ export const makePendingClaudeProvider = (
         installed: false,
         version: null,
         status: "warning",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: "Claude provider status has not been checked in this session yet.",
       },
     });

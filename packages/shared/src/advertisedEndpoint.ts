@@ -1,5 +1,5 @@
+import { AdvertisedEndpoint, AdvertisedEndpointCompatibility } from "@t3tools/contracts";
 import type {
-  AdvertisedEndpoint,
   AdvertisedEndpointHostedHttpsCompatibility,
   AdvertisedEndpointProvider,
   AdvertisedEndpointReachability,
@@ -58,21 +58,21 @@ export function classifyHostedHttpsCompatibility(
 
 export function createAdvertisedEndpoint(input: CreateAdvertisedEndpointInput): AdvertisedEndpoint {
   const httpBaseUrl = normalizeHttpBaseUrl(input.httpBaseUrl);
-  return {
+  return AdvertisedEndpoint.make({
     id: input.id,
     label: input.label,
     provider: input.provider,
     httpBaseUrl,
     wsBaseUrl: deriveWsBaseUrl(httpBaseUrl),
     reachability: input.reachability,
-    compatibility: {
+    compatibility: AdvertisedEndpointCompatibility.make({
       hostedHttpsApp:
         input.hostedHttpsCompatibility ?? classifyHostedHttpsCompatibility(httpBaseUrl),
       desktopApp: input.desktopCompatibility ?? "compatible",
-    },
+    }),
     source: input.source,
     status: input.status ?? "available",
     ...(input.isDefault === undefined ? {} : { isDefault: input.isDefault }),
     ...(input.description === undefined ? {} : { description: input.description }),
-  };
+  });
 }

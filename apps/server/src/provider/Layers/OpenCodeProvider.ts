@@ -3,6 +3,7 @@ import {
   type OpenCodeSettings,
   type ServerProviderModel,
 } from "@t3tools/contracts";
+import { ServerProviderAuth } from "@t3tools/contracts";
 import * as Cause from "effect/Cause";
 import * as Data from "effect/Data";
 import * as DateTime from "effect/DateTime";
@@ -271,7 +272,7 @@ export const makePendingOpenCodeProvider = (
           installed: false,
           version: null,
           status: "warning",
-          auth: { status: "unknown" },
+          auth: ServerProviderAuth.make({ status: "unknown" }),
           message:
             openCodeSettings.serverUrl.trim().length > 0
               ? "OpenCode is disabled in T3 Code settings. A server URL is configured."
@@ -289,7 +290,7 @@ export const makePendingOpenCodeProvider = (
         installed: false,
         version: null,
         status: "warning",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: "OpenCode provider status has not been checked in this session yet.",
       },
     });
@@ -321,7 +322,7 @@ export const checkOpenCodeProviderStatus = Effect.fn("checkOpenCodeProviderStatu
         installed: failure.installed,
         version,
         status: "error",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: failure.message,
       },
     });
@@ -337,7 +338,7 @@ export const checkOpenCodeProviderStatus = Effect.fn("checkOpenCodeProviderStatu
         installed: false,
         version: null,
         status: "warning",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: isExternalServer
           ? "OpenCode is disabled in T3 Code settings. A server URL is configured."
           : "OpenCode is disabled in T3 Code settings.",
@@ -383,7 +384,7 @@ export const checkOpenCodeProviderStatus = Effect.fn("checkOpenCodeProviderStatu
           installed: true,
           version,
           status: "error",
-          auth: { status: "unknown" },
+          auth: ServerProviderAuth.make({ status: "unknown" }),
           message: `OpenCode v${version} is too old. Upgrade to v${MINIMUM_OPENCODE_VERSION} or newer.`,
         },
       });
@@ -439,10 +440,10 @@ export const checkOpenCodeProviderStatus = Effect.fn("checkOpenCodeProviderStatu
       installed: true,
       version,
       status: connectedCount > 0 ? "ready" : "warning",
-      auth: {
+      auth: ServerProviderAuth.make({
         status: connectedCount > 0 ? "authenticated" : "unknown",
         type: "opencode",
-      },
+      }),
       message:
         connectedCount > 0
           ? `${connectedCount} upstream provider${connectedCount === 1 ? "" : "s"} connected through ${isExternalServer ? "the configured OpenCode server" : "OpenCode"}.`

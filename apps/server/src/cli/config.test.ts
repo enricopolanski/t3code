@@ -7,7 +7,6 @@ import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Path from "effect/Path";
-import * as Schema from "effect/Schema";
 
 import {
   DesktopBackendBootstrap,
@@ -21,21 +20,22 @@ import { resolveServerConfig } from "./config.ts";
 const deriveExplicitServerPaths = (baseDir: string, devUrl: URL | undefined) =>
   deriveServerPaths(baseDir, devUrl, { baseDirIsExplicit: true });
 
-const encodeDesktopBootstrap = Schema.encodeEffect(Schema.fromJsonString(DesktopBackendBootstrap));
+const encodeDesktopBootstrap = DesktopBackendBootstrap.encodeJson;
 
 const makeDesktopBootstrap = (
   overrides: Partial<DesktopBackendBootstrapValue> = {},
-): DesktopBackendBootstrapValue => ({
-  mode: "desktop",
-  noBrowser: true,
-  port: 4888,
-  t3Home: "/tmp/t3-bootstrap-home",
-  host: "127.0.0.1",
-  desktopBootstrapToken: "desktop-bootstrap-token",
-  tailscaleServeEnabled: false,
-  tailscaleServePort: 443,
-  ...overrides,
-});
+): DesktopBackendBootstrapValue =>
+  DesktopBackendBootstrap.make({
+    mode: "desktop",
+    noBrowser: true,
+    port: 4888,
+    t3Home: "/tmp/t3-bootstrap-home",
+    host: "127.0.0.1",
+    desktopBootstrapToken: "desktop-bootstrap-token",
+    tailscaleServeEnabled: false,
+    tailscaleServePort: 443,
+    ...overrides,
+  });
 
 it.layer(NodeServices.layer)("cli config resolution", (it) => {
   const defaultObservabilityConfig = {

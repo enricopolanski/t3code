@@ -179,59 +179,29 @@ export const DesktopThemeSchema = Schema.Literals(["light", "dark", "system"]);
 export const DesktopUpdateChannelSchema = Schema.Literals(["latest", "nightly"]);
 export const DesktopAppStageLabelSchema = Schema.Literals(["Alpha", "Dev", "Nightly"]);
 
-export interface DesktopAppBranding {
-  baseName: string;
-  stageLabel: DesktopAppStageLabel;
-  displayName: string;
-}
-
-export const DesktopAppBrandingSchema = Schema.Struct({
+export class DesktopAppBranding extends Schema.Class<DesktopAppBranding>("DesktopAppBranding")({
   baseName: Schema.String,
   stageLabel: DesktopAppStageLabelSchema,
   displayName: Schema.String,
-});
+}) {}
+export const DesktopAppBrandingSchema = DesktopAppBranding;
 
-export interface DesktopRuntimeInfo {
-  hostArch: DesktopRuntimeArch;
-  appArch: DesktopRuntimeArch;
-  runningUnderArm64Translation: boolean;
-}
-
-export const DesktopRuntimeInfoSchema = Schema.Struct({
+export class DesktopRuntimeInfo extends Schema.Class<DesktopRuntimeInfo>("DesktopRuntimeInfo")({
   hostArch: DesktopRuntimeArchSchema,
   appArch: DesktopRuntimeArchSchema,
   runningUnderArm64Translation: Schema.Boolean,
-});
+}) {}
+export const DesktopRuntimeInfoSchema = DesktopRuntimeInfo;
 
-export interface DesktopUpdateState {
-  enabled: boolean;
-  status: DesktopUpdateStatus;
-  channel: DesktopUpdateChannel;
-  currentVersion: string;
-  hostArch: DesktopRuntimeArch;
-  appArch: DesktopRuntimeArch;
-  runningUnderArm64Translation: boolean;
-  availableVersion: string | null;
-  downloadedVersion: string | null;
-  releaseNotes: ReadonlyArray<DesktopUpdateReleaseNote>;
-  downloadPercent: number | null;
-  checkedAt: string | null;
-  message: string | null;
-  errorContext: "check" | "download" | "install" | null;
-  canRetry: boolean;
-}
-
-export interface DesktopUpdateReleaseNote {
-  version: string;
-  items: ReadonlyArray<string>;
-}
-
-export const DesktopUpdateReleaseNoteSchema = Schema.Struct({
+export class DesktopUpdateReleaseNote extends Schema.Class<DesktopUpdateReleaseNote>(
+  "DesktopUpdateReleaseNote",
+)({
   version: Schema.String,
   items: Schema.Array(Schema.String),
-});
+}) {}
+export const DesktopUpdateReleaseNoteSchema = DesktopUpdateReleaseNote;
 
-export const DesktopUpdateStateSchema = Schema.Struct({
+export class DesktopUpdateState extends Schema.Class<DesktopUpdateState>("DesktopUpdateState")({
   enabled: Schema.Boolean,
   status: DesktopUpdateStatusSchema,
   channel: DesktopUpdateChannelSchema,
@@ -247,29 +217,25 @@ export const DesktopUpdateStateSchema = Schema.Struct({
   message: Schema.NullOr(Schema.String),
   errorContext: Schema.NullOr(Schema.Literals(["check", "download", "install"])),
   canRetry: Schema.Boolean,
-});
+}) {}
+export const DesktopUpdateStateSchema = DesktopUpdateState;
 
-export interface DesktopUpdateActionResult {
-  accepted: boolean;
-  completed: boolean;
-  state: DesktopUpdateState;
-}
-
-export const DesktopUpdateActionResultSchema = Schema.Struct({
+export class DesktopUpdateActionResult extends Schema.Class<DesktopUpdateActionResult>(
+  "DesktopUpdateActionResult",
+)({
   accepted: Schema.Boolean,
   completed: Schema.Boolean,
   state: DesktopUpdateStateSchema,
-});
+}) {}
+export const DesktopUpdateActionResultSchema = DesktopUpdateActionResult;
 
-export interface DesktopUpdateCheckResult {
-  checked: boolean;
-  state: DesktopUpdateState;
-}
-
-export const DesktopUpdateCheckResultSchema = Schema.Struct({
+export class DesktopUpdateCheckResult extends Schema.Class<DesktopUpdateCheckResult>(
+  "DesktopUpdateCheckResult",
+)({
   checked: Schema.Boolean,
   state: DesktopUpdateStateSchema,
-});
+}) {}
+export const DesktopUpdateCheckResultSchema = DesktopUpdateCheckResult;
 
 // Stable id for the Windows-native primary backend. Desktop side wraps
 // this with a brand inside DesktopBackendManager; web side keeps it as
@@ -277,128 +243,131 @@ export const DesktopUpdateCheckResultSchema = Schema.Struct({
 // importing brand machinery from the desktop package.
 export const PRIMARY_LOCAL_ENVIRONMENT_ID = "primary";
 
-export interface DesktopEnvironmentBootstrap {
-  // Stable backend instance id (e.g. "primary" or "wsl:ubuntu"). The
-  // web env runtime keys local environments off this so projects
-  // routed to a specific backend reopen against the same one.
-  id: string;
-  label: string;
-  // Concrete WSL distro used by the current backend run. This stays separate
-  // from id because a default-tracking instance keeps the stable
-  // "wsl:default" IPC target while each run launches a specific distro.
-  runningDistro?: string | null;
-  httpBaseUrl: string | null;
-  wsBaseUrl: string | null;
-  bootstrapToken?: string;
-}
-
-export const DesktopEnvironmentBootstrapSchema = Schema.Struct({
+export class DesktopEnvironmentBootstrap extends Schema.Class<DesktopEnvironmentBootstrap>(
+  "DesktopEnvironmentBootstrap",
+)({
   id: Schema.String,
   label: Schema.String,
   runningDistro: Schema.optionalKey(Schema.NullOr(Schema.String)),
   httpBaseUrl: Schema.NullOr(Schema.String),
   wsBaseUrl: Schema.NullOr(Schema.String),
   bootstrapToken: Schema.optionalKey(Schema.String),
-});
+}) {}
+export const DesktopEnvironmentBootstrapSchema = DesktopEnvironmentBootstrap;
 
-export const DesktopSshEnvironmentTargetSchema = Schema.Struct({
+export class DesktopSshEnvironmentTarget extends Schema.Class<DesktopSshEnvironmentTarget>(
+  "DesktopSshEnvironmentTarget",
+)({
   alias: Schema.String,
   hostname: Schema.String,
   username: Schema.NullOr(Schema.String),
   port: Schema.NullOr(Schema.Number),
-});
-export type DesktopSshEnvironmentTarget = typeof DesktopSshEnvironmentTargetSchema.Type;
+}) {}
+export const DesktopSshEnvironmentTargetSchema = DesktopSshEnvironmentTarget;
 
 export type DesktopSshHostSource = "ssh-config" | "known-hosts";
 export const DesktopSshHostSourceSchema = Schema.Literals(["ssh-config", "known-hosts"]);
 
-export interface DesktopDiscoveredSshHost extends DesktopSshEnvironmentTarget {
-  source: DesktopSshHostSource;
-}
-
-export const DesktopDiscoveredSshHostSchema = Schema.Struct({
+export class DesktopDiscoveredSshHost extends Schema.Class<DesktopDiscoveredSshHost>(
+  "DesktopDiscoveredSshHost",
+)({
   alias: Schema.String,
   hostname: Schema.String,
   username: Schema.NullOr(Schema.String),
   port: Schema.NullOr(Schema.Number),
   source: DesktopSshHostSourceSchema,
-});
+}) {}
+export const DesktopDiscoveredSshHostSchema = DesktopDiscoveredSshHost;
 
-export interface DesktopSshEnvironmentBootstrap {
-  target: DesktopSshEnvironmentTarget;
-  httpBaseUrl: string;
-  wsBaseUrl: string;
-  pairingToken: string | null;
-  remotePort?: number;
-  remoteServerKind?: "external" | "managed";
-}
-
-export const DesktopSshEnvironmentBootstrapSchema = Schema.Struct({
+export class DesktopSshEnvironmentBootstrap extends Schema.Class<DesktopSshEnvironmentBootstrap>(
+  "DesktopSshEnvironmentBootstrap",
+)({
   target: DesktopSshEnvironmentTargetSchema,
   httpBaseUrl: Schema.String,
   wsBaseUrl: Schema.String,
   pairingToken: Schema.NullOr(Schema.String),
   remotePort: Schema.optionalKey(Schema.Number),
   remoteServerKind: Schema.optionalKey(Schema.Literals(["external", "managed"])),
-});
+}) {}
+export const DesktopSshEnvironmentBootstrapSchema = DesktopSshEnvironmentBootstrap;
 
-export interface DesktopSshPasswordPromptRequest {
-  requestId: string;
-  destination: string;
-  username: string | null;
-  prompt: string;
-  expiresAt: string;
-}
-
-export const DesktopSshPasswordPromptRequestSchema = Schema.Struct({
+export class DesktopSshPasswordPromptRequest extends Schema.Class<DesktopSshPasswordPromptRequest>(
+  "DesktopSshPasswordPromptRequest",
+)({
   requestId: Schema.String,
   destination: Schema.String,
   username: Schema.NullOr(Schema.String),
   prompt: Schema.String,
   expiresAt: Schema.String,
-});
+}) {}
+export const DesktopSshPasswordPromptRequestSchema = DesktopSshPasswordPromptRequest;
 
 export const DesktopSshPasswordPromptCancelledType = "ssh-password-prompt-cancelled" as const;
 
-export const DesktopSshPasswordPromptCancelledResultSchema = Schema.Struct({
+export class DesktopSshPasswordPromptCancelledResult extends Schema.Class<DesktopSshPasswordPromptCancelledResult>(
+  "DesktopSshPasswordPromptCancelledResult",
+)({
   type: Schema.Literal(DesktopSshPasswordPromptCancelledType),
   message: Schema.String,
-});
+}) {}
+export const DesktopSshPasswordPromptCancelledResultSchema =
+  DesktopSshPasswordPromptCancelledResult;
 
-export const DesktopSshEnvironmentEnsureOptionsSchema = Schema.Struct({
+export class DesktopSshEnvironmentEnsureOptions extends Schema.Class<DesktopSshEnvironmentEnsureOptions>(
+  "DesktopSshEnvironmentEnsureOptions",
+)({
   issuePairingToken: Schema.optionalKey(Schema.Boolean),
-});
+}) {}
+export const DesktopSshEnvironmentEnsureOptionsSchema = DesktopSshEnvironmentEnsureOptions;
 
-export const DesktopSshEnvironmentEnsureInputSchema = Schema.Struct({
+export class DesktopSshEnvironmentEnsureInput extends Schema.Class<DesktopSshEnvironmentEnsureInput>(
+  "DesktopSshEnvironmentEnsureInput",
+)({
   target: DesktopSshEnvironmentTargetSchema,
   options: Schema.optionalKey(DesktopSshEnvironmentEnsureOptionsSchema),
-});
+}) {}
+export const DesktopSshEnvironmentEnsureInputSchema = DesktopSshEnvironmentEnsureInput;
 
 export const DesktopSshEnvironmentEnsureResultSchema = Schema.Union([
   DesktopSshEnvironmentBootstrapSchema,
   DesktopSshPasswordPromptCancelledResultSchema,
 ]);
 
-export const DesktopSshHttpBaseUrlInputSchema = Schema.Struct({
+export class DesktopSshHttpBaseUrlInput extends Schema.Class<DesktopSshHttpBaseUrlInput>(
+  "DesktopSshHttpBaseUrlInput",
+)({
   httpBaseUrl: Schema.String,
-});
+}) {}
+export const DesktopSshHttpBaseUrlInputSchema = DesktopSshHttpBaseUrlInput;
 
-export const DesktopSshBearerRequestInputSchema = Schema.Struct({
+export class DesktopSshBearerRequestInput extends Schema.Class<DesktopSshBearerRequestInput>(
+  "DesktopSshBearerRequestInput",
+)({
   httpBaseUrl: Schema.String,
   bearerToken: Schema.String,
-});
+}) {}
+export const DesktopSshBearerRequestInputSchema = DesktopSshBearerRequestInput;
 
-export const DesktopSshBearerBootstrapInputSchema = Schema.Struct({
+export class DesktopSshBearerBootstrapInput extends Schema.Class<DesktopSshBearerBootstrapInput>(
+  "DesktopSshBearerBootstrapInput",
+)({
   httpBaseUrl: Schema.String,
   credential: Schema.String,
-});
+}) {}
+export const DesktopSshBearerBootstrapInputSchema = DesktopSshBearerBootstrapInput;
 
-export const DesktopSshPasswordPromptResolutionInputSchema = Schema.Struct({
+export class DesktopSshPasswordPromptResolutionInput extends Schema.Class<DesktopSshPasswordPromptResolutionInput>(
+  "DesktopSshPasswordPromptResolutionInput",
+)({
   requestId: Schema.String,
   password: Schema.NullOr(Schema.String),
-});
+}) {}
+export const DesktopSshPasswordPromptResolutionInputSchema =
+  DesktopSshPasswordPromptResolutionInput;
 
-export const PersistedSavedEnvironmentRecordSchema = Schema.Struct({
+export class PersistedSavedEnvironmentRecord extends Schema.Class<PersistedSavedEnvironmentRecord>(
+  "PersistedSavedEnvironmentRecord",
+)({
   environmentId: EnvironmentId,
   label: Schema.String,
   wsBaseUrl: Schema.String,
@@ -411,8 +380,8 @@ export const PersistedSavedEnvironmentRecordSchema = Schema.Struct({
       relayUrl: Schema.String,
     }),
   ),
-});
-export type PersistedSavedEnvironmentRecord = typeof PersistedSavedEnvironmentRecordSchema.Type;
+}) {}
+export const PersistedSavedEnvironmentRecordSchema = PersistedSavedEnvironmentRecord;
 
 export type DesktopServerExposureMode = "local-only" | "network-accessible";
 
@@ -421,78 +390,39 @@ export const DesktopServerExposureModeSchema = Schema.Literals([
   "network-accessible",
 ]);
 
-export interface DesktopServerExposureState {
-  mode: DesktopServerExposureMode;
-  endpointUrl: string | null;
-  advertisedHost: string | null;
-  tailscaleServeEnabled: boolean;
-  tailscaleServePort: number;
-}
-
-export const DesktopServerExposureStateSchema = Schema.Struct({
+export class DesktopServerExposureState extends Schema.Class<DesktopServerExposureState>(
+  "DesktopServerExposureState",
+)({
   mode: DesktopServerExposureModeSchema,
   endpointUrl: Schema.NullOr(Schema.String),
   advertisedHost: Schema.NullOr(Schema.String),
   tailscaleServeEnabled: Schema.Boolean,
   tailscaleServePort: Schema.Number,
-});
+}) {}
+export const DesktopServerExposureStateSchema = DesktopServerExposureState;
 
-export interface PickFolderOptions {
-  initialPath?: string | null;
-  // When set, the desktop dialog opens against the named backend's
-  // filesystem instead of the primary's. Used by callers that already
-  // know which local environment they're targeting (e.g. opening a
-  // project that lives inside WSL). Omitting it keeps the historical
-  // behavior so non-WSL users never see a different picker.
-  targetEnvironmentId?: string;
-}
-
-export const PickFolderOptionsSchema = Schema.Struct({
+export class PickFolderOptions extends Schema.Class<PickFolderOptions>("PickFolderOptions")({
   initialPath: Schema.optionalKey(Schema.NullOr(Schema.String)),
   targetEnvironmentId: Schema.optionalKey(Schema.String),
-});
+}) {}
+export const PickFolderOptionsSchema = PickFolderOptions;
 
-export interface DesktopWslDistro {
-  name: string;
-  isDefault: boolean;
-  version: 1 | 2;
-}
-
-export const DesktopWslDistroSchema = Schema.Struct({
+export class DesktopWslDistro extends Schema.Class<DesktopWslDistro>("DesktopWslDistro")({
   name: Schema.String,
   isDefault: Schema.Boolean,
   version: Schema.Literals([1, 2]),
-});
+}) {}
+export const DesktopWslDistroSchema = DesktopWslDistro;
 
-export interface DesktopWslState {
-  // True when the user has opted the WSL backend in; the actual backend
-  // process is registered with the desktop pool independently of this
-  // flag and may take a moment to come up after the user enables it.
-  enabled: boolean;
-  // null means "track the current WSL default distro".
-  distro: string | null;
-  available: boolean;
-  // When true (and `enabled` is also true) the desktop runs only the
-  // WSL backend as the primary; the Windows-side Node backend is not
-  // started. Toggling this requires an app restart because the
-  // primary backend's spec is captured once at layer init.
-  wslOnly: boolean;
-  distros: readonly DesktopWslDistro[];
-  // Reason the dual-mode WSL backend last failed preflight (no node, wrong
-  // version, missing build tools), or null. Surfaced inline in Connections
-  // settings. Always null in wsl-only mode — that path shows a dialog and
-  // falls back to Windows instead.
-  preflightError: string | null;
-}
-
-export const DesktopWslStateSchema = Schema.Struct({
+export class DesktopWslState extends Schema.Class<DesktopWslState>("DesktopWslState")({
   enabled: Schema.Boolean,
   distro: Schema.NullOr(Schema.String),
   available: Schema.Boolean,
   wslOnly: Schema.Boolean,
   distros: Schema.Array(DesktopWslDistroSchema),
   preflightError: Schema.NullOr(Schema.String),
-});
+}) {}
+export const DesktopWslStateSchema = DesktopWslState;
 
 /**
  * Renderer-facing snapshot of a desktop preview tab. Mirrors the main-process
@@ -527,6 +457,8 @@ export interface DesktopPreviewTabState {
   canGoForward: boolean;
   /** Current zoom factor (1.0 = 100%). */
   zoomFactor: number;
+  /** Whether this tab is currently mirrored into a desktop picture-in-picture window. */
+  pictureInPicture: boolean;
   colorScheme: DesktopPreviewColorScheme;
   controller: "human" | "agent" | "none";
   updatedAt: string;
@@ -564,6 +496,7 @@ export const DesktopPreviewTabStateSchema: Schema.Codec<DesktopPreviewTabState> 
   canGoBack: Schema.Boolean,
   canGoForward: Schema.Boolean,
   zoomFactor: Schema.Number,
+  pictureInPicture: Schema.Boolean,
   colorScheme: DesktopPreviewColorSchemeSchema,
   controller: Schema.Literals(["human", "agent", "none"]),
   updatedAt: Schema.String,
@@ -905,72 +838,114 @@ export const PreviewAnnotationPayloadSchema: Schema.Codec<PreviewAnnotationPaylo
   },
 );
 
-export const DesktopPreviewTabInputSchema = Schema.Struct({
+export class DesktopPreviewTabInput extends Schema.Class<DesktopPreviewTabInput>(
+  "DesktopPreviewTabInput",
+)({
   tabId: DesktopPreviewTabIdSchema,
-});
+}) {}
+export const DesktopPreviewTabInputSchema = DesktopPreviewTabInput;
 
-export const DesktopPreviewRegisterWebviewInputSchema = Schema.Struct({
+export class DesktopPreviewRegisterWebviewInput extends Schema.Class<DesktopPreviewRegisterWebviewInput>(
+  "DesktopPreviewRegisterWebviewInput",
+)({
   tabId: DesktopPreviewTabIdSchema,
   webContentsId: Schema.Int.check(Schema.isGreaterThan(0)),
-});
+}) {}
+export const DesktopPreviewRegisterWebviewInputSchema = DesktopPreviewRegisterWebviewInput;
 
-export const DesktopPreviewNavigateInputSchema = Schema.Struct({
+export class DesktopPreviewNavigateInput extends Schema.Class<DesktopPreviewNavigateInput>(
+  "DesktopPreviewNavigateInput",
+)({
   tabId: DesktopPreviewTabIdSchema,
   url: Schema.String,
-});
+}) {}
+export const DesktopPreviewNavigateInputSchema = DesktopPreviewNavigateInput;
 
-export const DesktopPreviewConfigInputSchema = Schema.Struct({
+export class DesktopPreviewConfigInput extends Schema.Class<DesktopPreviewConfigInput>(
+  "DesktopPreviewConfigInput",
+)({
   environmentId: EnvironmentId,
-});
+}) {}
+export const DesktopPreviewConfigInputSchema = DesktopPreviewConfigInput;
 
-export const DesktopPreviewSetColorSchemeInputSchema = Schema.Struct({
+export class DesktopPreviewSetColorSchemeInput extends Schema.Class<DesktopPreviewSetColorSchemeInput>(
+  "DesktopPreviewSetColorSchemeInput",
+)({
   tabId: DesktopPreviewTabIdSchema,
   colorScheme: DesktopPreviewColorSchemeSchema,
-});
+}) {}
+export const DesktopPreviewSetColorSchemeInputSchema = DesktopPreviewSetColorSchemeInput;
 
-export const DesktopPreviewAnnotationThemeInputSchema = Schema.Struct({
+export class DesktopPreviewAnnotationThemeInput extends Schema.Class<DesktopPreviewAnnotationThemeInput>(
+  "DesktopPreviewAnnotationThemeInput",
+)({
   theme: DesktopPreviewAnnotationThemeSchema,
-});
+}) {}
+export const DesktopPreviewAnnotationThemeInputSchema = DesktopPreviewAnnotationThemeInput;
 
-export const DesktopPreviewArtifactInputSchema = Schema.Struct({
+export class DesktopPreviewArtifactInput extends Schema.Class<DesktopPreviewArtifactInput>(
+  "DesktopPreviewArtifactInput",
+)({
   path: Schema.String.check(Schema.isTrimmed()).check(Schema.isNonEmpty()),
-});
+}) {}
+export const DesktopPreviewArtifactInputSchema = DesktopPreviewArtifactInput;
 
-export const DesktopPreviewRecordingSaveInputSchema = Schema.Struct({
+export class DesktopPreviewRecordingSaveInput extends Schema.Class<DesktopPreviewRecordingSaveInput>(
+  "DesktopPreviewRecordingSaveInput",
+)({
   tabId: DesktopPreviewTabIdSchema,
   mimeType: Schema.String.check(Schema.isTrimmed()).check(Schema.isNonEmpty()),
   data: Schema.Uint8Array,
-});
+}) {}
+export const DesktopPreviewRecordingSaveInputSchema = DesktopPreviewRecordingSaveInput;
 
-export const DesktopPreviewAutomationClickInputSchema = Schema.Struct({
+export class DesktopPreviewAutomationClickInput extends Schema.Class<DesktopPreviewAutomationClickInput>(
+  "DesktopPreviewAutomationClickInput",
+)({
   tabId: DesktopPreviewTabIdSchema,
   input: PreviewAutomationClickInput,
-});
+}) {}
+export const DesktopPreviewAutomationClickInputSchema = DesktopPreviewAutomationClickInput;
 
-export const DesktopPreviewAutomationTypeInputSchema = Schema.Struct({
+export class DesktopPreviewAutomationTypeInput extends Schema.Class<DesktopPreviewAutomationTypeInput>(
+  "DesktopPreviewAutomationTypeInput",
+)({
   tabId: DesktopPreviewTabIdSchema,
   input: PreviewAutomationTypeInput,
-});
+}) {}
+export const DesktopPreviewAutomationTypeInputSchema = DesktopPreviewAutomationTypeInput;
 
-export const DesktopPreviewAutomationPressInputSchema = Schema.Struct({
+export class DesktopPreviewAutomationPressInput extends Schema.Class<DesktopPreviewAutomationPressInput>(
+  "DesktopPreviewAutomationPressInput",
+)({
   tabId: DesktopPreviewTabIdSchema,
   input: PreviewAutomationPressInput,
-});
+}) {}
+export const DesktopPreviewAutomationPressInputSchema = DesktopPreviewAutomationPressInput;
 
-export const DesktopPreviewAutomationScrollInputSchema = Schema.Struct({
+export class DesktopPreviewAutomationScrollInput extends Schema.Class<DesktopPreviewAutomationScrollInput>(
+  "DesktopPreviewAutomationScrollInput",
+)({
   tabId: DesktopPreviewTabIdSchema,
   input: PreviewAutomationScrollInput,
-});
+}) {}
+export const DesktopPreviewAutomationScrollInputSchema = DesktopPreviewAutomationScrollInput;
 
-export const DesktopPreviewAutomationEvaluateInputSchema = Schema.Struct({
+export class DesktopPreviewAutomationEvaluateInput extends Schema.Class<DesktopPreviewAutomationEvaluateInput>(
+  "DesktopPreviewAutomationEvaluateInput",
+)({
   tabId: DesktopPreviewTabIdSchema,
   input: PreviewAutomationEvaluateInput,
-});
+}) {}
+export const DesktopPreviewAutomationEvaluateInputSchema = DesktopPreviewAutomationEvaluateInput;
 
-export const DesktopPreviewAutomationWaitForInputSchema = Schema.Struct({
+export class DesktopPreviewAutomationWaitForInput extends Schema.Class<DesktopPreviewAutomationWaitForInput>(
+  "DesktopPreviewAutomationWaitForInput",
+)({
   tabId: DesktopPreviewTabIdSchema,
   input: PreviewAutomationWaitForInput,
-});
+}) {}
+export const DesktopPreviewAutomationWaitForInputSchema = DesktopPreviewAutomationWaitForInput;
 
 export interface DesktopBridge {
   getAppBranding: () => DesktopAppBranding | null;
@@ -1080,6 +1055,10 @@ export interface DesktopPreviewBridge {
   captureScreenshot: (tabId: string) => Promise<DesktopPreviewScreenshotArtifact>;
   revealArtifact: (path: string) => Promise<void>;
   copyArtifactToClipboard: (path: string) => Promise<void>;
+  pictureInPicture: {
+    open: (tabId: string) => Promise<void>;
+    close: (tabId: string) => Promise<void>;
+  };
   recording: {
     startScreencast: (tabId: string) => Promise<void>;
     stopScreencast: (tabId: string) => Promise<void>;

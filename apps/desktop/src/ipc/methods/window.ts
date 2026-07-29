@@ -5,7 +5,7 @@ import {
   DesktopThemeSchema,
   PickFolderOptionsSchema,
   PRIMARY_LOCAL_ENVIRONMENT_ID,
-  type DesktopEnvironmentBootstrap,
+  DesktopEnvironmentBootstrap,
 } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
@@ -100,27 +100,31 @@ export const getLocalEnvironmentBootstraps = DesktopIpc.makeSyncIpcMethod({
           Option.isSome(config.value.preflightFailure) &&
           (!snapshot.desiredRunning || !snapshot.restartScheduled);
         if (isPrimary || fatalPreflight || stoppedPreflight) continue;
-        bootstraps.push({
-          id: instance.id,
-          label: yield* instance.label,
-          runningDistro: null,
-          httpBaseUrl: null,
-          wsBaseUrl: null,
-        });
+        bootstraps.push(
+          DesktopEnvironmentBootstrap.make({
+            id: instance.id,
+            label: yield* instance.label,
+            runningDistro: null,
+            httpBaseUrl: null,
+            wsBaseUrl: null,
+          }),
+        );
         continue;
       }
       const { bootstrap, httpBaseUrl } = config.value;
       const runningDistro = config.value.runningDistro ?? null;
-      bootstraps.push({
-        id: instance.id,
-        label: runningDistro === null ? yield* instance.label : `WSL (${runningDistro})`,
-        runningDistro,
-        httpBaseUrl: httpBaseUrl.href,
-        wsBaseUrl: toWebSocketBaseUrl(httpBaseUrl),
-        ...(bootstrap.desktopBootstrapToken
-          ? { bootstrapToken: bootstrap.desktopBootstrapToken }
-          : {}),
-      });
+      bootstraps.push(
+        DesktopEnvironmentBootstrap.make({
+          id: instance.id,
+          label: runningDistro === null ? yield* instance.label : `WSL (${runningDistro})`,
+          runningDistro,
+          httpBaseUrl: httpBaseUrl.href,
+          wsBaseUrl: toWebSocketBaseUrl(httpBaseUrl),
+          ...(bootstrap.desktopBootstrapToken
+            ? { bootstrapToken: bootstrap.desktopBootstrapToken }
+            : {}),
+        }),
+      );
     }
     return bootstraps;
   }),

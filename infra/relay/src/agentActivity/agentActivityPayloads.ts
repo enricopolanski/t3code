@@ -1,7 +1,7 @@
-import type {
+import {
   RelayAgentActivityAggregateRow,
   RelayAgentActivityAggregateState,
-  RelayAgentActivityState,
+  type RelayAgentActivityState,
 } from "@t3tools/contracts/relay";
 import * as DateTime from "effect/DateTime";
 import * as Option from "effect/Option";
@@ -66,27 +66,27 @@ function sanitizeDeepLink(value: string): string {
 export function sanitizeAgentActivityAggregateRow(
   row: RelayAgentActivityAggregateRow,
 ): RelayAgentActivityAggregateRow {
-  return {
+  return RelayAgentActivityAggregateRow.make({
     ...row,
     projectTitle: truncateText(row.projectTitle, MAX_SUMMARY_TEXT_LENGTH),
     threadTitle: truncateText(row.threadTitle, MAX_SUMMARY_TEXT_LENGTH),
     modelTitle: truncateText(row.modelTitle, MAX_SUMMARY_TEXT_LENGTH),
     status: truncateText(row.status, MAX_STATUS_TEXT_LENGTH),
     deepLink: sanitizeDeepLink(row.deepLink),
-  };
+  });
 }
 
 export function sanitizeAgentActivityAggregateState(
   aggregate: RelayAgentActivityAggregateState,
 ): RelayAgentActivityAggregateState {
-  return {
+  return RelayAgentActivityAggregateState.make({
     ...aggregate,
     title: truncateText(aggregate.title, MAX_SUMMARY_TEXT_LENGTH),
     subtitle: truncateText(aggregate.subtitle, MAX_SUMMARY_TEXT_LENGTH),
     activities: aggregate.activities
       .slice(0, MAX_ACTIVITY_ROWS)
       .map(sanitizeAgentActivityAggregateRow),
-  };
+  });
 }
 
 export function sanitizeApnsNotificationPayload(

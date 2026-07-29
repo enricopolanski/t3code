@@ -54,13 +54,14 @@ const MIN_MAIN_WINDOW_SIZE = {
   width: 840,
   height: 620,
 } as const;
-export const DesktopWindowBoundsSchema = Schema.Struct({
+
+export class DesktopWindowBounds extends Schema.Class<DesktopWindowBounds>("DesktopWindowBounds")({
   x: Schema.Int,
   y: Schema.Int,
   width: Schema.Int.check(Schema.isGreaterThanOrEqualTo(MIN_MAIN_WINDOW_SIZE.width)),
   height: Schema.Int.check(Schema.isGreaterThanOrEqualTo(MIN_MAIN_WINDOW_SIZE.height)),
-});
-export type DesktopWindowBounds = typeof DesktopWindowBoundsSchema.Type;
+}) {}
+
 export const DEFAULT_MAIN_WINDOW_SIZE = {
   width: 1100,
   height: 780,
@@ -109,8 +110,8 @@ type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 const DesktopSettingsJson = fromLenientJson(DesktopSettingsDocument);
 const decodeDesktopSettingsJson = Schema.decodeEffect(DesktopSettingsJson);
 const encodeDesktopSettingsJson = Schema.encodeEffect(DesktopSettingsJson);
-const decodeDesktopWindowBounds = Schema.decodeUnknownOption(DesktopWindowBoundsSchema);
-const desktopWindowBoundsEquivalence = Schema.toEquivalence(DesktopWindowBoundsSchema);
+const decodeDesktopWindowBounds = Schema.decodeUnknownOption(DesktopWindowBounds);
+const desktopWindowBoundsEquivalence = Schema.toEquivalence(DesktopWindowBounds);
 
 const settingsChange = (settings: DesktopSettings, changed: boolean): DesktopSettingsChange => ({
   settings,

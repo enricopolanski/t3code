@@ -9,9 +9,9 @@ import * as Path from "effect/Path";
 import * as RcMap from "effect/RcMap";
 import * as Schema from "effect/Schema";
 
+import { FilesystemBrowseEntry, FilesystemBrowseResult } from "@t3tools/contracts";
 import type {
   FilesystemBrowseInput,
-  FilesystemBrowseResult,
   ProjectListEntriesInput,
   ProjectListEntriesResult,
   ProjectSearchEntriesInput,
@@ -206,24 +206,26 @@ export const make = Effect.gen(function* () {
 
       const showHidden = endsWithSeparator || prefix.startsWith(".");
       const lowerPrefix = prefix.toLowerCase();
-      const entries: Array<{ readonly name: string; readonly fullPath: string }> = [];
+      const entries: Array<FilesystemBrowseEntry> = [];
       for (const dirent of dirents) {
         if (
           dirent.isDirectory() &&
           dirent.name.toLowerCase().startsWith(lowerPrefix) &&
           (showHidden || !dirent.name.startsWith("."))
         ) {
-          entries.push({
-            name: dirent.name,
-            fullPath: path.join(parentPath, dirent.name),
-          });
+          entries.push(
+            FilesystemBrowseEntry.make({
+              name: dirent.name,
+              fullPath: path.join(parentPath, dirent.name),
+            }),
+          );
         }
       }
 
-      return {
+      return FilesystemBrowseResult.make({
         parentPath,
         entries: entries.toSorted((left, right) => left.name.localeCompare(right.name)),
-      };
+      });
     },
   );
 

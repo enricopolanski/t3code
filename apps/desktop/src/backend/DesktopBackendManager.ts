@@ -323,7 +323,7 @@ function drainBackendOutput(
   );
 }
 
-const encodeBootstrapJson = Schema.encodeEffect(Schema.fromJsonString(DesktopBackendBootstrap));
+const encodeBootstrapJson = DesktopBackendBootstrap.encodeJson;
 
 const runBackendProcess = Effect.fn("runBackendProcess")(function* (
   options: RunBackendProcessOptions,

@@ -31,7 +31,7 @@ const ProviderSessionStatus = Schema.Literals([
   "closed",
 ]);
 
-export const ProviderSession = Schema.Struct({
+export class ProviderSession extends Schema.Class<ProviderSession>("ProviderSession")({
   provider: ProviderDriverKind,
   // Optional during the driver/instance migration. Once every producer
   // populates it (post-slice-4), routing flips to instance-id-only and the
@@ -47,10 +47,11 @@ export const ProviderSession = Schema.Struct({
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
   lastError: Schema.optional(TrimmedNonEmptyString),
-});
-export type ProviderSession = typeof ProviderSession.Type;
+}) {}
 
-export const ProviderSessionStartInput = Schema.Struct({
+export class ProviderSessionStartInput extends Schema.Class<ProviderSessionStartInput>(
+  "ProviderSessionStartInput",
+)({
   threadId: ThreadId,
   provider: Schema.optional(ProviderDriverKind),
   // See ProviderSession for the migration story.
@@ -61,10 +62,11 @@ export const ProviderSessionStartInput = Schema.Struct({
   approvalPolicy: Schema.optional(ProviderApprovalPolicy),
   sandboxMode: Schema.optional(ProviderSandboxMode),
   runtimeMode: RuntimeMode,
-});
-export type ProviderSessionStartInput = typeof ProviderSessionStartInput.Type;
+}) {}
 
-export const ProviderSendTurnInput = Schema.Struct({
+export class ProviderSendTurnInput extends Schema.Class<ProviderSendTurnInput>(
+  "ProviderSendTurnInput",
+)({
   threadId: ThreadId,
   input: Schema.optional(
     TrimmedNonEmptyString.check(Schema.isMaxLength(PROVIDER_SEND_TURN_MAX_INPUT_CHARS)),
@@ -74,44 +76,48 @@ export const ProviderSendTurnInput = Schema.Struct({
   ),
   modelSelection: Schema.optional(ModelSelection),
   interactionMode: Schema.optional(ProviderInteractionMode),
-});
-export type ProviderSendTurnInput = typeof ProviderSendTurnInput.Type;
+}) {}
 
-export const ProviderTurnStartResult = Schema.Struct({
+export class ProviderTurnStartResult extends Schema.Class<ProviderTurnStartResult>(
+  "ProviderTurnStartResult",
+)({
   threadId: ThreadId,
   turnId: TurnId,
   resumeCursor: Schema.optional(Schema.Unknown),
-});
-export type ProviderTurnStartResult = typeof ProviderTurnStartResult.Type;
+}) {}
 
-export const ProviderInterruptTurnInput = Schema.Struct({
+export class ProviderInterruptTurnInput extends Schema.Class<ProviderInterruptTurnInput>(
+  "ProviderInterruptTurnInput",
+)({
   threadId: ThreadId,
   turnId: Schema.optional(TurnId),
-});
-export type ProviderInterruptTurnInput = typeof ProviderInterruptTurnInput.Type;
+}) {}
 
-export const ProviderStopSessionInput = Schema.Struct({
+export class ProviderStopSessionInput extends Schema.Class<ProviderStopSessionInput>(
+  "ProviderStopSessionInput",
+)({
   threadId: ThreadId,
-});
-export type ProviderStopSessionInput = typeof ProviderStopSessionInput.Type;
+}) {}
 
-export const ProviderRespondToRequestInput = Schema.Struct({
+export class ProviderRespondToRequestInput extends Schema.Class<ProviderRespondToRequestInput>(
+  "ProviderRespondToRequestInput",
+)({
   threadId: ThreadId,
   requestId: ApprovalRequestId,
   decision: ProviderApprovalDecision,
-});
-export type ProviderRespondToRequestInput = typeof ProviderRespondToRequestInput.Type;
+}) {}
 
-export const ProviderRespondToUserInputInput = Schema.Struct({
+export class ProviderRespondToUserInputInput extends Schema.Class<ProviderRespondToUserInputInput>(
+  "ProviderRespondToUserInputInput",
+)({
   threadId: ThreadId,
   requestId: ApprovalRequestId,
   answers: ProviderUserInputAnswers,
-});
-export type ProviderRespondToUserInputInput = typeof ProviderRespondToUserInputInput.Type;
+}) {}
 
 const ProviderEventKind = Schema.Literals(["session", "notification", "request", "error"]);
 
-export const ProviderEvent = Schema.Struct({
+export class ProviderEvent extends Schema.Class<ProviderEvent>("ProviderEvent")({
   id: EventId,
   kind: ProviderEventKind,
   provider: ProviderDriverKind,
@@ -127,5 +133,4 @@ export const ProviderEvent = Schema.Struct({
   requestKind: Schema.optional(ProviderRequestKind),
   textDelta: Schema.optional(Schema.String),
   payload: Schema.optional(Schema.Unknown),
-});
-export type ProviderEvent = typeof ProviderEvent.Type;
+}) {}

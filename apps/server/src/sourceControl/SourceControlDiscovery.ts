@@ -1,6 +1,6 @@
 import {
-  type SourceControlDiscoveryResult,
-  type VcsDiscoveryItem,
+  SourceControlDiscoveryResult,
+  VcsDiscoveryItem,
   type VcsDriverKind,
 } from "@t3tools/contracts";
 import * as Context from "effect/Context";
@@ -26,17 +26,6 @@ type VcsProbe = DiscoveryProbe & {
   readonly executable: string;
   readonly versionArgs: ReadonlyArray<string>;
 };
-
-interface DiscoveryProbeResult<Kind extends string> {
-  readonly kind: Kind;
-  readonly label: string;
-  readonly executable?: string;
-  readonly implemented: boolean;
-  readonly status: "available" | "missing";
-  readonly version: Option.Option<string>;
-  readonly installHint: string;
-  readonly detail: Option.Option<string>;
-}
 
 const VCS_PROBES: ReadonlyArray<VcsProbe> = [
   {
@@ -71,20 +60,22 @@ export const make = Effect.gen(function* () {
 
   const probe = <Kind extends VcsDriverKind>(
     input: DiscoveryProbe & { readonly kind: Kind },
-  ): Effect.Effect<DiscoveryProbeResult<Kind>> => {
+  ): Effect.Effect<VcsDiscoveryItem> => {
     const executable = input.executable;
     const versionArgs = input.versionArgs;
 
     if (!executable || !versionArgs) {
-      return Effect.succeed({
-        kind: input.kind,
-        label: input.label,
-        implemented: input.implemented,
-        status: "missing" as const,
-        version: Option.none<string>(),
-        installHint: input.installHint,
-        detail: Option.some(input.installHint),
-      } satisfies DiscoveryProbeResult<Kind>);
+      return Effect.succeed(
+        VcsDiscoveryItem.make({
+          kind: input.kind,
+          label: input.label,
+          implemented: input.implemented,
+          status: "missing",
+          version: Option.none<string>(),
+          installHint: input.installHint,
+          detail: Option.some(input.installHint),
+        }),
+      );
     }
 
     return process
@@ -98,32 +89,33 @@ export const make = Effect.gen(function* () {
         appendTruncationMarker: true,
       })
       .pipe(
-        Effect.map(
-          (result) =>
-            ({
-              kind: input.kind,
-              label: input.label,
-              executable,
-              implemented: input.implemented,
-              status: "available" as const,
-              version: Option.orElse(firstNonEmptyLine(result.stdout), () =>
-                firstNonEmptyLine(result.stderr),
-              ),
-              installHint: input.installHint,
-              detail: Option.none<string>(),
-            }) satisfies DiscoveryProbeResult<Kind>,
-        ),
-        Effect.catch((cause) =>
-          Effect.succeed({
+        Effect.map((result) =>
+          VcsDiscoveryItem.make({
             kind: input.kind,
             label: input.label,
             executable,
             implemented: input.implemented,
-            status: "missing" as const,
-            version: Option.none<string>(),
+            status: "available",
+            version: Option.orElse(firstNonEmptyLine(result.stdout), () =>
+              firstNonEmptyLine(result.stderr),
+            ),
             installHint: input.installHint,
-            detail: detailFromCause(cause),
-          } satisfies DiscoveryProbeResult<Kind>),
+            detail: Option.none<string>(),
+          }),
+        ),
+        Effect.catch((cause) =>
+          Effect.succeed(
+            VcsDiscoveryItem.make({
+              kind: input.kind,
+              label: input.label,
+              executable,
+              implemented: input.implemented,
+              status: "missing",
+              version: Option.none<string>(),
+              installHint: input.installHint,
+              detail: detailFromCause(cause),
+            }),
+          ),
         ),
       );
   };
@@ -131,11 +123,11 @@ export const make = Effect.gen(function* () {
   return SourceControlDiscovery.of({
     discover: Effect.all({
       versionControlSystems: Effect.all(
-        VCS_PROBES.map((entry) => probe(entry)) as ReadonlyArray<Effect.Effect<VcsDiscoveryItem>>,
+        VCS_PROBES.map((entry) => probe(entry)),
         { concurrency: "unbounded" },
       ),
       sourceControlProviders: sourceControlProviders.discover,
-    }),
+    }).pipe(Effect.map((parts) => SourceControlDiscoveryResult.make(parts))),
   });
 });
 

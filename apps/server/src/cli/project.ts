@@ -6,6 +6,9 @@ import {
   type OrchestrationReadModel,
   ProjectId,
   type ClientOrchestrationCommand,
+  ProjectCreateCommand,
+  ProjectDeleteCommand,
+  ProjectMetaUpdateCommand,
 } from "@t3tools/contracts";
 import * as Console from "effect/Console";
 import * as Crypto from "effect/Crypto";
@@ -473,15 +476,17 @@ const projectAddCommand = Command.make("add", {
 
         const title = yield* resolveProjectTitle(workspaceRoot, Option.getOrUndefined(flags.title));
         const projectId = ProjectId.make(yield* projectCommandUuid);
-        yield* dispatch({
-          type: "project.create",
-          commandId: CommandId.make(yield* projectCommandUuid),
-          projectId,
-          title,
-          workspaceRoot,
-          defaultModelSelection: ServerRuntimeStartup.getAutoBootstrapDefaultModelSelection(),
-          createdAt: DateTime.formatIso(yield* DateTime.now),
-        });
+        yield* dispatch(
+          ProjectCreateCommand.make({
+            type: "project.create",
+            commandId: CommandId.make(yield* projectCommandUuid),
+            projectId,
+            title,
+            workspaceRoot,
+            defaultModelSelection: ServerRuntimeStartup.getAutoBootstrapDefaultModelSelection(),
+            createdAt: DateTime.formatIso(yield* DateTime.now),
+          }),
+        );
         return `Added project ${projectId} (${title}) at ${workspaceRoot}.`;
       }),
     ),
@@ -515,12 +520,14 @@ const projectRemoveCommand = Command.make("remove", {
           snapshot,
           identifier: flags.project,
         });
-        yield* dispatch({
-          type: "project.delete",
-          commandId: CommandId.make(yield* projectCommandUuid),
-          projectId: project.id,
-          force: flags.force,
-        });
+        yield* dispatch(
+          ProjectDeleteCommand.make({
+            type: "project.delete",
+            commandId: CommandId.make(yield* projectCommandUuid),
+            projectId: project.id,
+            force: flags.force,
+          }),
+        );
         return `Removed project ${project.id} (${project.title}).`;
       }),
     ),
@@ -556,12 +563,14 @@ const projectRenameCommand = Command.make("rename", {
           return `Project ${project.id} is already named ${nextTitle}.`;
         }
 
-        yield* dispatch({
-          type: "project.meta.update",
-          commandId: CommandId.make(yield* projectCommandUuid),
-          projectId: project.id,
-          title: nextTitle,
-        });
+        yield* dispatch(
+          ProjectMetaUpdateCommand.make({
+            type: "project.meta.update",
+            commandId: CommandId.make(yield* projectCommandUuid),
+            projectId: project.id,
+            title: nextTitle,
+          }),
+        );
         return `Renamed project ${project.id} to ${nextTitle}.`;
       }),
     ),

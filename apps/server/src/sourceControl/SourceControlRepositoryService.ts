@@ -9,13 +9,13 @@ import * as Schema from "effect/Schema";
 import {
   SourceControlRepositoryError,
   type SourceControlCloneRepositoryInput,
-  type SourceControlCloneRepositoryResult,
+  SourceControlCloneRepositoryResult,
   type SourceControlCloneProtocol,
   type SourceControlProviderKind,
   type SourceControlPublishRepositoryInput,
-  type SourceControlPublishRepositoryResult,
+  SourceControlPublishRepositoryResult,
   type SourceControlRepositoryCloneUrls,
-  type SourceControlRepositoryInfo,
+  SourceControlRepositoryInfo,
   type SourceControlRepositoryLookupInput,
 } from "@t3tools/contracts";
 
@@ -56,12 +56,12 @@ function toRepositoryInfo(
   provider: SourceControlProviderKind,
   urls: SourceControlRepositoryCloneUrls,
 ): SourceControlRepositoryInfo {
-  return {
+  return SourceControlRepositoryInfo.make({
     provider,
     nameWithOwner: urls.nameWithOwner,
     url: urls.url,
     sshUrl: urls.sshUrl,
-  };
+  });
 }
 
 function selectRemoteUrl(
@@ -211,11 +211,11 @@ export const make = Effect.gen(function* () {
       maxOutputBytes: 256 * 1024,
     });
 
-    return {
+    return SourceControlCloneRepositoryResult.make({
       cwd: preparedDestination.destinationPath,
       remoteUrl,
       repository,
-    };
+    });
   });
 
   const publishRepository = Effect.fn("SourceControlRepositoryService.publishRepository")(
@@ -253,25 +253,25 @@ export const make = Effect.gen(function* () {
         );
       if (!hasCommits) {
         const details = yield* git.statusDetails(input.cwd).pipe(Effect.orElseSucceed(() => null));
-        return {
+        return SourceControlPublishRepositoryResult.make({
           repository: toRepositoryInfo(providerKind, urls),
           remoteName,
           remoteUrl,
           branch: details?.branch ?? "main",
-          status: "remote_added" as const,
-        };
+          status: "remote_added",
+        });
       }
 
       const pushResult = yield* git.pushCurrentBranch(input.cwd, null, { remoteName });
 
-      return {
+      return SourceControlPublishRepositoryResult.make({
         repository: toRepositoryInfo(providerKind, urls),
         remoteName,
         remoteUrl,
         branch: pushResult.branch,
         ...(pushResult.upstreamBranch ? { upstreamBranch: pushResult.upstreamBranch } : {}),
-        status: "pushed" as const,
-      };
+        status: "pushed",
+      });
     },
   );
 

@@ -1,3 +1,4 @@
+import { SourceControlRepositoryCloneUrls } from "@t3tools/contracts";
 import { assert, it, afterEach, describe, expect, vi } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -284,11 +285,14 @@ describe("GitHubCli.layer", () => {
         repository: "octocat/codething-mvp",
       });
 
-      assert.deepStrictEqual(result, {
-        nameWithOwner: "octocat/codething-mvp",
-        url: "https://github.com/octocat/codething-mvp",
-        sshUrl: "git@github.com:octocat/codething-mvp.git",
-      });
+      assert.deepStrictEqual(
+        result,
+        SourceControlRepositoryCloneUrls.make({
+          nameWithOwner: "octocat/codething-mvp",
+          url: "https://github.com/octocat/codething-mvp",
+          sshUrl: "git@github.com:octocat/codething-mvp.git",
+        }),
+      );
     }).pipe(Effect.provide(layer)),
   );
 
@@ -309,11 +313,14 @@ describe("GitHubCli.layer", () => {
         visibility: "private",
       });
 
-      assert.deepStrictEqual(result, {
-        nameWithOwner: "octocat/codething-mvp",
-        url: "https://github.com/octocat/codething-mvp",
-        sshUrl: "git@github.com:octocat/codething-mvp.git",
-      });
+      assert.deepStrictEqual(
+        result,
+        SourceControlRepositoryCloneUrls.make({
+          nameWithOwner: "octocat/codething-mvp",
+          url: "https://github.com/octocat/codething-mvp",
+          sshUrl: "git@github.com:octocat/codething-mvp.git",
+        }),
+      );
       expect(mockRun).toHaveBeenCalledTimes(1);
       expect(mockRun).toHaveBeenNthCalledWith(1, {
         operation: "GitHubCli.execute",
@@ -336,11 +343,14 @@ describe("GitHubCli.layer", () => {
         visibility: "private",
       });
 
-      assert.deepStrictEqual(result, {
-        nameWithOwner: "octocat/codething-mvp",
-        url: "https://github.com/octocat/codething-mvp",
-        sshUrl: "git@github.com:octocat/codething-mvp.git",
-      });
+      assert.deepStrictEqual(
+        result,
+        SourceControlRepositoryCloneUrls.make({
+          nameWithOwner: "octocat/codething-mvp",
+          url: "https://github.com/octocat/codething-mvp",
+          sshUrl: "git@github.com:octocat/codething-mvp.git",
+        }),
+      );
     }).pipe(Effect.provide(layer)),
   );
 

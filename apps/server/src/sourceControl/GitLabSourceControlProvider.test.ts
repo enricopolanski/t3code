@@ -1,3 +1,4 @@
+import { ChangeRequest } from "@t3tools/contracts";
 import { assert, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -36,19 +37,22 @@ it.effect("maps GitLab MR summaries into provider-neutral change requests", () =
       reference: "42",
     });
 
-    assert.deepStrictEqual(changeRequest, {
-      provider: "gitlab",
-      number: 42,
-      title: "Add GitLab provider",
-      url: "https://gitlab.com/pingdotgg/t3code/-/merge_requests/42",
-      baseRefName: "main",
-      headRefName: "feature/source-control",
-      state: "open",
-      updatedAt: Option.none(),
-      isCrossRepository: true,
-      headRepositoryNameWithOwner: "fork/t3code",
-      headRepositoryOwnerLogin: "fork",
-    });
+    assert.deepStrictEqual(
+      changeRequest,
+      ChangeRequest.make({
+        provider: "gitlab",
+        number: 42,
+        title: "Add GitLab provider",
+        url: "https://gitlab.com/pingdotgg/t3code/-/merge_requests/42",
+        baseRefName: "main",
+        headRefName: "feature/source-control",
+        state: "open",
+        updatedAt: Option.none(),
+        isCrossRepository: true,
+        headRepositoryNameWithOwner: "fork/t3code",
+        headRepositoryOwnerLogin: "fork",
+      }),
+    );
   }),
 );
 

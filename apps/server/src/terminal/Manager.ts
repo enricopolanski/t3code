@@ -22,14 +22,26 @@ import {
   type TerminalAttachStreamEvent,
   type TerminalClearInput,
   type TerminalCloseInput,
+  TerminalActivityEvent,
+  TerminalAttachSnapshotEvent,
+  TerminalClearedEvent,
+  TerminalClosedEvent,
+  TerminalErrorEvent,
   type TerminalEvent,
+  TerminalExitedEvent,
+  TerminalMetadataRemoveEvent,
+  TerminalMetadataSnapshotEvent,
+  TerminalMetadataUpsertEvent,
+  TerminalOutputEvent,
+  TerminalRestartedEvent,
+  TerminalStartedEvent,
   type TerminalMetadataStreamEvent,
   type TerminalOpenInput,
   type TerminalResizeInput,
   type TerminalRestartInput,
-  type TerminalSessionSnapshot,
+  TerminalSessionSnapshot,
   type TerminalSessionStatus,
-  type TerminalSummary,
+  TerminalSummary,
   type TerminalWriteInput,
 } from "@t3tools/contracts";
 import { makeKeyedCoalescingWorker } from "@t3tools/shared/KeyedCoalescingWorker";
@@ -324,7 +336,7 @@ function terminalWireLabel(session: TerminalSessionState): string {
 }
 
 function snapshot(session: TerminalSessionState): TerminalSessionSnapshot {
-  return {
+  return TerminalSessionSnapshot.make({
     threadId: session.threadId,
     terminalId: session.terminalId,
     cwd: session.cwd,
@@ -337,11 +349,11 @@ function snapshot(session: TerminalSessionState): TerminalSessionSnapshot {
     label: terminalWireLabel(session),
     updatedAt: session.updatedAt,
     sequence: session.eventSequence,
-  };
+  });
 }
 
 function summary(session: TerminalSessionState): TerminalSummary {
-  return {
+  return TerminalSummary.make({
     threadId: session.threadId,
     terminalId: session.terminalId,
     cwd: session.cwd,
@@ -353,7 +365,7 @@ function summary(session: TerminalSessionState): TerminalSummary {
     hasRunningSubprocess: session.hasRunningSubprocess,
     label: terminalWireLabel(session),
     updatedAt: session.updatedAt,
-  };
+  });
 }
 
 function shouldPublishTerminalMetadataEvent(event: TerminalEvent): boolean {
@@ -374,10 +386,10 @@ function shouldPublishTerminalMetadataEvent(event: TerminalEvent): boolean {
 function terminalEventToAttachEvent(event: TerminalEvent): TerminalAttachStreamEvent | null {
   switch (event.type) {
     case "started":
-      return {
+      return TerminalAttachSnapshotEvent.make({
         type: "snapshot",
         snapshot: event.snapshot,
-      };
+      });
     case "output":
     case "exited":
     case "closed":
@@ -1733,13 +1745,15 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
           yield* queuePersist(action.threadId, action.terminalId, action.history);
         }
 
-        yield* publishEvent({
-          type: "output",
-          threadId: action.threadId,
-          terminalId: action.terminalId,
-          sequence: action.sequence,
-          data: action.data,
-        });
+        yield* publishEvent(
+          TerminalOutputEvent.make({
+            type: "output",
+            threadId: action.threadId,
+            terminalId: action.terminalId,
+            sequence: action.sequence,
+            data: action.data,
+          }),
+        );
         continue;
       }
 
@@ -1748,14 +1762,16 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
         threadId: action.threadId,
         terminalId: action.terminalId,
       });
-      yield* publishEvent({
-        type: "exited",
-        threadId: action.threadId,
-        terminalId: action.terminalId,
-        sequence: action.sequence,
-        exitCode: action.exitCode,
-        exitSignal: action.exitSignal,
-      });
+      yield* publishEvent(
+        TerminalExitedEvent.make({
+          type: "exited",
+          threadId: action.threadId,
+          terminalId: action.terminalId,
+          sequence: action.sequence,
+          exitCode: action.exitCode,
+          exitSignal: action.exitSignal,
+        }),
+      );
       yield* evictInactiveSessionsIfNeeded();
       return;
     }
@@ -1917,13 +1933,17 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
               return [undefined, state] as const;
             });
 
-            yield* publishEvent({
-              type: eventType,
+            const startedFields = {
               threadId: session.threadId,
               terminalId: session.terminalId,
               sequence: eventStamp.sequence,
               snapshot: snapshot(session),
-            });
+            };
+            yield* publishEvent(
+              eventType === "started"
+                ? TerminalStartedEvent.make({ type: "started", ...startedFields })
+                : TerminalRestartedEvent.make({ type: "restarted", ...startedFields }),
+            );
           }),
         ),
       ),
@@ -1960,13 +1980,15 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
       yield* evictInactiveSessionsIfNeeded();
 
       const message = error.message;
-      yield* publishEvent({
-        type: "error",
-        threadId: session.threadId,
-        terminalId: session.terminalId,
-        sequence: session.eventSequence,
-        message,
-      });
+      yield* publishEvent(
+        TerminalErrorEvent.make({
+          type: "error",
+          threadId: session.threadId,
+          terminalId: session.terminalId,
+          sequence: session.eventSequence,
+          message,
+        }),
+      );
       yield* Effect.logError("failed to start terminal", {
         threadId: session.threadId,
         terminalId: session.terminalId,
@@ -2003,12 +2025,14 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
     });
 
     if (removed) {
-      yield* publishEvent({
-        type: "closed",
-        threadId,
-        terminalId,
-        sequence: closedEventSequence,
-      });
+      yield* publishEvent(
+        TerminalClosedEvent.make({
+          type: "closed",
+          threadId,
+          terminalId,
+          sequence: closedEventSequence,
+        }),
+      );
     }
 
     if (deleteHistoryOnClose) {
@@ -2073,14 +2097,16 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
         const eventStamp = advanceEventSequence(liveSession.value);
 
         return [
-          Option.some({
-            type: "activity" as const,
-            threadId: liveSession.value.threadId,
-            terminalId: liveSession.value.terminalId,
-            sequence: eventStamp.sequence,
-            hasRunningSubprocess: next.hasRunningSubprocess,
-            label: terminalWireLabel(liveSession.value),
-          }),
+          Option.some(
+            TerminalActivityEvent.make({
+              type: "activity",
+              threadId: liveSession.value.threadId,
+              terminalId: liveSession.value.terminalId,
+              sequence: eventStamp.sequence,
+              hasRunningSubprocess: next.hasRunningSubprocess,
+              label: terminalWireLabel(liveSession.value),
+            }),
+          ),
           state,
         ] as const;
       });
@@ -2372,10 +2398,12 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
 
       const initialSnapshot = yield* openOrAttachForStream(input);
 
-      yield* listener({
-        type: "snapshot",
-        snapshot: initialSnapshot,
-      });
+      yield* listener(
+        TerminalAttachSnapshotEvent.make({
+          type: "snapshot",
+          snapshot: initialSnapshot,
+        }),
+      );
 
       for (const event of bufferedEvents) {
         if (isDuplicateAttachSnapshotEvent(event, initialSnapshot)) {
@@ -2414,11 +2442,13 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
     }
 
     if (event.type === "closed") {
-      return Effect.succeed({
-        type: "remove" as const,
-        threadId: event.threadId,
-        terminalId: event.terminalId,
-      });
+      return Effect.succeed(
+        TerminalMetadataRemoveEvent.make({
+          type: "remove",
+          threadId: event.threadId,
+          terminalId: event.terminalId,
+        }),
+      );
     }
 
     return readTerminalMetadata({
@@ -2427,10 +2457,10 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
     }).pipe(
       Effect.map((terminal) =>
         terminal
-          ? {
-              type: "upsert" as const,
+          ? TerminalMetadataUpsertEvent.make({
+              type: "upsert",
               terminal,
-            }
+            })
           : null,
       ),
     );
@@ -2461,10 +2491,12 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
       });
 
       const terminals = yield* readAllTerminalMetadata();
-      yield* listener({
-        type: "snapshot",
-        terminals,
-      });
+      yield* listener(
+        TerminalMetadataSnapshotEvent.make({
+          type: "snapshot",
+          terminals,
+        }),
+      );
 
       for (const event of bufferedEvents) {
         yield* offerMetadataEvent(listener, event);
@@ -2543,12 +2575,14 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
         session.processEventDrainRunning = false;
         const eventStamp = advanceEventSequence(session);
         yield* persistHistory(input.threadId, terminalId, session.history);
-        yield* publishEvent({
-          type: "cleared",
-          threadId: input.threadId,
-          terminalId,
-          sequence: eventStamp.sequence,
-        });
+        yield* publishEvent(
+          TerminalClearedEvent.make({
+            type: "cleared",
+            threadId: input.threadId,
+            terminalId,
+            sequence: eventStamp.sequence,
+          }),
+        );
       }),
     );
 

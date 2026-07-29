@@ -1,12 +1,12 @@
 import * as NodeOS from "node:os";
-import type {
-  CursorSettings,
-  ModelCapabilities,
-  ProviderOptionSelection,
-  ServerProvider,
+import {
+  type CursorSettings,
+  type ModelCapabilities,
+  type ProviderOptionSelection,
+  type ServerProvider,
   ServerProviderAuth,
-  ServerProviderModel,
-  ServerProviderState,
+  type ServerProviderModel,
+  type ServerProviderState,
 } from "@t3tools/contracts";
 import type * as EffectAcpSchema from "effect-acp/schema";
 import { causeErrorTag } from "@t3tools/shared/observability";
@@ -91,7 +91,7 @@ export function buildInitialCursorProviderSnapshot(
           installed: false,
           version: null,
           status: "warning",
-          auth: { status: "unknown" },
+          auth: ServerProviderAuth.make({ status: "unknown" }),
           message: "Cursor is disabled in T3 Code settings.",
         },
       });
@@ -106,7 +106,7 @@ export function buildInitialCursorProviderSnapshot(
         installed: true,
         version: null,
         status: "warning",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: "Checking Cursor Agent availability...",
       },
     });
@@ -835,7 +835,7 @@ export function parseCursorAboutOutput(result: CommandResult): CursorAboutResult
       return {
         version,
         status: "error",
-        auth: { status: "unauthenticated" },
+        auth: ServerProviderAuth.make({ status: "unauthenticated" }),
         message: "Cursor Agent is not authenticated. Run `agent login` and try again.",
       };
     }
@@ -845,16 +845,16 @@ export function parseCursorAboutOutput(result: CommandResult): CursorAboutResult
         return {
           version,
           status: "ready",
-          auth: {
+          auth: ServerProviderAuth.make({
             status: "unknown",
             ...authMetadata,
-          },
+          }),
         };
       }
       return {
         version,
         status: "warning",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: "Could not verify Cursor Agent authentication status.",
       };
     }
@@ -868,7 +868,7 @@ export function parseCursorAboutOutput(result: CommandResult): CursorAboutResult
       return {
         version,
         status: "error",
-        auth: { status: "unauthenticated" },
+        auth: ServerProviderAuth.make({ status: "unauthenticated" }),
         message: "Cursor Agent is not authenticated. Run `agent login` and try again.",
       };
     }
@@ -876,11 +876,11 @@ export function parseCursorAboutOutput(result: CommandResult): CursorAboutResult
     return {
       version,
       status: "ready",
-      auth: {
+      auth: ServerProviderAuth.make({
         status: "authenticated",
         email: userEmail,
         ...authMetadata,
-      },
+      }),
     };
   }
 
@@ -896,7 +896,7 @@ export function parseCursorAboutOutput(result: CommandResult): CursorAboutResult
     return {
       version: null,
       status: "warning",
-      auth: { status: "unknown" },
+      auth: ServerProviderAuth.make({ status: "unknown" }),
       message: "The `agent about` command is unavailable in this version of the Cursor Agent CLI.",
     };
   }
@@ -909,12 +909,12 @@ export function parseCursorAboutOutput(result: CommandResult): CursorAboutResult
   if (userEmail === undefined) {
     // Field missing entirely — can't determine auth.
     if (result.code === 0) {
-      return { version, status: "ready", auth: { status: "unknown" } };
+      return { version, status: "ready", auth: ServerProviderAuth.make({ status: "unknown" }) };
     }
     return {
       version,
       status: "warning",
-      auth: { status: "unknown" },
+      auth: ServerProviderAuth.make({ status: "unknown" }),
       message: "Could not verify Cursor Agent authentication status.",
     };
   }
@@ -928,7 +928,7 @@ export function parseCursorAboutOutput(result: CommandResult): CursorAboutResult
     return {
       version,
       status: "error",
-      auth: { status: "unauthenticated" },
+      auth: ServerProviderAuth.make({ status: "unauthenticated" }),
       message: "Cursor Agent is not authenticated. Run `agent login` and try again.",
     };
   }
@@ -937,7 +937,7 @@ export function parseCursorAboutOutput(result: CommandResult): CursorAboutResult
   return {
     version,
     status: "ready",
-    auth: { status: "authenticated", email: userEmail },
+    auth: ServerProviderAuth.make({ status: "authenticated", email: userEmail }),
   };
 }
 
@@ -1005,7 +1005,7 @@ export const checkCursorProviderStatus = Effect.fn("checkCursorProviderStatus")(
         installed: false,
         version: null,
         status: "warning",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: "Cursor is disabled in T3 Code settings.",
       },
     });
@@ -1031,7 +1031,7 @@ export const checkCursorProviderStatus = Effect.fn("checkCursorProviderStatus")(
         installed: !isCommandMissingCause(error),
         version: null,
         status: "error",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: isCommandMissingCause(error)
           ? buildCursorCliCommandMissingMessage(cursorSettings.binaryPath)
           : "Failed to execute Cursor Agent CLI health check.",
@@ -1049,7 +1049,7 @@ export const checkCursorProviderStatus = Effect.fn("checkCursorProviderStatus")(
         installed: true,
         version: null,
         status: "error",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
         message: "Cursor Agent CLI is installed but timed out while running `agent about`.",
       },
     });

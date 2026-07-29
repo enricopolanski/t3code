@@ -5,7 +5,6 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Result from "effect/Result";
 import * as Schema from "effect/Schema";
-import * as Struct from "effect/Struct";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";
 
@@ -32,7 +31,9 @@ import {
  * @module ProviderSessionRuntimeRepository
  */
 
-export const ProviderSessionRuntime = Schema.Struct({
+export class ProviderSessionRuntime extends Schema.Class<ProviderSessionRuntime>(
+  "ProviderSessionRuntime",
+)({
   threadId: ThreadId,
   providerName: Schema.String,
   /**
@@ -47,16 +48,17 @@ export const ProviderSessionRuntime = Schema.Struct({
   runtimeMode: RuntimeMode,
   status: ProviderSessionRuntimeStatus,
   lastSeenAt: IsoDateTime,
-  resumeCursor: Schema.NullOr(Schema.Unknown),
-  runtimePayload: Schema.NullOr(Schema.Unknown),
-});
-export type ProviderSessionRuntime = typeof ProviderSessionRuntime.Type;
+  resumeCursor: Schema.NullOr(Schema.fromJsonString(Schema.Unknown)),
+  runtimePayload: Schema.NullOr(Schema.fromJsonString(Schema.Unknown)),
+}) {}
 
-export const GetProviderSessionRuntimeInput = Schema.Struct({ threadId: ThreadId });
-export type GetProviderSessionRuntimeInput = typeof GetProviderSessionRuntimeInput.Type;
+export class GetProviderSessionRuntimeInput extends Schema.Class<GetProviderSessionRuntimeInput>(
+  "GetProviderSessionRuntimeInput",
+)({ threadId: ThreadId }) {}
 
-export const DeleteProviderSessionRuntimeInput = Schema.Struct({ threadId: ThreadId });
-export type DeleteProviderSessionRuntimeInput = typeof DeleteProviderSessionRuntimeInput.Type;
+export class DeleteProviderSessionRuntimeInput extends Schema.Class<DeleteProviderSessionRuntimeInput>(
+  "DeleteProviderSessionRuntimeInput",
+)({ threadId: ThreadId }) {}
 
 /**
  * ProviderSessionRuntimeRepository - Service tag for provider runtime persistence.
@@ -102,12 +104,7 @@ export class ProviderSessionRuntimeRepository extends Context.Service<
   }
 >()("t3/persistence/ProviderSessionRuntime/ProviderSessionRuntimeRepository") {}
 
-const ProviderSessionRuntimeDbRowSchema = ProviderSessionRuntime.mapFields(
-  Struct.assign({
-    resumeCursor: Schema.NullOr(Schema.fromJsonString(Schema.Unknown)),
-    runtimePayload: Schema.NullOr(Schema.fromJsonString(Schema.Unknown)),
-  }),
-);
+const ProviderSessionRuntimeDbRowSchema = ProviderSessionRuntime;
 
 const ProviderSessionRuntimeRawDbRowSchema = Schema.Struct({
   threadId: Schema.String,
@@ -122,12 +119,6 @@ const ProviderSessionRuntimeRawDbRowSchema = Schema.Struct({
 });
 
 const decodeRuntimeRow = Schema.decodeUnknownEffect(ProviderSessionRuntimeDbRowSchema);
-
-const GetRuntimeRequestSchema = Schema.Struct({
-  threadId: ThreadId,
-});
-
-const DeleteRuntimeRequestSchema = GetRuntimeRequestSchema;
 
 function toPersistenceSqlOrDecodeError(
   sqlOperation: string,
@@ -187,7 +178,7 @@ export const make = Effect.gen(function* () {
   });
 
   const getRuntimeRowByThreadId = SqlSchema.findOneOption({
-    Request: GetRuntimeRequestSchema,
+    Request: GetProviderSessionRuntimeInput,
     Result: ProviderSessionRuntimeRawDbRowSchema,
     execute: ({ threadId }) =>
       sql`
@@ -227,7 +218,7 @@ export const make = Effect.gen(function* () {
   });
 
   const deleteRuntimeByThreadId = SqlSchema.void({
-    Request: DeleteRuntimeRequestSchema,
+    Request: DeleteProviderSessionRuntimeInput,
     execute: ({ threadId }) =>
       sql`
         DELETE FROM provider_session_runtime

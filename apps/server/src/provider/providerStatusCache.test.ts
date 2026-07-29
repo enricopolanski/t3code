@@ -3,7 +3,9 @@ import {
   defaultInstanceIdForDriver,
   ProviderDriverKind,
   ProviderInstanceId,
-  type ServerProvider,
+  ServerProvider,
+  ServerProviderAuth,
+  ServerProviderModel,
 } from "@t3tools/contracts";
 import { createModelCapabilities } from "@t3tools/shared/model";
 import { assert, it } from "@effect/vitest";
@@ -27,20 +29,21 @@ const OPENCODE_DRIVER = ProviderDriverKind.make("opencode");
 const makeProvider = (
   provider: ProviderDriverKind,
   overrides?: Partial<ServerProvider>,
-): ServerProvider => ({
-  instanceId: defaultInstanceIdForDriver(provider),
-  driver: provider,
-  enabled: true,
-  installed: true,
-  version: "1.0.0",
-  status: "ready",
-  auth: { status: "authenticated" },
-  checkedAt: "2026-04-11T00:00:00.000Z",
-  models: [],
-  slashCommands: [],
-  skills: [],
-  ...overrides,
-});
+): ServerProvider =>
+  ServerProvider.make({
+    instanceId: defaultInstanceIdForDriver(provider),
+    driver: provider,
+    enabled: true,
+    installed: true,
+    version: "1.0.0",
+    status: "ready",
+    auth: ServerProviderAuth.make({ status: "authenticated" }),
+    checkedAt: "2026-04-11T00:00:00.000Z",
+    models: [],
+    slashCommands: [],
+    skills: [],
+    ...overrides,
+  });
 
 it.layer(NodeServices.layer)("providerStatusCache", (it) => {
   it.effect("logs structural diagnostics without retaining invalid cache contents", () => {
@@ -83,7 +86,7 @@ it.layer(NodeServices.layer)("providerStatusCache", (it) => {
       const codexProvider = makeProvider(CODEX_DRIVER);
       const claudeProvider = makeProvider(CLAUDE_AGENT_DRIVER, {
         status: "warning",
-        auth: { status: "unknown" },
+        auth: ServerProviderAuth.make({ status: "unknown" }),
       });
       const openCodeProvider = makeProvider(OPENCODE_DRIVER, {
         status: "warning",
@@ -125,12 +128,12 @@ it.layer(NodeServices.layer)("providerStatusCache", (it) => {
     const cachedCodex = makeProvider(CODEX_DRIVER, {
       checkedAt: "2026-04-10T12:00:00.000Z",
       models: [
-        {
+        ServerProviderModel.make({
           slug: "gpt-5-mini",
           name: "GPT-5 Mini",
           isCustom: false,
           capabilities: emptyCapabilities,
-        },
+        }),
       ],
       message: "Cached message",
       skills: [
@@ -144,12 +147,12 @@ it.layer(NodeServices.layer)("providerStatusCache", (it) => {
     });
     const fallbackCodex = makeProvider(CODEX_DRIVER, {
       models: [
-        {
+        ServerProviderModel.make({
           slug: "gpt-5.4",
           name: "GPT-5.4",
           isCustom: false,
           capabilities: emptyCapabilities,
-        },
+        }),
       ],
       message: "Pending refresh",
     });
@@ -159,16 +162,16 @@ it.layer(NodeServices.layer)("providerStatusCache", (it) => {
         cachedProvider: cachedCodex,
         fallbackProvider: fallbackCodex,
       }),
-      {
+      ServerProvider.make({
         ...fallbackCodex,
         models: [
           ...fallbackCodex.models,
-          {
+          ServerProviderModel.make({
             slug: "gpt-5-mini",
             name: "GPT-5 Mini",
             isCustom: false,
             capabilities: emptyCapabilities,
-          },
+          }),
         ],
         installed: cachedCodex.installed,
         version: cachedCodex.version,
@@ -178,7 +181,7 @@ it.layer(NodeServices.layer)("providerStatusCache", (it) => {
         slashCommands: cachedCodex.slashCommands,
         skills: cachedCodex.skills,
         message: cachedCodex.message,
-      },
+      }),
     );
   });
 
@@ -192,7 +195,7 @@ it.layer(NodeServices.layer)("providerStatusCache", (it) => {
       installed: false,
       version: null,
       status: "disabled",
-      auth: { status: "unknown" },
+      auth: ServerProviderAuth.make({ status: "unknown" }),
       message: "Codex is disabled in T3 Code settings.",
     });
 
@@ -208,12 +211,12 @@ it.layer(NodeServices.layer)("providerStatusCache", (it) => {
   it("rejects cached snapshots that are not correlated to the fallback instance", () => {
     const fallbackCodex = makeProvider(CODEX_DRIVER, {
       models: [
-        {
+        ServerProviderModel.make({
           slug: "gpt-5.4",
           name: "GPT-5.4",
           isCustom: false,
           capabilities: emptyCapabilities,
-        },
+        }),
       ],
     });
     const legacyCachedCodex = {
@@ -225,12 +228,12 @@ it.layer(NodeServices.layer)("providerStatusCache", (it) => {
       auth: { status: "authenticated" },
       checkedAt: "2026-04-10T12:00:00.000Z",
       models: [
-        {
+        ServerProviderModel.make({
           slug: "cached-legacy-model",
           name: "Cached Legacy Model",
           isCustom: false,
           capabilities: emptyCapabilities,
-        },
+        }),
       ],
       slashCommands: [],
       skills: [],

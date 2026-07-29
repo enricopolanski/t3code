@@ -7,7 +7,7 @@ import {
   type RelayDeviceRegistrationRequest,
   RelayDpopAccessTokenScope,
   RelayDpopTokenExchangeGrantType,
-  type RelayEnvironmentConnectRequest,
+  RelayEnvironmentConnectRequest,
   type RelayEnvironmentConnectResponse,
   type RelayEnvironmentLinkChallengeRequest,
   type RelayEnvironmentLinkChallengeResponse,
@@ -804,10 +804,10 @@ export const make = Effect.fn("ManagedRelayClient.make")(function* (
             target: dpopProofTargets.connectEnvironment(input.environmentId),
           },
           (authorization) => {
-            const payload: RelayEnvironmentConnectRequest = {
+            const payload = RelayEnvironmentConnectRequest.make({
               ...(input.deviceId ? { deviceId: input.deviceId } : {}),
               clientKeyThumbprint: authorization.thumbprint,
-            };
+            });
             return client.dpopClient
               .connectEnvironment({
                 headers: dpopHeaders(authorization),

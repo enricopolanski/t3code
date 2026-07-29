@@ -3,19 +3,19 @@ import {
   AuthAccessWriteScope,
   AuthAdministrativeScopes,
   AuthStandardClientScopes,
-  type AuthAccessTokenResult,
-  type AuthBrowserSessionResult,
+  AuthAccessTokenResult,
+  AuthBrowserSessionResult,
   type AuthClientMetadata,
-  type AuthClientSession,
+  AuthClientSession,
   type AuthCreatePairingCredentialInput,
   type AuthEnvironmentScope,
   type AuthPairingLink,
-  type AuthPairingCredentialResult,
+  AuthPairingCredentialResult,
   type AuthSessionId,
-  type AuthSessionState,
+  AuthSessionState,
   type ServerAuthDescriptor,
   type ServerAuthSessionMethod,
-  type AuthWebSocketTicketResult,
+  AuthWebSocketTicketResult,
 } from "@t3tools/contracts";
 import { encodeOAuthScope } from "@t3tools/shared/oauthScope";
 import * as Context from "effect/Context";
@@ -633,21 +633,22 @@ export const make = Effect.gen(function* () {
 
   const getSessionState: EnvironmentAuth["Service"]["getSessionState"] = (request) =>
     authenticateRequest(request).pipe(
-      Effect.map(
-        (session) =>
-          ({
-            authenticated: true,
-            auth: descriptor,
-            scopes: session.scopes,
-            sessionMethod: session.method,
-            ...(session.expiresAt ? { expiresAt: DateTime.toUtc(session.expiresAt) } : {}),
-          }) satisfies AuthSessionState,
+      Effect.map((session) =>
+        AuthSessionState.make({
+          authenticated: true,
+          auth: descriptor,
+          scopes: session.scopes,
+          sessionMethod: session.method,
+          ...(session.expiresAt ? { expiresAt: DateTime.toUtc(session.expiresAt) } : {}),
+        }),
       ),
       Effect.catchIf(isServerAuthCredentialError, () =>
-        Effect.succeed({
-          authenticated: false,
-          auth: descriptor,
-        } satisfies AuthSessionState),
+        Effect.succeed(
+          AuthSessionState.make({
+            authenticated: false,
+            auth: descriptor,
+          }),
+        ),
       ),
       Effect.withSpan("EnvironmentAuth.getSessionState"),
     );
@@ -676,12 +677,12 @@ export const make = Effect.gen(function* () {
       Effect.map(
         (session) =>
           ({
-            response: {
+            response: AuthBrowserSessionResult.make({
               authenticated: true,
               scopes: session.scopes,
               sessionMethod: session.method,
               expiresAt: DateTime.toUtc(session.expiresAt),
-            } satisfies AuthBrowserSessionResult,
+            }),
             sessionToken: session.token,
           }) satisfies BootstrapExchangeResult,
       ),
@@ -723,20 +724,17 @@ export const make = Effect.gen(function* () {
         ),
         Effect.flatMap((session) =>
           DateTime.now.pipe(
-            Effect.map(
-              (now) =>
-                ({
-                  access_token: session.token,
-                  issued_token_type: AuthAccessTokenType,
-                  token_type: input?.proofKeyThumbprint ? "DPoP" : "Bearer",
-                  expires_in: Math.max(
-                    0,
-                    Math.floor(
-                      (session.expiresAt.epochMilliseconds - now.epochMilliseconds) / 1000,
-                    ),
-                  ),
-                  scope: encodeOAuthScope(session.scopes),
-                }) satisfies AuthAccessTokenResult,
+            Effect.map((now) =>
+              AuthAccessTokenResult.make({
+                access_token: session.token,
+                issued_token_type: AuthAccessTokenType,
+                token_type: input?.proofKeyThumbprint ? "DPoP" : "Bearer",
+                expires_in: Math.max(
+                  0,
+                  Math.floor((session.expiresAt.epochMilliseconds - now.epochMilliseconds) / 1000),
+                ),
+                scope: encodeOAuthScope(session.scopes),
+              }),
             ),
           ),
         ),
@@ -755,14 +753,13 @@ export const make = Effect.gen(function* () {
       ...(input.label ? { label: input.label } : {}),
       ...(input.purpose ? { purpose: input.purpose } : {}),
     }).pipe(
-      Effect.map(
-        (issued) =>
-          ({
-            id: issued.id,
-            credential: issued.credential,
-            ...(issued.label ? { label: issued.label } : {}),
-            expiresAt: issued.expiresAt,
-          }) satisfies AuthPairingCredentialResult,
+      Effect.map((issued) =>
+        AuthPairingCredentialResult.make({
+          id: issued.id,
+          credential: issued.credential,
+          ...(issued.label ? { label: issued.label } : {}),
+          expiresAt: issued.expiresAt,
+        }),
       ),
     );
 
@@ -882,8 +879,8 @@ export const make = Effect.gen(function* () {
   const listClientSessions: EnvironmentAuth["Service"]["listClientSessions"] = (currentSessionId) =>
     listSessions().pipe(
       Effect.map((clientSessions) =>
-        clientSessions.map(
-          (clientSession): AuthClientSession => ({
+        clientSessions.map((clientSession) =>
+          AuthClientSession.make({
             ...clientSession,
             current: clientSession.sessionId === currentSessionId,
           }),
@@ -923,12 +920,11 @@ export const make = Effect.gen(function* () {
   const issueWebSocketTicket: EnvironmentAuth["Service"]["issueWebSocketTicket"] = (session) =>
     sessions.issueWebSocketToken(session.sessionId).pipe(
       Effect.mapError((cause) => new ServerAuthWebSocketTokenIssueError({ cause })),
-      Effect.map(
-        (issued) =>
-          ({
-            ticket: issued.token,
-            expiresAt: DateTime.toUtc(issued.expiresAt),
-          }) satisfies AuthWebSocketTicketResult,
+      Effect.map((issued) =>
+        AuthWebSocketTicketResult.make({
+          ticket: issued.token,
+          expiresAt: DateTime.toUtc(issued.expiresAt),
+        }),
       ),
       Effect.withSpan("EnvironmentAuth.issueWebSocketTicket"),
     );

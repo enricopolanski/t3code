@@ -1,6 +1,11 @@
 import {
   DEFAULT_SERVER_SETTINGS,
   EnvironmentId,
+  ExecutionEnvironmentCapabilities,
+  ExecutionEnvironmentDescriptor,
+  ExecutionEnvironmentPlatform,
+  ServerAuthDescriptor,
+  ServerObservability,
   ServerConfig,
   type ServerConfig as ServerConfigType,
   WS_METHODS,
@@ -98,43 +103,43 @@ const PREPARED: PreparedConnection = {
   target: TARGET,
 };
 
-const SERVER_CONFIG: ServerConfigType = {
-  environment: {
+const SERVER_CONFIG = ServerConfig.make({
+  environment: ExecutionEnvironmentDescriptor.make({
     environmentId: TARGET.environmentId,
     label: TARGET.label,
-    platform: {
+    platform: ExecutionEnvironmentPlatform.make({
       os: "darwin",
       arch: "arm64",
-    },
+    }),
     serverVersion: "0.0.0-test",
-    capabilities: {
+    capabilities: ExecutionEnvironmentCapabilities.make({
       repositoryIdentity: true,
       connectionProbe: true,
-    },
-  },
-  auth: {
+    }),
+  }),
+  auth: ServerAuthDescriptor.make({
     policy: "loopback-browser",
     bootstrapMethods: ["one-time-token"],
     sessionMethods: ["browser-session-cookie", "bearer-access-token"],
     sessionCookieName: "t3_session",
-  },
+  }),
   cwd: "/tmp/workspace",
   keybindingsConfigPath: "/tmp/workspace/keybindings.json",
   keybindings: [],
   issues: [],
   providers: [],
   availableEditors: [],
-  observability: {
+  observability: ServerObservability.make({
     logsDirectoryPath: "/tmp/logs",
     localTracingEnabled: false,
     otlpTracesEnabled: false,
     otlpMetricsEnabled: false,
-  },
+  }),
   settings: DEFAULT_SERVER_SETTINGS,
-};
+});
 
 const RpcRequest = Schema.TaggedStruct("Request", {
-  id: Schema.String,
+  id: Schema.Union([Schema.String, Schema.Number]),
   payload: Schema.Unknown,
   tag: Schema.String,
 });

@@ -135,26 +135,29 @@ export const AuthEnvironmentBootstrapTokenType =
  * the right UX without embedding server-specific auth logic or assuming a
  * single access method.
  */
-export const ServerAuthDescriptor = Schema.Struct({
+export class ServerAuthDescriptor extends Schema.Class<ServerAuthDescriptor>(
+  "ServerAuthDescriptor",
+)({
   policy: ServerAuthPolicy,
   bootstrapMethods: Schema.Array(ServerAuthBootstrapMethod),
   sessionMethods: Schema.Array(ServerAuthSessionMethod),
   sessionCookieName: TrimmedNonEmptyString,
-});
-export type ServerAuthDescriptor = typeof ServerAuthDescriptor.Type;
+}) {}
 
-export const AuthBrowserSessionRequest = Schema.Struct({
+export class AuthBrowserSessionRequest extends Schema.Class<AuthBrowserSessionRequest>(
+  "AuthBrowserSessionRequest",
+)({
   credential: TrimmedNonEmptyString,
-});
-export type AuthBrowserSessionRequest = typeof AuthBrowserSessionRequest.Type;
+}) {}
 
-export const AuthBrowserSessionResult = Schema.Struct({
+export class AuthBrowserSessionResult extends Schema.Class<AuthBrowserSessionResult>(
+  "AuthBrowserSessionResult",
+)({
   authenticated: Schema.Literal(true),
   scopes: AuthEnvironmentScopes,
   sessionMethod: ServerAuthSessionMethod,
   expiresAt: Schema.DateTimeUtc,
-});
-export type AuthBrowserSessionResult = typeof AuthBrowserSessionResult.Type;
+}) {}
 
 export const AuthClientMetadataDeviceType = Schema.Literals([
   "desktop",
@@ -165,13 +168,17 @@ export const AuthClientMetadataDeviceType = Schema.Literals([
 ]);
 export type AuthClientMetadataDeviceType = typeof AuthClientMetadataDeviceType.Type;
 
-export const AuthClientPresentationMetadata = Schema.Struct({
+export class AuthClientPresentationMetadata extends Schema.Class<AuthClientPresentationMetadata>(
+  "AuthClientPresentationMetadata",
+)({
   label: Schema.optionalKey(TrimmedNonEmptyString),
   deviceType: Schema.optionalKey(AuthClientMetadataDeviceType),
   os: Schema.optionalKey(TrimmedNonEmptyString),
-});
-export type AuthClientPresentationMetadata = typeof AuthClientPresentationMetadata.Type;
+}) {}
 
+// Stays a `Schema.Struct`: `HttpApiSchema.asFormUrlEncoded()` annotates the
+// struct itself, and wrapping it in a `Schema.Class` hides that annotation
+// from the HttpApi layer, which then rejects the request with a 415.
 export const AuthTokenExchangeRequest = Schema.Struct({
   grant_type: Schema.Literal(AuthTokenExchangeGrantType),
   subject_token: TrimmedNonEmptyString,
@@ -184,30 +191,33 @@ export const AuthTokenExchangeRequest = Schema.Struct({
 }).pipe(HttpApiSchema.asFormUrlEncoded());
 export type AuthTokenExchangeRequest = typeof AuthTokenExchangeRequest.Type;
 
-export const AuthAccessTokenResult = Schema.Struct({
+export class AuthAccessTokenResult extends Schema.Class<AuthAccessTokenResult>(
+  "AuthAccessTokenResult",
+)({
   access_token: TrimmedNonEmptyString,
   issued_token_type: Schema.Literal(AuthAccessTokenType),
   token_type: Schema.Literals(["Bearer", "DPoP"]),
   expires_in: Schema.Number,
   scope: TrimmedNonEmptyString,
-});
-export type AuthAccessTokenResult = typeof AuthAccessTokenResult.Type;
+}) {}
 
-export const AuthWebSocketTicketResult = Schema.Struct({
+export class AuthWebSocketTicketResult extends Schema.Class<AuthWebSocketTicketResult>(
+  "AuthWebSocketTicketResult",
+)({
   ticket: TrimmedNonEmptyString,
   expiresAt: Schema.DateTimeUtc,
-});
-export type AuthWebSocketTicketResult = typeof AuthWebSocketTicketResult.Type;
+}) {}
 
-export const AuthPairingCredentialResult = Schema.Struct({
+export class AuthPairingCredentialResult extends Schema.Class<AuthPairingCredentialResult>(
+  "AuthPairingCredentialResult",
+)({
   id: TrimmedNonEmptyString,
   credential: TrimmedNonEmptyString,
   label: Schema.optionalKey(TrimmedNonEmptyString),
   expiresAt: Schema.DateTimeUtc,
-});
-export type AuthPairingCredentialResult = typeof AuthPairingCredentialResult.Type;
+}) {}
 
-export const AuthPairingLink = Schema.Struct({
+export class AuthPairingLink extends Schema.Class<AuthPairingLink>("AuthPairingLink")({
   id: TrimmedNonEmptyString,
   credential: TrimmedNonEmptyString,
   scopes: AuthEnvironmentScopes,
@@ -215,20 +225,18 @@ export const AuthPairingLink = Schema.Struct({
   label: Schema.optionalKey(TrimmedNonEmptyString),
   createdAt: Schema.DateTimeUtc,
   expiresAt: Schema.DateTimeUtc,
-});
-export type AuthPairingLink = typeof AuthPairingLink.Type;
+}) {}
 
-export const AuthClientMetadata = Schema.Struct({
+export class AuthClientMetadata extends Schema.Class<AuthClientMetadata>("AuthClientMetadata")({
   label: Schema.optionalKey(TrimmedNonEmptyString),
   ipAddress: Schema.optionalKey(TrimmedNonEmptyString),
   userAgent: Schema.optionalKey(TrimmedNonEmptyString),
   deviceType: AuthClientMetadataDeviceType,
   os: Schema.optionalKey(TrimmedNonEmptyString),
   browser: Schema.optionalKey(TrimmedNonEmptyString),
-});
-export type AuthClientMetadata = typeof AuthClientMetadata.Type;
+}) {}
 
-export const AuthClientSession = Schema.Struct({
+export class AuthClientSession extends Schema.Class<AuthClientSession>("AuthClientSession")({
   sessionId: AuthSessionId,
   subject: TrimmedNonEmptyString,
   scopes: AuthEnvironmentScopes,
@@ -239,42 +247,43 @@ export const AuthClientSession = Schema.Struct({
   lastConnectedAt: Schema.NullOr(Schema.DateTimeUtc),
   connected: Schema.Boolean,
   current: Schema.Boolean,
-});
-export type AuthClientSession = typeof AuthClientSession.Type;
+}) {}
 
-export const AuthAccessSnapshot = Schema.Struct({
+export class AuthAccessSnapshot extends Schema.Class<AuthAccessSnapshot>("AuthAccessSnapshot")({
   pairingLinks: Schema.Array(AuthPairingLink),
   clientSessions: Schema.Array(AuthClientSession),
-});
-export type AuthAccessSnapshot = typeof AuthAccessSnapshot.Type;
+}) {}
 
-export const AuthAccessStreamSnapshotEvent = Schema.Struct({
+export class AuthAccessStreamSnapshotEvent extends Schema.Class<AuthAccessStreamSnapshotEvent>(
+  "AuthAccessStreamSnapshotEvent",
+)({
   version: Schema.Literal(1),
   revision: Schema.Number,
   type: Schema.Literal("snapshot"),
   payload: AuthAccessSnapshot,
-});
-export type AuthAccessStreamSnapshotEvent = typeof AuthAccessStreamSnapshotEvent.Type;
+}) {}
 
-export const AuthAccessStreamPairingLinkUpsertedEvent = Schema.Struct({
+export class AuthAccessStreamPairingLinkUpsertedEvent extends Schema.Class<AuthAccessStreamPairingLinkUpsertedEvent>(
+  "AuthAccessStreamPairingLinkUpsertedEvent",
+)({
   version: Schema.Literal(1),
   revision: Schema.Number,
   type: Schema.Literal("pairingLinkUpserted"),
   payload: AuthPairingLink,
-});
-export type AuthAccessStreamPairingLinkUpsertedEvent =
-  typeof AuthAccessStreamPairingLinkUpsertedEvent.Type;
+}) {}
 
-export const AuthAccessStreamPairingLinkRemovedEvent = Schema.Struct({
+export class AuthPairingLinkRef extends Schema.Class<AuthPairingLinkRef>("AuthPairingLinkRef")({
+  id: TrimmedNonEmptyString,
+}) {}
+
+export class AuthAccessStreamPairingLinkRemovedEvent extends Schema.Class<AuthAccessStreamPairingLinkRemovedEvent>(
+  "AuthAccessStreamPairingLinkRemovedEvent",
+)({
   version: Schema.Literal(1),
   revision: Schema.Number,
   type: Schema.Literal("pairingLinkRemoved"),
-  payload: Schema.Struct({
-    id: TrimmedNonEmptyString,
-  }),
-});
-export type AuthAccessStreamPairingLinkRemovedEvent =
-  typeof AuthAccessStreamPairingLinkRemovedEvent.Type;
+  payload: AuthPairingLinkRef,
+}) {}
 
 export class AuthAccessStreamError extends Schema.TaggedErrorClass<AuthAccessStreamError>()(
   "AuthAccessStreamError",
@@ -291,23 +300,29 @@ export class EnvironmentAuthorizationError extends Schema.TaggedErrorClass<Envir
   },
 ) {}
 
-export const AuthAccessStreamClientUpsertedEvent = Schema.Struct({
+export class AuthAccessStreamClientUpsertedEvent extends Schema.Class<AuthAccessStreamClientUpsertedEvent>(
+  "AuthAccessStreamClientUpsertedEvent",
+)({
   version: Schema.Literal(1),
   revision: Schema.Number,
   type: Schema.Literal("clientUpserted"),
   payload: AuthClientSession,
-});
-export type AuthAccessStreamClientUpsertedEvent = typeof AuthAccessStreamClientUpsertedEvent.Type;
+}) {}
 
-export const AuthAccessStreamClientRemovedEvent = Schema.Struct({
+export class AuthClientSessionRef extends Schema.Class<AuthClientSessionRef>(
+  "AuthClientSessionRef",
+)({
+  sessionId: AuthSessionId,
+}) {}
+
+export class AuthAccessStreamClientRemovedEvent extends Schema.Class<AuthAccessStreamClientRemovedEvent>(
+  "AuthAccessStreamClientRemovedEvent",
+)({
   version: Schema.Literal(1),
   revision: Schema.Number,
   type: Schema.Literal("clientRemoved"),
-  payload: Schema.Struct({
-    sessionId: AuthSessionId,
-  }),
-});
-export type AuthAccessStreamClientRemovedEvent = typeof AuthAccessStreamClientRemovedEvent.Type;
+  payload: AuthClientSessionRef,
+}) {}
 
 export const AuthAccessStreamEvent = Schema.Union([
   AuthAccessStreamSnapshotEvent,
@@ -318,27 +333,29 @@ export const AuthAccessStreamEvent = Schema.Union([
 ]);
 export type AuthAccessStreamEvent = typeof AuthAccessStreamEvent.Type;
 
-export const AuthRevokePairingLinkInput = Schema.Struct({
+export class AuthRevokePairingLinkInput extends Schema.Class<AuthRevokePairingLinkInput>(
+  "AuthRevokePairingLinkInput",
+)({
   id: TrimmedNonEmptyString,
-});
-export type AuthRevokePairingLinkInput = typeof AuthRevokePairingLinkInput.Type;
+}) {}
 
-export const AuthRevokeClientSessionInput = Schema.Struct({
+export class AuthRevokeClientSessionInput extends Schema.Class<AuthRevokeClientSessionInput>(
+  "AuthRevokeClientSessionInput",
+)({
   sessionId: AuthSessionId,
-});
-export type AuthRevokeClientSessionInput = typeof AuthRevokeClientSessionInput.Type;
+}) {}
 
-export const AuthCreatePairingCredentialInput = Schema.Struct({
+export class AuthCreatePairingCredentialInput extends Schema.Class<AuthCreatePairingCredentialInput>(
+  "AuthCreatePairingCredentialInput",
+)({
   label: Schema.optionalKey(TrimmedNonEmptyString),
   scopes: Schema.optionalKey(AuthEnvironmentScopes),
-});
-export type AuthCreatePairingCredentialInput = typeof AuthCreatePairingCredentialInput.Type;
+}) {}
 
-export const AuthSessionState = Schema.Struct({
+export class AuthSessionState extends Schema.Class<AuthSessionState>("AuthSessionState")({
   authenticated: Schema.Boolean,
   auth: ServerAuthDescriptor,
   scopes: Schema.optionalKey(AuthEnvironmentScopes),
   sessionMethod: Schema.optionalKey(ServerAuthSessionMethod),
   expiresAt: Schema.optionalKey(Schema.DateTimeUtc),
-});
-export type AuthSessionState = typeof AuthSessionState.Type;
+}) {}

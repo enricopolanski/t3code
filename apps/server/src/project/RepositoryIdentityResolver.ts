@@ -1,4 +1,4 @@
-import type { RepositoryIdentity } from "@t3tools/contracts";
+import { RepositoryIdentity, RepositoryIdentityLocator } from "@t3tools/contracts";
 import {
   detectSourceControlProviderFromGitRemoteUrl,
   normalizeGitRemoteUrl,
@@ -72,19 +72,19 @@ function buildRepositoryIdentity(input: {
   const [owner] = repositoryPathSegments;
   const repositoryName = repositoryPathSegments.at(-1);
 
-  return {
+  return RepositoryIdentity.make({
     canonicalKey,
-    locator: {
+    locator: RepositoryIdentityLocator.make({
       source: "git-remote",
       remoteName: input.remoteName,
       remoteUrl: input.remoteUrl,
-    },
+    }),
     rootPath: input.rootPath,
     ...(repositoryPath ? { displayName: repositoryPath } : {}),
     ...(sourceControlProvider ? { provider: sourceControlProvider.kind } : {}),
     ...(owner ? { owner } : {}),
     ...(repositoryName ? { name: repositoryName } : {}),
-  };
+  });
 }
 
 const resolveRepositoryIdentityCacheKey = Effect.fn("RepositoryIdentityResolver.resolveCacheKey")(

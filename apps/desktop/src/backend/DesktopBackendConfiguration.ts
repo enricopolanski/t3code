@@ -1,5 +1,6 @@
 import * as NodeOS from "node:os";
 
+import { DesktopBackendBootstrap } from "@t3tools/contracts";
 import { parsePersistedServerObservabilitySettings } from "@t3tools/shared/serverSettings";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
@@ -336,8 +337,8 @@ const resolvePrimaryStartConfig = Effect.fn("desktop.backendConfiguration.resolv
     const serverExposure = yield* DesktopServerExposure.DesktopServerExposure;
     const backendExposure = yield* serverExposure.backendConfig;
 
-    const bootstrap = {
-      mode: "desktop" as const,
+    const bootstrap = DesktopBackendBootstrap.make({
+      mode: "desktop",
       noBrowser: true,
       port: backendExposure.port,
       t3Home: environment.baseDir,
@@ -346,7 +347,7 @@ const resolvePrimaryStartConfig = Effect.fn("desktop.backendConfiguration.resolv
       tailscaleServeEnabled: backendExposure.tailscaleServeEnabled,
       tailscaleServePort: backendExposure.tailscaleServePort,
       ...buildObservabilityFragment(input.observabilitySettings),
-    };
+    });
 
     return {
       executablePath: process.execPath,
@@ -396,8 +397,8 @@ const resolveWslStartConfig = Effect.fn("desktop.backendConfiguration.resolveWsl
   // LAN; the primary owns LAN exposure when the user opts in.
   const wslBindHost = "0.0.0.0";
 
-  const bootstrap = {
-    mode: "desktop" as const,
+  const bootstrap = DesktopBackendBootstrap.make({
+    mode: "desktop",
     noBrowser: true,
     port: input.port,
     // Omit t3Home so the Linux backend uses its own home dir instead of
@@ -412,7 +413,7 @@ const resolveWslStartConfig = Effect.fn("desktop.backendConfiguration.resolveWsl
     tailscaleServeEnabled: false,
     tailscaleServePort: 443,
     ...buildObservabilityFragment(input.observabilitySettings),
-  };
+  });
 
   // In packaged builds environment.appRoot is .../resources/app.asar — an
   // archive FILE. The Windows primary reads its entry through

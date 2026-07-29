@@ -5,37 +5,40 @@ const PROJECT_SEARCH_ENTRIES_MAX_LIMIT = 200;
 const PROJECT_WRITE_FILE_PATH_MAX_LENGTH = 512;
 const PROJECT_READ_FILE_PATH_MAX_LENGTH = 512;
 
-export const ProjectSearchEntriesInput = Schema.Struct({
+export class ProjectSearchEntriesInput extends Schema.Class<ProjectSearchEntriesInput>(
+  "ProjectSearchEntriesInput",
+)({
   cwd: TrimmedNonEmptyString,
   query: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
   limit: PositiveInt.check(Schema.isLessThanOrEqualTo(PROJECT_SEARCH_ENTRIES_MAX_LIMIT)),
-});
-export type ProjectSearchEntriesInput = typeof ProjectSearchEntriesInput.Type;
+}) {}
 
 const ProjectEntryKind = Schema.Literals(["file", "directory"]);
 
-export const ProjectEntry = Schema.Struct({
+export class ProjectEntry extends Schema.Class<ProjectEntry>("ProjectEntry")({
   path: TrimmedNonEmptyString,
   kind: ProjectEntryKind,
-});
-export type ProjectEntry = typeof ProjectEntry.Type;
+}) {}
 
-export const ProjectSearchEntriesResult = Schema.Struct({
+export class ProjectSearchEntriesResult extends Schema.Class<ProjectSearchEntriesResult>(
+  "ProjectSearchEntriesResult",
+)({
   entries: Schema.Array(ProjectEntry),
   truncated: Schema.Boolean,
-});
-export type ProjectSearchEntriesResult = typeof ProjectSearchEntriesResult.Type;
+}) {}
 
-export const ProjectListEntriesInput = Schema.Struct({
+export class ProjectListEntriesInput extends Schema.Class<ProjectListEntriesInput>(
+  "ProjectListEntriesInput",
+)({
   cwd: TrimmedNonEmptyString,
-});
-export type ProjectListEntriesInput = typeof ProjectListEntriesInput.Type;
+}) {}
 
-export const ProjectListEntriesResult = Schema.Struct({
+export class ProjectListEntriesResult extends Schema.Class<ProjectListEntriesResult>(
+  "ProjectListEntriesResult",
+)({
   entries: Schema.Array(ProjectEntry),
   truncated: Schema.Boolean,
-});
-export type ProjectListEntriesResult = typeof ProjectListEntriesResult.Type;
+}) {}
 
 export const ProjectEntriesFailure = Schema.Literals([
   "workspace_root_not_found",
@@ -116,19 +119,21 @@ export class ProjectListEntriesError extends Schema.TaggedErrorClass<ProjectList
   }
 }
 
-export const ProjectReadFileInput = Schema.Struct({
+export class ProjectReadFileInput extends Schema.Class<ProjectReadFileInput>(
+  "ProjectReadFileInput",
+)({
   cwd: TrimmedNonEmptyString,
   relativePath: TrimmedNonEmptyString.check(Schema.isMaxLength(PROJECT_READ_FILE_PATH_MAX_LENGTH)),
-});
-export type ProjectReadFileInput = typeof ProjectReadFileInput.Type;
+}) {}
 
-export const ProjectReadFileResult = Schema.Struct({
+export class ProjectReadFileResult extends Schema.Class<ProjectReadFileResult>(
+  "ProjectReadFileResult",
+)({
   relativePath: TrimmedNonEmptyString,
   contents: Schema.String,
   byteLength: NonNegativeInt,
   truncated: Schema.Boolean,
-});
-export type ProjectReadFileResult = typeof ProjectReadFileResult.Type;
+}) {}
 
 export const ProjectFileFailure = Schema.Literals([
   "workspace_path_outside_root",
@@ -187,17 +192,19 @@ export class ProjectReadFileError extends Schema.TaggedErrorClass<ProjectReadFil
   }
 }
 
-export const ProjectWriteFileInput = Schema.Struct({
+export class ProjectWriteFileInput extends Schema.Class<ProjectWriteFileInput>(
+  "ProjectWriteFileInput",
+)({
   cwd: TrimmedNonEmptyString,
   relativePath: TrimmedNonEmptyString.check(Schema.isMaxLength(PROJECT_WRITE_FILE_PATH_MAX_LENGTH)),
   contents: Schema.String,
-});
-export type ProjectWriteFileInput = typeof ProjectWriteFileInput.Type;
+}) {}
 
-export const ProjectWriteFileResult = Schema.Struct({
+export class ProjectWriteFileResult extends Schema.Class<ProjectWriteFileResult>(
+  "ProjectWriteFileResult",
+)({
   relativePath: TrimmedNonEmptyString,
-});
-export type ProjectWriteFileResult = typeof ProjectWriteFileResult.Type;
+}) {}
 
 export class ProjectWriteFileError extends Schema.TaggedErrorClass<ProjectWriteFileError>()(
   "ProjectWriteFileError",

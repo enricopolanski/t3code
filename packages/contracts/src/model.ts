@@ -7,13 +7,14 @@ import { ProviderDriverKind } from "./providerInstance.ts";
 export const ProviderOptionDescriptorType = Schema.Literals(["select", "boolean"]);
 export type ProviderOptionDescriptorType = typeof ProviderOptionDescriptorType.Type;
 
-export const ProviderOptionChoice = Schema.Struct({
+export class ProviderOptionChoice extends Schema.Class<ProviderOptionChoice>(
+  "ProviderOptionChoice",
+)({
   id: TrimmedNonEmptyString,
   label: TrimmedNonEmptyString,
   description: Schema.optional(TrimmedNonEmptyString),
   isDefault: Schema.optional(Schema.Boolean),
-});
-export type ProviderOptionChoice = typeof ProviderOptionChoice.Type;
+}) {}
 
 const ProviderOptionDescriptorBase = {
   id: TrimmedNonEmptyString,
@@ -21,21 +22,23 @@ const ProviderOptionDescriptorBase = {
   description: Schema.optional(TrimmedNonEmptyString),
 } as const;
 
-export const SelectProviderOptionDescriptor = Schema.Struct({
+export class SelectProviderOptionDescriptor extends Schema.Class<SelectProviderOptionDescriptor>(
+  "SelectProviderOptionDescriptor",
+)({
   ...ProviderOptionDescriptorBase,
   type: Schema.Literal("select"),
   options: Schema.Array(ProviderOptionChoice),
   currentValue: Schema.optional(TrimmedNonEmptyString),
   promptInjectedValues: Schema.optional(Schema.Array(TrimmedNonEmptyString)),
-});
-export type SelectProviderOptionDescriptor = typeof SelectProviderOptionDescriptor.Type;
+}) {}
 
-export const BooleanProviderOptionDescriptor = Schema.Struct({
+export class BooleanProviderOptionDescriptor extends Schema.Class<BooleanProviderOptionDescriptor>(
+  "BooleanProviderOptionDescriptor",
+)({
   ...ProviderOptionDescriptorBase,
   type: Schema.Literal("boolean"),
   currentValue: Schema.optional(Schema.Boolean),
-});
-export type BooleanProviderOptionDescriptor = typeof BooleanProviderOptionDescriptor.Type;
+}) {}
 
 export const ProviderOptionDescriptor = Schema.Union([
   SelectProviderOptionDescriptor,
@@ -46,11 +49,12 @@ export type ProviderOptionDescriptor = typeof ProviderOptionDescriptor.Type;
 export const ProviderOptionSelectionValue = Schema.Union([TrimmedNonEmptyString, Schema.Boolean]);
 export type ProviderOptionSelectionValue = typeof ProviderOptionSelectionValue.Type;
 
-export const ProviderOptionSelection = Schema.Struct({
+export class ProviderOptionSelection extends Schema.Class<ProviderOptionSelection>(
+  "ProviderOptionSelection",
+)({
   id: TrimmedNonEmptyString,
   value: ProviderOptionSelectionValue,
-});
-export type ProviderOptionSelection = typeof ProviderOptionSelection.Type;
+}) {}
 
 /**
  * Legacy on-disk shape for provider option selections, kept readable by the
@@ -102,9 +106,9 @@ function coerceLegacyOptionsObjectToArray(
     if (id.length === 0) continue;
     if (typeof rawValue === "string") {
       const trimmed = rawValue.trim();
-      if (trimmed.length > 0) entries.push({ id, value: trimmed });
+      if (trimmed.length > 0) entries.push(ProviderOptionSelection.make({ id, value: trimmed }));
     } else if (typeof rawValue === "boolean") {
-      entries.push({ id, value: rawValue });
+      entries.push(ProviderOptionSelection.make({ id, value: rawValue }));
     }
     // Drop anything else (numbers, null, nested objects/arrays) to match the
     // permissive normalization performed by migration 026.
@@ -122,10 +126,9 @@ function canonicalSelectionsToLegacyObject(
   return out;
 }
 
-export const ModelCapabilities = Schema.Struct({
+export class ModelCapabilities extends Schema.Class<ModelCapabilities>("ModelCapabilities")({
   optionDescriptors: Schema.optional(Schema.Array(ProviderOptionDescriptor)),
-});
-export type ModelCapabilities = typeof ModelCapabilities.Type;
+}) {}
 
 const CODEX_DRIVER_KIND = ProviderDriverKind.make("codex");
 const CLAUDE_DRIVER_KIND = ProviderDriverKind.make("claudeAgent");
@@ -144,7 +147,7 @@ export const PREFERRED_DEFAULT_CODEX_MODELS: ReadonlyArray<string> = [
   "gpt-5.6-sol",
   "gpt-5.6-terra",
 ];
-export const DEFAULT_GIT_TEXT_GENERATION_MODEL = "gpt-5.6-luna";
+export const DEFAULT_TEXT_GENERATION_MODEL = "gpt-5.6-luna";
 
 export const DEFAULT_MODEL_BY_PROVIDER: Partial<Record<ProviderDriverKind, string>> = {
   [CODEX_DRIVER_KIND]: DEFAULT_MODEL,
@@ -155,10 +158,10 @@ export const DEFAULT_MODEL_BY_PROVIDER: Partial<Record<ProviderDriverKind, strin
 };
 
 /** Per-provider text generation model defaults. */
-export const DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER: Partial<
+export const DEFAULT_TEXT_GENERATION_MODEL_BY_PROVIDER: Partial<
   Record<ProviderDriverKind, string>
 > = {
-  [CODEX_DRIVER_KIND]: DEFAULT_GIT_TEXT_GENERATION_MODEL,
+  [CODEX_DRIVER_KIND]: DEFAULT_TEXT_GENERATION_MODEL,
   [CLAUDE_DRIVER_KIND]: "claude-haiku-4-5",
   [CURSOR_DRIVER_KIND]: "composer-2",
   [OPENCODE_DRIVER_KIND]: "openai/gpt-5",

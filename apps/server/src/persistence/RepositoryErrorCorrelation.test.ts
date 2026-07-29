@@ -17,7 +17,7 @@ const now = DateTime.makeUnsafe("2026-06-21T00:00:00.000Z");
 const scopes: ReadonlyArray<AuthEnvironmentScope> = ["access:read"];
 
 const authSessionLayer = AuthSessions.layer.pipe(Layer.provideMerge(SqlitePersistenceMemory));
-const authPairingLinkLayer = AuthPairingLinks.layer.pipe(
+const authPairingLinkLayer = AuthPairingLinks.AuthPairingLinkRepository.layer.pipe(
   Layer.provideMerge(SqlitePersistenceMemory),
 );
 const providerSessionRuntimeLayer = ProviderSessionRuntime.layer.pipe(
@@ -33,42 +33,8 @@ describe("persistence error correlation", () => {
       const currentSessionId = AuthSessionId.make("current-session-correlation");
       const subject = "session-subject-secret-sentinel";
 
-      yield* sessions.create({
-        sessionId,
-        subject,
-        scopes,
-        method: "browser-session-cookie",
-        client: {
-          label: null,
-          ipAddress: null,
-          userAgent: null,
-          deviceType: "desktop",
-          os: null,
-          browser: null,
-        },
-        issuedAt,
-        expiresAt,
-      });
-      yield* sql`
-        UPDATE auth_sessions
-        SET scopes = ${"session-scopes-secret-sentinel"}
-        WHERE session_id = ${sessionId}
-      `;
-
-      const decodeError = yield* Effect.flip(sessions.listActive({ now }));
-      assert.instanceOf(decodeError, PersistenceErrors.PersistenceDecodeError);
-      assert.deepStrictEqual(decodeError.correlation, { sessionId });
-      assert.equal(
-        decodeError.message,
-        `Decode error in AuthSessionRepository.listActive:decodeRows: ${decodeError.issue}`,
-      );
-      assert.notInclude(decodeError.issue, subject);
-      assert.notInclude(decodeError.issue, "session-scopes-secret-sentinel");
-      assert.notInclude(decodeError.message, subject);
-
-      yield* sql`DROP TABLE auth_sessions`;
-      const createError = yield* Effect.flip(
-        sessions.create({
+      yield* sessions.create(
+        new AuthSessions.CreateAuthSessionInput({
           sessionId,
           subject,
           scopes,
@@ -85,6 +51,44 @@ describe("persistence error correlation", () => {
           expiresAt,
         }),
       );
+      yield* sql`
+        UPDATE auth_sessions
+        SET scopes = ${"session-scopes-secret-sentinel"}
+        WHERE session_id = ${sessionId}
+      `;
+
+      const decodeError = yield* Effect.flip(sessions.listActive(now));
+      assert.instanceOf(decodeError, PersistenceErrors.PersistenceDecodeError);
+      assert.deepStrictEqual(decodeError.correlation, { sessionId });
+      assert.equal(
+        decodeError.message,
+        `Decode error in AuthSessionRepository.listActive:decodeRows: ${decodeError.issue}`,
+      );
+      assert.notInclude(decodeError.issue, subject);
+      assert.notInclude(decodeError.issue, "session-scopes-secret-sentinel");
+      assert.notInclude(decodeError.message, subject);
+
+      yield* sql`DROP TABLE auth_sessions`;
+      const createError = yield* Effect.flip(
+        sessions.create(
+          new AuthSessions.CreateAuthSessionInput({
+            sessionId,
+            subject,
+            scopes,
+            method: "browser-session-cookie",
+            client: {
+              label: null,
+              ipAddress: null,
+              userAgent: null,
+              deviceType: "desktop",
+              os: null,
+              browser: null,
+            },
+            issuedAt,
+            expiresAt,
+          }),
+        ),
+      );
       assert.instanceOf(createError, PersistenceErrors.PersistenceSqlError);
       assert.deepStrictEqual(createError.correlation, { sessionId });
       assert.equal(createError.message, "SQL error in AuthSessionRepository.create:query");
@@ -92,7 +96,9 @@ describe("persistence error correlation", () => {
       assert.notInclude(createError.message, DateTime.formatIso(issuedAt));
 
       const revokeOtherError = yield* Effect.flip(
-        sessions.revokeAllExcept({ currentSessionId, revokedAt: now }),
+        sessions.revokeAllExcept(
+          AuthSessions.RevokeAuthSessionInput.make({ sessionId: currentSessionId, revokedAt: now }),
+        ),
       );
       assert.instanceOf(revokeOtherError, PersistenceErrors.PersistenceSqlError);
       assert.deepStrictEqual(revokeOtherError.correlation, { currentSessionId });
@@ -142,7 +148,7 @@ describe("persistence error correlation", () => {
         )
       `;
 
-      const decodeError = yield* Effect.flip(pairingLinks.getByCredential({ credential }));
+      const decodeError = yield* Effect.flip(pairingLinks.getByCredential(credential));
       assert.instanceOf(decodeError, PersistenceErrors.PersistenceDecodeError);
       assert.deepStrictEqual(decodeError.correlation, { pairingLinkId: id });
       assert.equal(
@@ -156,17 +162,19 @@ describe("persistence error correlation", () => {
 
       yield* sql`DROP TABLE auth_pairing_links`;
       const createError = yield* Effect.flip(
-        pairingLinks.create({
-          id,
-          credential,
-          method: "one-time-token",
-          scopes,
-          subject,
-          label: null,
-          proofKeyThumbprint: null,
-          createdAt: issuedAt,
-          expiresAt,
-        }),
+        pairingLinks.create(
+          new AuthPairingLinks.CreateAuthPairingLinkInput({
+            id,
+            credential,
+            method: "one-time-token",
+            scopes,
+            subject,
+            label: null,
+            proofKeyThumbprint: null,
+            createdAt: issuedAt,
+            expiresAt,
+          }),
+        ),
       );
       assert.instanceOf(createError, PersistenceErrors.PersistenceSqlError);
       assert.deepStrictEqual(createError.correlation, { pairingLinkId: id });
@@ -174,7 +182,7 @@ describe("persistence error correlation", () => {
       assert.notInclude(createError.message, subject);
       assert.notInclude(createError.message, DateTime.formatIso(issuedAt));
 
-      const revokeError = yield* Effect.flip(pairingLinks.revoke({ id, revokedAt: now }));
+      const revokeError = yield* Effect.flip(pairingLinks.revoke(id, now));
       assert.instanceOf(revokeError, PersistenceErrors.PersistenceSqlError);
       assert.deepStrictEqual(revokeError.correlation, { pairingLinkId: id });
       assert.notInclude(revokeError.message, credential);
@@ -216,17 +224,19 @@ describe("persistence error correlation", () => {
       `;
 
       const validThreadId = ThreadId.make("thread-valid");
-      yield* runtimes.upsert({
-        threadId: validThreadId,
-        providerName: "codex",
-        providerInstanceId: null,
-        adapterKey: "codex",
-        runtimeMode: "full-access",
-        status: "running",
-        lastSeenAt,
-        resumeCursor: null,
-        runtimePayload: null,
-      });
+      yield* runtimes.upsert(
+        new ProviderSessionRuntime.ProviderSessionRuntime({
+          threadId: validThreadId,
+          providerName: "codex",
+          providerInstanceId: null,
+          adapterKey: "codex",
+          runtimeMode: "full-access",
+          status: "running",
+          lastSeenAt,
+          resumeCursor: null,
+          runtimePayload: null,
+        }),
+      );
 
       const listed = yield* runtimes.list();
       assert.deepStrictEqual(
@@ -236,17 +246,19 @@ describe("persistence error correlation", () => {
 
       yield* sql`DROP TABLE provider_session_runtime`;
       const sqlFailure = yield* Effect.flip(
-        runtimes.upsert({
-          threadId,
-          providerName: "codex",
-          providerInstanceId: null,
-          adapterKey: "codex",
-          runtimeMode: "full-access",
-          status: "running",
-          lastSeenAt,
-          resumeCursor: null,
-          runtimePayload: { secret: runtimePayload },
-        }),
+        runtimes.upsert(
+          new ProviderSessionRuntime.ProviderSessionRuntime({
+            threadId,
+            providerName: "codex",
+            providerInstanceId: null,
+            adapterKey: "codex",
+            runtimeMode: "full-access",
+            status: "running",
+            lastSeenAt,
+            resumeCursor: null,
+            runtimePayload: { secret: runtimePayload },
+          }),
+        ),
       );
       assert.instanceOf(sqlFailure, PersistenceErrors.PersistenceSqlError);
       assert.deepStrictEqual(sqlFailure.correlation, { threadId });
